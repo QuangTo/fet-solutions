@@ -43,6 +43,8 @@
 
 ## Logic nghiệp vụ
 
+- Vai trò chuẩn là `driver`, `warehouse`, `accountant`, `admin`.
+- Quyền truy cập: driver vào Tổng quan/Nhập hàng/Xuất hàng; warehouse vào Tổng quan/Nhập hàng/Xuất hàng/Quản lý; accountant vào Tổng quan/Báo cáo; admin vào tất cả.
 - Xuất hàng luôn gắn với khách hàng, loại hàng, xe, tài xế và thủ kho.
 - Tồn kho được trừ theo cặp khách hàng + loại hàng.
 - Báo cáo kế toán lọc theo khách hàng và hiển thị lịch sử xuất hàng đầy đủ.

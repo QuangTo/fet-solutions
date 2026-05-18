@@ -12,7 +12,7 @@
         <div class="brand login-brand">
           <div class="brand-mark">FET</div>
           <div>
-            <strong>Fast & Effective Technology</strong>
+            <!-- <strong>Fast & Effective Technology</strong> -->
             <span>Quản lý vận tải</span>
           </div>
         </div>
@@ -27,8 +27,9 @@
         <label>
           Vai trò
           <select name="role" required>
+            <option value="admin">Admin</option>
             <option value="warehouse">Thủ kho</option>
-            <option value="accounting">Kế toán</option>
+            <option value="accountant">Kế toán</option>
             <option value="driver">Lái xe</option>
           </select>
         </label>
@@ -45,7 +46,7 @@
         <div class="brand">
           <div class="brand-mark">FET</div>
           <div>
-            <strong>Fast & Effective Technology</strong>
+            <!-- <strong>Fast & Effective Technology</strong> -->
             <span>Quản lý vận tải</span>
           </div>
         </div>
@@ -107,7 +108,8 @@
             <h1 id="page-title">Tổng quan</h1>
             <div class="title-row">
               <p id="page-subtitle" class="page-subtitle">
-                Nắm nhanh tồn kho, tiến độ xuất hàng và khách hàng cần xử lý tiếp.
+                Nắm nhanh tồn kho, tiến độ xuất hàng và khách hàng cần xử lý
+                tiếp.
               </p>
               <label id="overview-period-control" class="period-control">
                 Kỳ xem dữ liệu
@@ -139,10 +141,23 @@
       </section>
     </main>
     <datalist id="customer-list"></datalist>
-    <div id="dispatch-success" class="toast-message" role="status" aria-live="polite" hidden>
+    <div
+      id="dispatch-success"
+      class="toast-message"
+      role="status"
+      aria-live="polite"
+      hidden
+    >
       Xuất hàng thành công. Lịch sử bên dưới đã được cập nhật.
     </div>
-    <div id="invoice-confirm-dialog" class="dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="invoice-confirm-title" hidden>
+    <div
+      id="invoice-confirm-dialog"
+      class="dialog-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="invoice-confirm-title"
+      hidden
+    >
       <div class="dialog-panel">
         <p class="eyebrow">Xác nhận xuất hóa đơn</p>
         <h2 id="invoice-confirm-title">Xuất hóa đơn cho khách hàng này?</h2>
@@ -151,36 +166,76 @@
           và không còn nằm trong danh sách chờ xử lý.
         </p>
         <div class="dialog-actions">
-          <button id="invoice-confirm-cancel" class="ghost-button" type="button">Hủy bỏ</button>
+          <button
+            id="invoice-confirm-cancel"
+            class="ghost-button"
+            type="button"
+          >
+            Hủy bỏ
+          </button>
           <button id="invoice-confirm-approve" type="button">Đồng ý</button>
         </div>
       </div>
     </div>
-    <div id="master-edit-dialog" class="dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="master-edit-title" hidden>
+    <div
+      id="master-edit-dialog"
+      class="dialog-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="master-edit-title"
+      hidden
+    >
       <div class="dialog-panel">
         <p class="eyebrow">Cập nhật danh mục</p>
         <h2 id="master-edit-title">Cập nhật dữ liệu</h2>
-        <p id="master-edit-copy">Chỉnh sửa giá trị và chọn Update để lưu thay đổi.</p>
+        <p id="master-edit-copy">
+          Chỉnh sửa giá trị và chọn Update để lưu thay đổi.
+        </p>
         <form id="master-edit-form" class="dialog-form">
           <label>
             <span id="master-edit-label">Giá trị</span>
             <input id="master-edit-input" name="value" required />
           </label>
           <div class="dialog-actions">
-            <button id="master-edit-cancel" class="ghost-button" type="button">Hủy</button>
-            <button id="master-edit-submit" class="dialog-confirm-accent" type="submit">Update</button>
+            <button id="master-edit-cancel" class="ghost-button" type="button">
+              Hủy
+            </button>
+            <button
+              id="master-edit-submit"
+              class="dialog-confirm-accent"
+              type="submit"
+            >
+              Update
+            </button>
           </div>
         </form>
       </div>
     </div>
-    <div id="master-delete-dialog" class="dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="master-delete-title" hidden>
+    <div
+      id="master-delete-dialog"
+      class="dialog-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="master-delete-title"
+      hidden
+    >
       <div class="dialog-panel">
         <p class="eyebrow">Xác nhận xóa</p>
         <h2 id="master-delete-title">Xóa dữ liệu này?</h2>
-        <p id="master-delete-copy">Hành động này sẽ xóa mục đã chọn khỏi danh sách quản lý.</p>
+        <p id="master-delete-copy">
+          Hành động này sẽ xóa mục đã chọn khỏi danh sách quản lý.
+        </p>
         <div class="dialog-actions">
-          <button id="master-delete-cancel" class="ghost-button" type="button">Hủy</button>
-          <button id="master-delete-confirm" class="dialog-confirm-danger" type="button">Xóa</button>
+          <button id="master-delete-cancel" class="ghost-button" type="button">
+            Hủy
+          </button>
+          <button
+            id="master-delete-confirm"
+            class="dialog-confirm-danger"
+            type="button"
+          >
+            Xóa
+          </button>
         </div>
       </div>
     </div>

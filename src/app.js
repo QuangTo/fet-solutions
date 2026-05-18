@@ -1,3 +1,4 @@
+import { apiRequest } from "./api/client.js";
 import { enhanceDateInputs } from "./ui/date-input.js";
 import { bindDialogDismiss, hideDialog, showDialog } from "./ui/dialog.js";
 import {
@@ -13,13 +14,13 @@ import {
 } from "./ui/master-data.js";
 import { paginateRows, paginationMarkup } from "./ui/table.js";
 
-const STORAGE_KEY = "fet-logistics-demo";
 const SESSION_KEY = "fet-logistics-session";
 const SETTINGS_KEY = "fet-logistics-settings";
 
 const roles = {
+  admin: "Admin",
   warehouse: "Thủ kho",
-  accounting: "Kế toán",
+  accountant: "Kế toán",
   driver: "Lái xe",
 };
 
@@ -28,37 +29,37 @@ const pages = {
     title: "Tổng quan",
     subtitle:
       "Theo dõi tồn kho, tiến độ xuất hàng và những khách hàng cần ưu tiên xử lý.",
-    roles: ["warehouse", "accounting", "driver"],
+    roles: ["admin", "warehouse", "accountant", "driver"],
   },
   "nhap-hang": {
     title: "Nhập hàng",
     subtitle:
       "Tạo đợt nhập, thêm nhiều loại hàng cho cùng khách hàng và kiểm tra tồn còn lại.",
-    roles: ["warehouse", "accounting"],
+    roles: ["admin", "warehouse", "driver"],
   },
   "xuat-hang": {
     title: "Xuất hàng",
     subtitle:
       "Chọn khách hàng, xe, tài xế và số lượng hàng xuất dựa trên tồn kho khả dụng.",
-    roles: ["warehouse", "driver"],
+    roles: ["admin", "warehouse", "driver"],
   },
   "cai-dat": {
     title: "Cài đặt",
     subtitle:
       "Tùy chỉnh giao diện để phù hợp cách anh muốn quan sát dữ liệu mỗi ngày.",
-    roles: ["warehouse", "accounting", "driver"],
+    roles: ["admin"],
   },
   "quan-ly": {
     title: "Quản lý",
     subtitle:
       "Cập nhật danh sách khách hàng, xe và tài xế để các bước nhập xuất luôn nhất quán.",
-    roles: ["warehouse", "accounting"],
+    roles: ["admin", "warehouse"],
   },
   "bao-cao": {
     title: "Báo cáo",
     subtitle:
       "Xem trạng thái chốt hóa đơn và toàn bộ lịch sử xuất hàng theo từng khách hàng.",
-    roles: ["warehouse", "accounting", "driver"],
+    roles: ["admin", "accountant"],
   },
 };
 
@@ -71,95 +72,7 @@ const legacyRoutes = {
   reports: "bao-cao",
 };
 
-const demoVehicles = ["51C-123.45", "50H-888.88", "29C-456.78", "60C-222.11"];
-const demoDrivers = [
-  "Nguyễn Văn An",
-  "Trần Minh Quân",
-  "Lê Hoàng Nam",
-  "Phạm Quốc Huy",
-];
-
-const demoCustomers = [
-  "Vinamilk",
-  "Hoa Phat Group",
-  "Masan Consumer",
-  "Vingroup",
-  "Petrolimex",
-  "FPT Corporation",
-  "Viettel Post",
-  "Sabeco",
-  "Mobile World",
-  "Duc Giang Chemicals",
-  "Vinatex",
-  "Thaco",
-  "Binh Minh Plastics",
-  "Traphaco",
-  "Nam Kim Steel",
-  "Refrigeration Electrical Engineering",
-  "Dabaco",
-  "Gemadept",
-  "Tan Cang Sai Gon",
-  "An Phat Holdings",
-];
-
-const demoItems = [
-  { sku: "THEP", unit: "tan" },
-  { sku: "SUA", unit: "thung" },
-  { sku: "VAI", unit: "cuon" },
-  { sku: "NHUA", unit: "kien" },
-  { sku: "BANH", unit: "thung" },
-  { sku: "HOA CHAT", unit: "can" },
-  { sku: "MAY MOC", unit: "pallet" },
-  { sku: "DAU", unit: "phuy" },
-];
-
-const demoState = {
-  customers: demoCustomers,
-  invoice: buildDemoInvoice(),
-  invoiceApprovals: [],
-  vehicles: demoVehicles,
-  drivers: demoDrivers,
-  dispatches: [
-    {
-      date: "2026-05-17",
-      customer: "Vinamilk",
-      warehouse: "Thủ kho mẫu",
-      truck: "51C-123.45",
-      driver: "Nguyễn Văn An",
-      sku: "THEP",
-      quantity: 50,
-    },
-    {
-      date: "2026-05-17",
-      customer: "Hoa Phat Group",
-      warehouse: "Thủ kho mẫu",
-      truck: "51C-123.45",
-      driver: "Nguyễn Văn An",
-      sku: "SUA",
-      quantity: 120,
-    },
-    {
-      date: "2026-05-18",
-      customer: "Masan Consumer",
-      warehouse: "Thủ kho mẫu",
-      truck: "50H-888.88",
-      driver: "Trần Minh Quân",
-      sku: "VAI",
-      quantity: 80,
-    },
-    {
-      date: "2026-05-18",
-      customer: "Vingroup",
-      warehouse: "Thủ kho mẫu",
-      truck: "50H-888.88",
-      driver: "Trần Minh Quân",
-      sku: "NHUA",
-      quantity: 100,
-    },
-  ],
-};
-
-let state = loadState();
+let state = emptyState();
 let session = loadSession();
 let settings = loadSettings();
 let activePage = getInitialPage();
@@ -222,7 +135,6 @@ const selectors = {
   receiptHistoryPagination: document.querySelector(
     "#receipt-history-pagination",
   ),
-  dispatchTripList: document.querySelector("#dispatch-trip-list"),
   accountingReport: document.querySelector("#accounting-report"),
   reportHistoryTable: document.querySelector("#report-history-table"),
   reportHistoryPagination: document.querySelector("#report-history-pagination"),
@@ -259,37 +171,36 @@ const selectors = {
 };
 
 setToday(selectors.dispatchForm.elements.date);
-setToday(selectors.dispatchHistoryFilter.elements.date);
 setToday(selectors.stockForm.elements.date);
 setDefaultItemFields(selectors.stockForm);
+selectors.dispatchHistoryFilter.reset();
+selectors.dispatchHistoryFilter.elements.date.value = "";
 enhanceDateInputs();
 
-function loadState() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    return structuredClone(demoState);
-  }
-
-  const parsed = JSON.parse(stored);
-  parsed.customers =
-    parsed.customers ||
-    Array.from(
-      new Set(
-        (parsed.invoice || []).map((item) => item.customer || "CustomerA"),
-      ),
-    );
-  parsed.invoiceApprovals = parsed.invoiceApprovals || [];
-  parsed.vehicles = parsed.vehicles || demoVehicles;
-  parsed.drivers = parsed.drivers || demoDrivers;
-  const customers = new Set(
-    (parsed.invoice || []).map((item) => item.customer || "CustomerA"),
-  );
-  return customers.size >= 20 ? parsed : structuredClone(demoState);
+function emptyState() {
+  return {
+    billingReady: [],
+    customerIds: {},
+    customerRecords: [],
+    customers: [],
+    dispatches: [],
+    driverIds: {},
+    driverRecords: [],
+    drivers: [],
+    inventory: [],
+    invoice: [],
+    invoiceApprovals: [],
+    vehicleIds: {},
+    vehicleRecords: [],
+    vehicles: [],
+  };
 }
 
 function loadSession() {
   const stored = localStorage.getItem(SESSION_KEY);
-  return stored ? JSON.parse(stored) : null;
+  if (!stored) return null;
+  const parsed = JSON.parse(stored);
+  return { ...parsed, role: normalizeRole(parsed.role) };
 }
 
 function loadSettings() {
@@ -301,10 +212,6 @@ function loadSettings() {
     textSize: "comfortable",
   };
   return stored ? { ...defaults, ...JSON.parse(stored) } : defaults;
-}
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
 function saveSettings() {
@@ -322,32 +229,106 @@ function getInitialPage() {
   return pages[normalizedPage] ? normalizedPage : "tong-quan";
 }
 
-function navigateTo(page) {
+async function navigateTo(page, { refresh = true } = {}) {
   activePage = pages[page] ? page : "tong-quan";
   window.history.replaceState(null, "", `#${activePage}`);
+  if (refresh) {
+    await refreshAppData();
+  }
   render();
 }
 
-function buildDemoInvoice() {
-  return demoCustomers.flatMap((customer, customerIndex) => {
-    const lineCount = 3 + (customerIndex % 3);
-    return Array.from({ length: lineCount }, (_, lineIndex) => {
-      const item = demoItems[(customerIndex + lineIndex) % demoItems.length];
-      const quantity =
-        80 + (((customerIndex + 2) * (lineIndex + 3) * 17) % 520);
-      const day = String(1 + ((customerIndex + lineIndex) % 17)).padStart(
-        2,
-        "0",
-      );
-      return {
-        customer,
-        date: `2026-05-${day}`,
-        sku: item.sku,
-        quantity,
-        unit: item.unit,
-      };
-    });
-  });
+function normalizeRole(role = "warehouse") {
+  return role === "accounting" ? "accountant" : role;
+}
+
+async function refreshAppData() {
+  const data = await apiRequest("/app-data", {}, session);
+  state = hydrateState(data);
+  if (selectedCustomer && !state.customers.includes(selectedCustomer)) {
+    selectedCustomer = "";
+  }
+}
+
+function hydrateState(data) {
+  const customers = data.customers || [];
+  const vehicles = data.vehicles || [];
+  const drivers = data.drivers || [];
+  return {
+    billingReady: data.billingReady || [],
+    customerIds: Object.fromEntries(customers.map((item) => [item.label, item.id])),
+    customerRecords: customers,
+    customers: customers.map((item) => item.label),
+    dispatches: flattenDispatches(data.dispatches || []),
+    driverIds: Object.fromEntries(drivers.map((item) => [item.label, item.id])),
+    driverRecords: drivers,
+    drivers: drivers.map((item) => item.label),
+    inventory: (data.inventory || []).map((row) => ({
+      ...row,
+      invoiceQuantity: Number(row.receivedQuantity || 0),
+      dispatchedQuantity: Number(row.dispatchedQuantity || 0),
+      remainingQuantity: Number(row.remainingQuantity || 0),
+    })),
+    invoice: flattenReceipts(data.receipts || []),
+    invoiceApprovals: data.invoiceApprovals || [],
+    vehicleIds: Object.fromEntries(vehicles.map((item) => [item.label, item.id])),
+    vehicleRecords: vehicles,
+    vehicles: vehicles.map((item) => item.label),
+  };
+}
+
+function flattenReceipts(receipts) {
+  return receipts.flatMap((receipt) =>
+    (receipt.items || []).map((item) => ({
+      customer: receipt.customer,
+      customerId: receipt.customerId,
+      date: normalizeApiDate(receipt.date),
+      id: item.id,
+      quantity: Number(item.quantity),
+      receiptId: receipt.id,
+      sku: item.sku,
+      unit: item.unit,
+    })),
+  );
+}
+
+function flattenDispatches(dispatches) {
+  return dispatches.flatMap((dispatch) =>
+    (dispatch.items || []).map((item) => ({
+      createdAt: dispatch.createdAt,
+      customer: dispatch.customer,
+      customerId: dispatch.customerId,
+      date: normalizeApiDate(dispatch.date),
+      dispatchId: dispatch.id,
+      driver: dispatch.driver,
+      driverId: dispatch.driverId,
+      id: item.id,
+      quantity: Number(item.quantity),
+      sku: item.sku,
+      truck: dispatch.plate,
+      unit: item.unit,
+      vehicleId: dispatch.vehicleId,
+      warehouse: dispatch.warehouse,
+    })),
+  );
+}
+
+function normalizeApiDate(value) {
+  if (!value) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.toString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+async function refreshAndRender() {
+  await refreshAppData();
+  render();
 }
 
 function invoiceTotals(items = state.invoice) {
@@ -377,30 +358,15 @@ function customerDispatchTotals() {
 }
 
 function inventoryRows(customer = "") {
-  const invoiceItems = customer
-    ? state.invoice.filter((item) => item.customer === customer)
-    : state.invoice;
-  const dispatchItems = customer
-    ? state.dispatches.filter((item) => item.customer === customer)
-    : state.dispatches;
-  const invoiced = invoiceTotals(invoiceItems);
-  const dispatched = dispatchTotals(dispatchItems);
-  const units = skuUnits(invoiceItems);
-  const skus = Array.from(
-    new Set([...Object.keys(invoiced), ...Object.keys(dispatched)]),
-  ).sort();
-
-  return skus.map((sku) => {
-    const invoiceQuantity = invoiced[sku] || 0;
-    const dispatchedQuantity = dispatched[sku] || 0;
-    return {
-      sku,
-      invoiceQuantity,
-      dispatchedQuantity,
-      remainingQuantity: invoiceQuantity - dispatchedQuantity,
-      unit: units[sku] || "don vi",
-    };
-  });
+  return state.inventory
+    .filter((row) => !customer || row.customer === customer)
+    .map((row) => ({
+      ...row,
+      invoiceQuantity: Number(row.invoiceQuantity || row.receivedQuantity || 0),
+      dispatchedQuantity: Number(row.dispatchedQuantity || 0),
+      remainingQuantity: Number(row.remainingQuantity || 0),
+      unit: row.unit || "đơn vị",
+    }));
 }
 
 function skuUnits(items = state.invoice) {
@@ -412,31 +378,20 @@ function skuUnits(items = state.invoice) {
 }
 
 function stockRows() {
-  const dispatched = customerDispatchTotals();
-  const dispatchedUsed = {};
-
-  return state.invoice
-    .map((item) => {
-      const sku = normalizeSku(item.sku);
-      const customer = item.customer || "CustomerA";
-      const key = `${customer}||${sku}`;
-      const dispatchedForSku = dispatched[key] || 0;
-      const alreadyUsed = dispatchedUsed[key] || 0;
-      const quantity = Number(item.quantity);
-      const deducted = Math.min(
-        quantity,
-        Math.max(dispatchedForSku - alreadyUsed, 0),
-      );
-      dispatchedUsed[key] = alreadyUsed + deducted;
-
-      return {
-        customer,
-        sku,
-        unit: item.unit || "don vi",
-        date: item.date || "2026-05-17",
-        remainingQuantity: quantity - deducted,
-      };
-    })
+  return inventoryRows()
+    .map((row) => ({
+      customer: row.customer,
+      sku: row.sku,
+      unit: row.unit || "đơn vị",
+      date:
+        state.invoice
+          .filter(
+            (item) => item.customer === row.customer && item.sku === row.sku,
+          )
+          .sort((a, b) => b.date.localeCompare(a.date))[0]?.date ||
+        "2026-05-01",
+      remainingQuantity: Number(row.remainingQuantity),
+    }))
     .filter((row) => row.remainingQuantity > 0);
 }
 
@@ -472,35 +427,6 @@ function customerSummaries() {
         b.totalQuantity - a.totalQuantity ||
         a.customer.localeCompare(b.customer),
     );
-}
-
-function tripGroups(customerFilter = "") {
-  const groups = new Map();
-
-  state.dispatches
-    .filter((item) => !customerFilter || item.customer === customerFilter)
-    .forEach((item) => {
-      const customer = item.customer || "CustomerA";
-      const key = `${item.date}-${customer}-${item.truck}-${item.driver}`;
-      if (!groups.has(key)) {
-        groups.set(key, {
-          date: item.date,
-          customer,
-          truck: item.truck,
-          driver: item.driver,
-          items: [],
-          total: 0,
-        });
-      }
-
-      const trip = groups.get(key);
-      trip.items.push(`${item.sku}: ${item.quantity}`);
-      trip.total += Number(item.quantity);
-    });
-
-  return Array.from(groups.values()).sort((a, b) =>
-    a.date.localeCompare(b.date),
-  );
 }
 
 function render() {
@@ -544,39 +470,6 @@ function render() {
   renderDispatchHistory();
 
   renderAccountingReport();
-
-  selectors.dispatchTripList.innerHTML = selectedCustomer
-    ? tripMarkupForCustomer(selectedCustomer)
-    : sampleTripCard();
-}
-
-function tripMarkupForCustomer(customer) {
-  return (
-    tripGroups(customer)
-      .map(
-        (trip) => `
-    <article class="trip-card">
-      <div>
-        <strong>${escapeHtml(trip.truck)}</strong>
-        <span>${escapeHtml(trip.customer)} - ${escapeHtml(trip.driver)} - ${formatDate(trip.date)}</span>
-      </div>
-      <p>${trip.items.map(escapeHtml).join(" | ")}</p>
-      <small>Tổng số lượng chuyến xe: ${trip.total.toLocaleString("vi-VN")}</small>
-    </article>
-  `,
-      )
-      .join("") || sampleTripCard("Khách hàng này chưa có chuyến xuất hàng.")
-  );
-}
-
-function sampleTripCard(
-  message = "Chọn khách hàng để xem các chuyến xe liên quan.",
-) {
-  return `
-    <article class="trip-card">
-      <p>${escapeHtml(message)}</p>
-    </article>
-  `;
 }
 
 function customerInventorySummary(customer) {
@@ -716,37 +609,6 @@ function closeInvoiceConfirmDialog() {
   hideDialog(selectors.invoiceConfirmDialog);
 }
 
-function syncMasterReferences(listName, oldValue, newValue = "") {
-  if (listName === "customers") {
-    state.invoice.forEach((item) => {
-      if (item.customer === oldValue) item.customer = newValue;
-    });
-    state.dispatches.forEach((item) => {
-      if (item.customer === oldValue) item.customer = newValue;
-    });
-    (state.invoiceApprovals || []).forEach((item) => {
-      if (item.customer === oldValue) item.customer = newValue;
-    });
-    if (selectedCustomer === oldValue) {
-      selectedCustomer = newValue;
-    }
-    return;
-  }
-
-  if (listName === "vehicles") {
-    state.dispatches.forEach((item) => {
-      if (item.truck === oldValue) item.truck = newValue;
-    });
-    return;
-  }
-
-  if (listName === "drivers") {
-    state.dispatches.forEach((item) => {
-      if (item.driver === oldValue) item.driver = newValue;
-    });
-  }
-}
-
 function openMasterEditDialog(listName, index) {
   const currentList = state[listName] || [];
   const currentValue = currentList[index];
@@ -783,6 +645,26 @@ function openMasterDeleteDialog(listName, index) {
 function closeMasterDeleteDialog() {
   pendingMasterDelete = null;
   hideDialog(selectors.masterDeleteDialog);
+}
+
+function masterApiPath(listName) {
+  return {
+    customers: "/customers",
+    drivers: "/drivers",
+    vehicles: "/vehicles",
+  }[listName];
+}
+
+function masterPayload(listName, value) {
+  return listName === "vehicles" ? { plate: value } : { name: value };
+}
+
+function masterId(listName, value) {
+  return {
+    customers: state.customerIds,
+    drivers: state.driverIds,
+    vehicles: state.vehicleIds,
+  }[listName]?.[value];
 }
 
 function receiptSummaryRows(customer) {
@@ -1101,14 +983,18 @@ function inventoryTrend(dayCount) {
 }
 
 function renderSession() {
-  const activeRole = session?.role || "warehouse";
+  const activeRole = normalizeRole(session?.role || "warehouse");
   document.body.dataset.role = activeRole;
   selectors.loginScreen.hidden = Boolean(session);
   selectors.activeUser.textContent = session?.name || "Người dùng mẫu";
   selectors.activeRole.textContent = roles[activeRole];
 
   selectors.writableOnly.forEach((form) => {
-    const canWrite = activeRole === "warehouse";
+    const isMasterForm = form.classList.contains("master-form");
+    const canWrite =
+      activeRole === "admin" ||
+      (!isMasterForm && ["driver", "warehouse"].includes(activeRole)) ||
+      (isMasterForm && activeRole === "warehouse");
     form.querySelectorAll("input, select, button").forEach((field) => {
       field.disabled = !canWrite;
     });
@@ -1116,7 +1002,7 @@ function renderSession() {
 }
 
 function renderPage() {
-  const activeRole = session?.role || "warehouse";
+  const activeRole = normalizeRole(session?.role || "warehouse");
   if (!pages[activePage].roles.includes(activeRole)) {
     activePage = "tong-quan";
     window.history.replaceState(null, "", "#tong-quan");
@@ -1336,13 +1222,6 @@ function applySettings() {
   selectors.settingsForm.elements.textSize.value = settings.textSize;
 }
 
-function ensureCustomer(customer) {
-  state.customers = state.customers || [];
-  if (customer && !state.customers.includes(customer)) {
-    state.customers.push(customer);
-  }
-}
-
 function syncReceiptCustomerSelects() {
   selectors.stockForm.elements.customer.value = selectedCustomer || "";
   selectors.dispatchForm.elements.customer.value = selectedCustomer || "";
@@ -1359,57 +1238,88 @@ function setDefaultItemFields(form) {
   form.elements.unit.value = "tấn";
 }
 
-selectors.stockForm.addEventListener("submit", (event) => {
+selectors.stockForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const data = new FormData(event.currentTarget);
-  state.invoice.push({
-    customer: data.get("customer").toString().trim(),
-    date: data.get("date"),
-    sku: normalizeSku(data.get("sku")),
-    quantity: Number(data.get("quantity")),
-    unit: data.get("unit").toString().trim(),
-  });
-  ensureCustomer(data.get("customer").toString().trim());
-  saveState();
-  resetReceiptPages();
-  resetItemFields(event.currentTarget);
-  setToday(selectors.stockForm.elements.date);
-  render();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const customer = data.get("customer").toString().trim();
+  try {
+    await apiRequest(
+      "/receipts",
+      {
+        body: JSON.stringify({
+          customerName: customer,
+          date: data.get("date"),
+          items: [
+            {
+              quantity: Number(data.get("quantity")),
+              sku: normalizeSku(data.get("sku")),
+              unit: data.get("unit").toString().trim(),
+            },
+          ],
+          receivedByName: session?.name || "Thủ kho mẫu",
+        }),
+        method: "POST",
+      },
+      session,
+    );
+    selectedCustomer = customer;
+    resetReceiptPages();
+    resetItemFields(form);
+    setToday(form.elements.date);
+    await refreshAndRender();
+    showDispatchToast("Thêm hàng thành công. Dữ liệu nhập kho đã được cập nhật.");
+  } catch (error) {
+    showDispatchToast(error.message);
+  }
 });
 
-selectors.dispatchForm.addEventListener("submit", (event) => {
+selectors.dispatchForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const data = new FormData(event.currentTarget);
+  const form = event.currentTarget;
+  const data = new FormData(form);
   const customer = data.get("customer").toString().trim();
-  state.dispatches.push({
-    date: data.get("date"),
-    customer,
-    warehouse: session?.name || "Thủ kho mẫu",
-    truck: data.get("truck").toString().trim().toUpperCase(),
-    driver: data.get("driver").toString().trim(),
-    sku: normalizeSku(data.get("sku")),
-    quantity: Number(data.get("quantity")),
-    createdAt: new Date().toISOString(),
-  });
-  ensureCustomer(customer);
-  selectedCustomer = customer;
-  saveState();
-  event.currentTarget.reset();
-  setToday(selectors.dispatchForm.elements.date);
-  selectors.dispatchForm.elements.customer.value = selectedCustomer;
-  selectors.dispatchHistoryFilter.elements.date.value = data.get("date");
-  selectors.dispatchHistoryFilter.elements.truck.value = data
-    .get("truck")
-    .toString()
-    .trim()
-    .toUpperCase();
-  selectors.dispatchHistoryFilter.elements.driver.value = data
-    .get("driver")
-    .toString()
-    .trim();
-  dispatchHistoryPage = 1;
-  showDispatchToast();
-  render();
+  const truck = data.get("truck").toString().trim().toUpperCase();
+  const driver = data.get("driver").toString().trim();
+  try {
+    await apiRequest(
+      "/dispatches",
+      {
+        body: JSON.stringify({
+          customerName: customer,
+          date: data.get("date"),
+          driverName: driver,
+          items: [
+            {
+              quantity: Number(data.get("quantity")),
+              sku: normalizeSku(data.get("sku")),
+              unit:
+                stockRows().find(
+                  (row) =>
+                    row.customer === customer &&
+                    row.sku === normalizeSku(data.get("sku")),
+                )?.unit || "đơn vị",
+            },
+          ],
+          plate: truck,
+          warehouseName: session?.name || "Thủ kho mẫu",
+        }),
+        method: "POST",
+      },
+      session,
+    );
+    selectedCustomer = customer;
+    form.reset();
+    setToday(form.elements.date);
+    selectors.dispatchHistoryFilter.elements.date.value = data.get("date");
+    selectors.dispatchHistoryFilter.elements.truck.value = truck;
+    selectors.dispatchHistoryFilter.elements.driver.value = driver;
+    dispatchHistoryPage = 1;
+    showDispatchToast();
+    await refreshAndRender();
+  } catch (error) {
+    showDispatchToast(error.message);
+  }
 });
 
 selectors.loginForm.addEventListener("submit", (event) => {
@@ -1429,11 +1339,13 @@ selectors.logoutButton.addEventListener("click", () => {
 });
 
 selectors.pageLinks.forEach((link) => {
-  link.addEventListener("click", (event) => {
+  link.addEventListener("click", async (event) => {
     event.preventDefault();
     const page = event.currentTarget.dataset.pageLink;
-    if (pages[page].roles.includes(session?.role || "warehouse")) {
-      navigateTo(page);
+    if (
+      pages[page].roles.includes(normalizeRole(session?.role || "warehouse"))
+    ) {
+      await navigateTo(page);
     }
   });
 });
@@ -1447,7 +1359,7 @@ selectors.customerGrid.addEventListener("click", (event) => {
   resetReceiptPages();
   syncReceiptCustomerSelects();
   selectors.dispatchForm.elements.customer.value = selectedCustomer;
-  navigateTo("nhap-hang");
+  navigateTo("nhap-hang", { refresh: false });
 });
 
 selectors.stockForm.elements.customer.addEventListener("change", () => {
@@ -1514,45 +1426,53 @@ selectors.skuSelect.addEventListener("change", () => {
   renderDispatchSkuOptions();
 });
 
-selectors.vehicleForm.addEventListener("submit", (event) => {
+selectors.vehicleForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const plate = new FormData(event.currentTarget)
+  const form = event.currentTarget;
+  const plate = new FormData(form)
     .get("plate")
     .toString()
     .trim()
     .toUpperCase();
-  if (plate && !state.vehicles.includes(plate)) {
-    state.vehicles.push(plate);
-    vehicleManagementPage = Math.ceil(state.vehicles.length / 10);
-    saveState();
+  if (plate) {
+    await apiRequest(
+      "/vehicles",
+      { body: JSON.stringify({ plate }), method: "POST" },
+      session,
+    );
   }
-  event.currentTarget.reset();
-  render();
+  form.reset();
+  await refreshAndRender();
 });
 
-selectors.driverForm.addEventListener("submit", (event) => {
+selectors.driverForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const name = new FormData(event.currentTarget).get("name").toString().trim();
-  if (name && !state.drivers.includes(name)) {
-    state.drivers.push(name);
-    driverManagementPage = Math.ceil(state.drivers.length / 10);
-    saveState();
+  const form = event.currentTarget;
+  const name = new FormData(form).get("name").toString().trim();
+  if (name) {
+    await apiRequest(
+      "/drivers",
+      { body: JSON.stringify({ name }), method: "POST" },
+      session,
+    );
   }
-  event.currentTarget.reset();
-  render();
+  form.reset();
+  await refreshAndRender();
 });
 
-selectors.customerForm.addEventListener("submit", (event) => {
+selectors.customerForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const name = new FormData(event.currentTarget).get("name").toString().trim();
-  state.customers = state.customers || [];
-  if (name && !state.customers.includes(name)) {
-    state.customers.push(name);
-    customerManagementPage = Math.ceil(state.customers.length / 10);
-    saveState();
+  const form = event.currentTarget;
+  const name = new FormData(form).get("name").toString().trim();
+  if (name) {
+    await apiRequest(
+      "/customers",
+      { body: JSON.stringify({ name }), method: "POST" },
+      session,
+    );
   }
-  event.currentTarget.reset();
-  render();
+  form.reset();
+  await refreshAndRender();
 });
 
 selectors.settingsForm.addEventListener("change", (event) => {
@@ -1610,23 +1530,32 @@ selectors.accountingReport.addEventListener("click", (event) => {
   render();
 });
 
-selectors.invoiceConfirmApprove.addEventListener("click", () => {
+selectors.invoiceConfirmApprove.addEventListener("click", async () => {
   if (!pendingInvoiceCustomer) return;
-  state.invoiceApprovals = state.invoiceApprovals || [];
-  state.invoiceApprovals.unshift({
-    date: new Date().toISOString().slice(0, 10),
-    customer: pendingInvoiceCustomer,
-    status: "Hoàn thành",
-  });
-  selectedReportCustomer = "";
-  reportHistoryPage = 1;
-  invoiceHistoryPage = 1;
-  saveState();
-  showDispatchToast(
-    "Xuất hóa đơn và lịch sử xuất hóa đơn đã ghi nhận thành công.",
-  );
-  closeInvoiceConfirmDialog();
-  render();
+  try {
+    await apiRequest(
+      "/invoice-approvals",
+      {
+        body: JSON.stringify({
+          approvedByName: session?.name || "Kế toán mẫu",
+          customerId: state.customerIds[pendingInvoiceCustomer],
+          status: "Hoàn thành",
+        }),
+        method: "POST",
+      },
+      session,
+    );
+    selectedReportCustomer = "";
+    reportHistoryPage = 1;
+    invoiceHistoryPage = 1;
+    showDispatchToast(
+      "Xuất hóa đơn và lịch sử xuất hóa đơn đã ghi nhận thành công.",
+    );
+    closeInvoiceConfirmDialog();
+    await refreshAndRender();
+  } catch (error) {
+    showDispatchToast(error.message);
+  }
 });
 
 bindDialogDismiss({
@@ -1635,7 +1564,7 @@ bindDialogDismiss({
   onDismiss: closeInvoiceConfirmDialog,
 });
 
-selectors.masterEditForm.addEventListener("submit", (event) => {
+selectors.masterEditForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!pendingMasterEdit) return;
 
@@ -1666,15 +1595,19 @@ selectors.masterEditForm.addEventListener("submit", (event) => {
 
   selectors.masterEditInput.setCustomValidity("");
   if (oldValue !== nextValue) {
-    state[listName] = currentList.map((item, itemIndex) =>
-      itemIndex === index ? nextValue : item,
+    await apiRequest(
+      `${masterApiPath(listName)}/${masterId(listName, oldValue)}`,
+      {
+        body: JSON.stringify(masterPayload(listName, nextValue)),
+        method: "PATCH",
+      },
+      session,
     );
-    syncMasterReferences(listName, oldValue, nextValue);
-    saveState();
-    render();
+    if (selectedCustomer === oldValue) selectedCustomer = nextValue;
   }
 
   closeMasterEditDialog();
+  await refreshAndRender();
 });
 
 selectors.masterEditInput.addEventListener("input", () => {
@@ -1687,16 +1620,19 @@ bindDialogDismiss({
   onDismiss: closeMasterEditDialog,
 });
 
-selectors.masterDeleteConfirm.addEventListener("click", () => {
+selectors.masterDeleteConfirm.addEventListener("click", async () => {
   if (!pendingMasterDelete) return;
   const { listName, index } = pendingMasterDelete;
   const currentList = state[listName] || [];
   const oldValue = currentList[index];
-  state[listName] = currentList.filter((_, itemIndex) => itemIndex !== index);
-  syncMasterReferences(listName, oldValue, "");
-  saveState();
+  await apiRequest(
+    `${masterApiPath(listName)}/${masterId(listName, oldValue)}`,
+    { method: "DELETE" },
+    session,
+  );
+  if (selectedCustomer === oldValue) selectedCustomer = "";
   closeMasterDeleteDialog();
-  render();
+  await refreshAndRender();
 });
 
 bindDialogDismiss({
@@ -1736,7 +1672,16 @@ selectors.overviewPeriod.addEventListener("change", () => {
 
 window.addEventListener("hashchange", () => {
   activePage = getInitialPage();
-  render();
+  refreshAndRender();
 });
 
-render();
+async function initializeApp() {
+  try {
+    await refreshAppData();
+  } catch (error) {
+    showDispatchToast(`Chưa kết nối được API: ${error.message}`);
+  }
+  render();
+}
+
+initializeApp();
