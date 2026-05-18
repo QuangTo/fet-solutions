@@ -1,0 +1,91 @@
+<section
+          id="dispatch"
+          class="page-view role-section"
+          data-page="xuat-hang"
+          data-roles="warehouse driver"
+        >
+          <div class="single-column">
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Tạo phiếu xuất hàng</h2>
+                  <p>
+                    Chọn khách hàng, xe, tài xế và lượng hàng cần xuất lên xe.
+                  </p>
+                </div>
+              </div>
+              <form id="dispatch-form" class="dispatch-form writable-only">
+                <label>
+                  Ngày xuất
+                  <input name="date" type="date" required />
+                </label>
+                <label>
+                  Khách hàng
+                  <select name="customer" required></select>
+                </label>
+                <label>
+                  Xe
+                  <select name="truck" required></select>
+                </label>
+                <label>
+                  Tài xế
+                  <select name="driver" required></select>
+                </label>
+                <label>
+                  Loại hàng
+                  <select name="sku" required></select>
+                </label>
+                <label>
+                  Số lượng
+                  <input
+                    name="quantity"
+                    type="number"
+                    min="1"
+                    step="1"
+                    required
+                  />
+                </label>
+                <button class="form-action" type="submit">Xuất hàng</button>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Lịch sử xuất hàng</h2>
+                  <p>Lọc nhanh các chuyến đã xuất theo ngày, xe và tài xế.</p>
+                </div>
+              </div>
+              <form id="dispatch-history-filter" class="history-filter">
+                <label>
+                  Ngày xuất
+                  <input name="date" type="date" />
+                </label>
+                <label>
+                  Xe
+                  <select name="truck"></select>
+                </label>
+                <label>
+                  Tài xế
+                  <select name="driver"></select>
+                </label>
+              </form>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Ngày xuất</th>
+                      <th>Khách hàng</th>
+                      <th>Xe</th>
+                      <th>Tài xế</th>
+                      <th>Loại hàng</th>
+                      <th>Số lượng</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dispatch-history-table"></tbody>
+                </table>
+              </div>
+              <div id="dispatch-history-pagination" class="pagination"></div>
+            </article>
+          </div>
+        </section>

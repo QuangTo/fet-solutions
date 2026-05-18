@@ -1,0 +1,555 @@
+.metric,
+.panel,
+.trip-card,
+.status-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.metric {
+  padding: 20px;
+}
+
+.metric span,
+.metric small,
+.panel p,
+.trip-card span,
+.trip-card small,
+.status-card span,
+.status-card small {
+  color: var(--muted);
+}
+
+.metric strong {
+  display: block;
+  margin: 8px 0;
+  font-size: 1.8rem;
+}
+
+.metric.accent strong {
+  color: var(--accent);
+  font-size: 1.3rem;
+}
+
+.customer-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.report-customer-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.customer-card {
+  display: grid;
+  gap: 8px;
+  min-height: 124px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  background: color-mix(in srgb, var(--paper) 84%, var(--wash));
+  color: var(--ink);
+  text-align: left;
+}
+
+.customer-card:hover,
+.customer-card.active {
+  border-color: color-mix(in srgb, var(--accent) 64%, var(--line));
+  background: color-mix(in srgb, var(--paper) 78%, var(--accent-soft));
+  transform: translateY(-1px);
+}
+
+.inventory-chart {
+  display: grid;
+  gap: 12px;
+}
+
+.inventory-chart svg {
+  width: 100%;
+  min-height: 260px;
+}
+
+.chart-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.chart-summary strong {
+  color: var(--accent);
+  font-size: 1.5rem;
+}
+
+.chart-summary.down strong {
+  color: var(--amber);
+}
+
+.chart-grid {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart-area {
+  fill: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.chart-dot {
+  fill: var(--paper);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.chart-axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.customer-card span {
+  min-height: 38px;
+  font-weight: 800;
+}
+
+.customer-card strong {
+  color: var(--accent);
+  font-size: 1.45rem;
+}
+
+.customer-card small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.report-customer-card {
+  display: grid;
+  gap: 8px;
+  grid-template-rows: auto 1fr auto;
+  min-height: 124px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  background: color-mix(in srgb, var(--paper) 84%, var(--wash));
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.report-customer-card:hover,
+.report-customer-card.active {
+  border-color: color-mix(in srgb, var(--accent) 64%, var(--line));
+  background: color-mix(in srgb, var(--paper) 78%, var(--accent-soft));
+  transform: translateY(-1px);
+}
+
+.report-card-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.report-customer-card strong {
+  color: var(--accent);
+  font-size: 1.15rem;
+}
+
+.report-meta {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.invoice-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 12px;
+  background: var(--accent);
+  color: white;
+  font-weight: 900;
+}
+
+.empty-state {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 6px;
+  min-height: 156px;
+  place-content: center;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 22px;
+  background: color-mix(in srgb, var(--paper) 76%, var(--wash));
+  color: var(--muted);
+  text-align: center;
+}
+
+.empty-state strong {
+  color: var(--ink);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.pagination button {
+  min-height: 34px;
+  border-radius: 10px;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--paper) 74%, var(--accent-soft));
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+.panel {
+  padding: 20px;
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.report-heading {
+  align-items: end;
+}
+
+.report-filter {
+  width: min(320px, 100%);
+}
+
+.inline-form,
+.dispatch-form,
+.stock-form,
+.master-form,
+.settings-form {
+  display: grid;
+  gap: 12px;
+}
+
+.inline-form {
+  grid-template-columns: 1fr;
+}
+
+.dispatch-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stock-form {
+  grid-template-columns: 1fr;
+}
+
+.master-form {
+  grid-template-columns: minmax(0, 1fr) minmax(224px, auto);
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.settings-form {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.history-filter {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.master-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.master-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: color-mix(in srgb, var(--paper) 92%, var(--wash));
+  font-size: 0.88rem;
+}
+
+.master-item strong {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.master-item div {
+  display: flex;
+  gap: 6px;
+}
+
+.master-item button {
+  min-width: 96px;
+  min-height: 30px;
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--line));
+  border-radius: 7px;
+  padding: 0 9px;
+  background: color-mix(in srgb, var(--paper) 50%, var(--accent-soft));
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.master-item button[data-action="delete"] {
+  border-color: color-mix(in srgb, var(--red) 42%, var(--line));
+  background: color-mix(in srgb, var(--paper) 70%, var(--red));
+  color: var(--red);
+}
+
+.batch-fields,
+.line-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.batch-fields {
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.28fr);
+}
+
+.line-fields {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.22fr) minmax(140px, 0.2fr) auto;
+  align-items: end;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+input,
+select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0 11px;
+  background: color-mix(in srgb, var(--paper) 88%, var(--wash));
+  color: var(--ink);
+}
+
+input::placeholder {
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+}
+
+form button {
+  min-height: 42px;
+  min-width: 112px;
+  border-radius: 10px;
+  padding: 0 18px;
+  background: var(--accent);
+  color: white;
+  font-weight: 800;
+}
+
+.form-action {
+  grid-column: 1 / -1;
+  justify-self: center;
+  min-width: 360px;
+}
+
+.toast-message {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 30;
+  max-width: min(420px, calc(100vw - 32px));
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--paper) 88%, var(--accent-soft));
+  color: var(--accent-strong);
+  box-shadow: var(--shadow);
+  font-weight: 800;
+  text-align: center;
+  transform: translateY(-8px);
+  opacity: 0;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.toast-message.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(10, 18, 28, 0.42);
+}
+
+.dialog-panel {
+  width: min(460px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.dialog-panel h2 {
+  margin-bottom: 8px;
+  font-size: 1.25rem;
+}
+
+.dialog-panel p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dialog-actions button {
+  min-height: 40px;
+  border-radius: 10px;
+  padding: 0 16px;
+  background: var(--accent);
+  color: white;
+  font-weight: 800;
+}
+
+.table-wrap {
+  margin-top: 18px;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 10px;
+  text-align: left;
+}
+
+th {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.warning-row td {
+  color: var(--red);
+  background: color-mix(in srgb, var(--paper) 84%, var(--red));
+}
+
+.status-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-left: 5px solid var(--amber);
+}
+
+.status-card.complete {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--paper) 86%, var(--accent));
+}
+
+.status-card.pending {
+  background: color-mix(in srgb, var(--paper) 86%, var(--amber));
+}
+
+.status-card div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: color-mix(in srgb, var(--paper) 78%, var(--accent));
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.status-pill.complete {
+  width: fit-content;
+  background: var(--blue);
+  color: white;
+}
+
+.status-pill.pending {
+  width: fit-content;
+  background: color-mix(in srgb, var(--paper) 68%, var(--amber));
+  color: var(--amber);
+}
+
+.status-card.pending .status-pill {
+  background: color-mix(in srgb, var(--paper) 78%, var(--amber));
+  color: var(--amber);
+}
+
+.trip-list {
+  display: grid;
+  gap: 10px;
+}
+
+.trip-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.trip-card div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trip-card p {
+  margin-bottom: 0;
+}

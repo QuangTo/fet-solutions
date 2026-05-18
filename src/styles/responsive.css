@@ -1,0 +1,92 @@
+@media (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    height: auto;
+    overflow: visible;
+    padding: 16px;
+  }
+
+  .workspace {
+    height: auto;
+    overflow: visible;
+  }
+
+  .nav-list {
+    display: flex;
+    flex-direction: row;
+    flex: none;
+    overflow-x: auto;
+    margin-top: 16px;
+  }
+
+  .nav-settings {
+    margin-top: 0;
+  }
+
+  .metric-grid,
+  .report-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .management-grid {
+    gap: 16px;
+  }
+
+  .customer-grid,
+  .report-customer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .report-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .workspace {
+    padding: 18px 14px;
+  }
+
+  .topbar,
+  .title-row,
+  .panel-heading,
+  .trip-card div {
+    display: grid;
+  }
+
+  .user-bar,
+  .inline-form,
+  .dispatch-form,
+  .stock-form,
+  .master-form,
+  .settings-form,
+  .history-filter,
+  .batch-fields,
+  .line-fields,
+  .customer-grid,
+  .report-customer-grid,
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user-bar {
+    width: 100%;
+  }
+
+  .user-bar {
+    align-items: stretch;
+  }
+
+  .user-bar div {
+    min-width: 0;
+  }
+}
