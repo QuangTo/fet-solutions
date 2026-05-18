@@ -104,7 +104,6 @@
       <section class="workspace">
         <header class="topbar">
           <div>
-            <p id="page-kicker" class="eyebrow">Vận hành kho vận</p>
             <h1 id="page-title">Tổng quan</h1>
             <div class="title-row">
               <p id="page-subtitle" class="page-subtitle">
@@ -154,6 +153,34 @@
         <div class="dialog-actions">
           <button id="invoice-confirm-cancel" class="ghost-button" type="button">Hủy bỏ</button>
           <button id="invoice-confirm-approve" type="button">Đồng ý</button>
+        </div>
+      </div>
+    </div>
+    <div id="master-edit-dialog" class="dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="master-edit-title" hidden>
+      <div class="dialog-panel">
+        <p class="eyebrow">Cập nhật danh mục</p>
+        <h2 id="master-edit-title">Cập nhật dữ liệu</h2>
+        <p id="master-edit-copy">Chỉnh sửa giá trị và chọn Update để lưu thay đổi.</p>
+        <form id="master-edit-form" class="dialog-form">
+          <label>
+            <span id="master-edit-label">Giá trị</span>
+            <input id="master-edit-input" name="value" required />
+          </label>
+          <div class="dialog-actions">
+            <button id="master-edit-cancel" class="ghost-button" type="button">Hủy</button>
+            <button id="master-edit-submit" class="dialog-confirm-accent" type="submit">Update</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="master-delete-dialog" class="dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="master-delete-title" hidden>
+      <div class="dialog-panel">
+        <p class="eyebrow">Xác nhận xóa</p>
+        <h2 id="master-delete-title">Xóa dữ liệu này?</h2>
+        <p id="master-delete-copy">Hành động này sẽ xóa mục đã chọn khỏi danh sách quản lý.</p>
+        <div class="dialog-actions">
+          <button id="master-delete-cancel" class="ghost-button" type="button">Hủy</button>
+          <button id="master-delete-confirm" class="dialog-confirm-danger" type="button">Xóa</button>
         </div>
       </div>
     </div>

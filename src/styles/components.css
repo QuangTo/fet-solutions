@@ -312,19 +312,19 @@
 .master-item button {
   min-width: 96px;
   min-height: 30px;
-  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line));
   border-radius: 7px;
   padding: 0 9px;
-  background: color-mix(in srgb, var(--paper) 50%, var(--accent-soft));
-  color: var(--accent-strong);
+  background: var(--accent);
+  color: white;
   font-size: 0.78rem;
   font-weight: 800;
 }
 
 .master-item button[data-action="delete"] {
-  border-color: color-mix(in srgb, var(--red) 42%, var(--line));
-  background: color-mix(in srgb, var(--paper) 70%, var(--red));
-  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 56%, var(--line));
+  background: var(--red);
+  color: white;
 }
 
 .batch-fields,
@@ -448,6 +448,32 @@ form button {
   background: var(--accent);
   color: white;
   font-weight: 800;
+}
+
+.dialog-actions .ghost-button {
+  background: color-mix(in srgb, var(--paper) 76%, var(--accent-soft));
+  color: var(--accent-strong);
+}
+
+.dialog-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.dialog-form label span {
+  display: inline-block;
+  margin-bottom: 6px;
+}
+
+.dialog-actions .dialog-confirm-accent {
+  background: var(--accent);
+  color: white;
+}
+
+.dialog-actions .dialog-confirm-danger {
+  background: var(--red);
+  color: white;
 }
 
 .table-wrap {

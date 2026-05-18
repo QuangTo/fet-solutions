@@ -1,4 +1,16 @@
 import { enhanceDateInputs } from "./ui/date-input.js";
+import { bindDialogDismiss, hideDialog, showDialog } from "./ui/dialog.js";
+import {
+  emptyStateMarkup,
+  escapeHtml,
+  optionMarkup,
+  sampleTableRow,
+} from "./ui/html.js";
+import {
+  masterDataConfig,
+  masterListView,
+  normalizeMasterValue,
+} from "./ui/master-data.js";
 import { paginateRows, paginationMarkup } from "./ui/table.js";
 
 const STORAGE_KEY = "fet-logistics-demo";
@@ -8,46 +20,46 @@ const SETTINGS_KEY = "fet-logistics-settings";
 const roles = {
   warehouse: "Thủ kho",
   accounting: "Kế toán",
-  driver: "Lái xe"
+  driver: "Lái xe",
 };
 
 const pages = {
   "tong-quan": {
     title: "Tổng quan",
-    kicker: "Bức tranh vận hành",
-    subtitle: "Theo dõi tồn kho, tiến độ xuất hàng và những khách hàng cần ưu tiên xử lý.",
-    roles: ["warehouse", "accounting", "driver"]
+    subtitle:
+      "Theo dõi tồn kho, tiến độ xuất hàng và những khách hàng cần ưu tiên xử lý.",
+    roles: ["warehouse", "accounting", "driver"],
   },
   "nhap-hang": {
     title: "Nhập hàng",
-    kicker: "Ghi nhận hàng vào kho",
-    subtitle: "Tạo đợt nhập, thêm nhiều loại hàng cho cùng khách hàng và kiểm tra tồn còn lại.",
-    roles: ["warehouse", "accounting"]
+    subtitle:
+      "Tạo đợt nhập, thêm nhiều loại hàng cho cùng khách hàng và kiểm tra tồn còn lại.",
+    roles: ["warehouse", "accounting"],
   },
   "xuat-hang": {
     title: "Xuất hàng",
-    kicker: "Điều phối chuyến xe",
-    subtitle: "Chọn khách hàng, xe, tài xế và số lượng hàng xuất dựa trên tồn kho khả dụng.",
-    roles: ["warehouse", "driver"]
+    subtitle:
+      "Chọn khách hàng, xe, tài xế và số lượng hàng xuất dựa trên tồn kho khả dụng.",
+    roles: ["warehouse", "driver"],
   },
   "cai-dat": {
     title: "Cài đặt",
-    kicker: "Không gian làm việc",
-    subtitle: "Tùy chỉnh giao diện để phù hợp cách anh muốn quan sát dữ liệu mỗi ngày.",
-    roles: ["warehouse", "accounting", "driver"]
+    subtitle:
+      "Tùy chỉnh giao diện để phù hợp cách anh muốn quan sát dữ liệu mỗi ngày.",
+    roles: ["warehouse", "accounting", "driver"],
   },
   "quan-ly": {
     title: "Quản lý",
-    kicker: "Dữ liệu nền tảng",
-    subtitle: "Cập nhật danh sách khách hàng, xe và tài xế để các bước nhập xuất luôn nhất quán.",
-    roles: ["warehouse", "accounting"]
+    subtitle:
+      "Cập nhật danh sách khách hàng, xe và tài xế để các bước nhập xuất luôn nhất quán.",
+    roles: ["warehouse", "accounting"],
   },
   "bao-cao": {
     title: "Báo cáo",
-    kicker: "Đối soát kế toán",
-    subtitle: "Xem trạng thái chốt hóa đơn và toàn bộ lịch sử xuất hàng theo từng khách hàng.",
-    roles: ["warehouse", "accounting", "driver"]
-  }
+    subtitle:
+      "Xem trạng thái chốt hóa đơn và toàn bộ lịch sử xuất hàng theo từng khách hàng.",
+    roles: ["warehouse", "accounting", "driver"],
+  },
 };
 
 const legacyRoutes = {
@@ -56,11 +68,16 @@ const legacyRoutes = {
   dispatch: "xuat-hang",
   "master-data": "quan-ly",
   "danh-muc": "quan-ly",
-  reports: "bao-cao"
+  reports: "bao-cao",
 };
 
 const demoVehicles = ["51C-123.45", "50H-888.88", "29C-456.78", "60C-222.11"];
-const demoDrivers = ["Nguyễn Văn An", "Trần Minh Quân", "Lê Hoàng Nam", "Phạm Quốc Huy"];
+const demoDrivers = [
+  "Nguyễn Văn An",
+  "Trần Minh Quân",
+  "Lê Hoàng Nam",
+  "Phạm Quốc Huy",
+];
 
 const demoCustomers = [
   "Vinamilk",
@@ -82,7 +99,7 @@ const demoCustomers = [
   "Dabaco",
   "Gemadept",
   "Tan Cang Sai Gon",
-  "An Phat Holdings"
+  "An Phat Holdings",
 ];
 
 const demoItems = [
@@ -93,7 +110,7 @@ const demoItems = [
   { sku: "BANH", unit: "thung" },
   { sku: "HOA CHAT", unit: "can" },
   { sku: "MAY MOC", unit: "pallet" },
-  { sku: "DAU", unit: "phuy" }
+  { sku: "DAU", unit: "phuy" },
 ];
 
 const demoState = {
@@ -103,11 +120,43 @@ const demoState = {
   vehicles: demoVehicles,
   drivers: demoDrivers,
   dispatches: [
-    { date: "2026-05-17", customer: "Vinamilk", warehouse: "Thủ kho mẫu", truck: "51C-123.45", driver: "Nguyễn Văn An", sku: "THEP", quantity: 50 },
-    { date: "2026-05-17", customer: "Hoa Phat Group", warehouse: "Thủ kho mẫu", truck: "51C-123.45", driver: "Nguyễn Văn An", sku: "SUA", quantity: 120 },
-    { date: "2026-05-18", customer: "Masan Consumer", warehouse: "Thủ kho mẫu", truck: "50H-888.88", driver: "Trần Minh Quân", sku: "VAI", quantity: 80 },
-    { date: "2026-05-18", customer: "Vingroup", warehouse: "Thủ kho mẫu", truck: "50H-888.88", driver: "Trần Minh Quân", sku: "NHUA", quantity: 100 }
-  ]
+    {
+      date: "2026-05-17",
+      customer: "Vinamilk",
+      warehouse: "Thủ kho mẫu",
+      truck: "51C-123.45",
+      driver: "Nguyễn Văn An",
+      sku: "THEP",
+      quantity: 50,
+    },
+    {
+      date: "2026-05-17",
+      customer: "Hoa Phat Group",
+      warehouse: "Thủ kho mẫu",
+      truck: "51C-123.45",
+      driver: "Nguyễn Văn An",
+      sku: "SUA",
+      quantity: 120,
+    },
+    {
+      date: "2026-05-18",
+      customer: "Masan Consumer",
+      warehouse: "Thủ kho mẫu",
+      truck: "50H-888.88",
+      driver: "Trần Minh Quân",
+      sku: "VAI",
+      quantity: 80,
+    },
+    {
+      date: "2026-05-18",
+      customer: "Vingroup",
+      warehouse: "Thủ kho mẫu",
+      truck: "50H-888.88",
+      driver: "Trần Minh Quân",
+      sku: "NHUA",
+      quantity: 100,
+    },
+  ],
 };
 
 let state = loadState();
@@ -126,6 +175,8 @@ let vehicleManagementPage = 1;
 let driverManagementPage = 1;
 let selectedReportCustomer = "";
 let pendingInvoiceCustomer = "";
+let pendingMasterEdit = null;
+let pendingMasterDelete = null;
 let dispatchToastTimer;
 let overviewPeriod = "month";
 
@@ -134,7 +185,6 @@ const selectors = {
   loginForm: document.querySelector("#login-form"),
   activeUser: document.querySelector("#active-user"),
   activeRole: document.querySelector("#active-role"),
-  pageKicker: document.querySelector("#page-kicker"),
   pageTitle: document.querySelector("#page-title"),
   pageSubtitle: document.querySelector("#page-subtitle"),
   overviewPeriodControl: document.querySelector("#overview-period-control"),
@@ -145,11 +195,15 @@ const selectors = {
   dispatchSuccess: document.querySelector("#dispatch-success"),
   dispatchHistoryFilter: document.querySelector("#dispatch-history-filter"),
   dispatchHistoryTable: document.querySelector("#dispatch-history-table"),
-  dispatchHistoryPagination: document.querySelector("#dispatch-history-pagination"),
+  dispatchHistoryPagination: document.querySelector(
+    "#dispatch-history-pagination",
+  ),
   settingsForm: document.querySelector("#settings-form"),
   customerForm: document.querySelector("#customer-form"),
   customerManagementList: document.querySelector("#customer-management-list"),
-  customerManagementPagination: document.querySelector("#customer-management-pagination"),
+  customerManagementPagination: document.querySelector(
+    "#customer-management-pagination",
+  ),
   vehicleForm: document.querySelector("#vehicle-form"),
   driverForm: document.querySelector("#driver-form"),
   vehicleList: document.querySelector("#vehicle-list"),
@@ -165,18 +219,35 @@ const selectors = {
   stockTable: document.querySelector("#stock-table"),
   stockPagination: document.querySelector("#stock-pagination"),
   inventoryTable: document.querySelector("#inventory-table"),
-  receiptHistoryPagination: document.querySelector("#receipt-history-pagination"),
+  receiptHistoryPagination: document.querySelector(
+    "#receipt-history-pagination",
+  ),
   dispatchTripList: document.querySelector("#dispatch-trip-list"),
   accountingReport: document.querySelector("#accounting-report"),
   reportHistoryTable: document.querySelector("#report-history-table"),
   reportHistoryPagination: document.querySelector("#report-history-pagination"),
   invoiceHistoryTable: document.querySelector("#invoice-history-table"),
-  invoiceHistoryPagination: document.querySelector("#invoice-history-pagination"),
+  invoiceHistoryPagination: document.querySelector(
+    "#invoice-history-pagination",
+  ),
   invoiceConfirmDialog: document.querySelector("#invoice-confirm-dialog"),
   invoiceConfirmTitle: document.querySelector("#invoice-confirm-title"),
   invoiceConfirmCopy: document.querySelector("#invoice-confirm-copy"),
   invoiceConfirmApprove: document.querySelector("#invoice-confirm-approve"),
   invoiceConfirmCancel: document.querySelector("#invoice-confirm-cancel"),
+  masterEditDialog: document.querySelector("#master-edit-dialog"),
+  masterEditTitle: document.querySelector("#master-edit-title"),
+  masterEditCopy: document.querySelector("#master-edit-copy"),
+  masterEditForm: document.querySelector("#master-edit-form"),
+  masterEditLabel: document.querySelector("#master-edit-label"),
+  masterEditInput: document.querySelector("#master-edit-input"),
+  masterEditCancel: document.querySelector("#master-edit-cancel"),
+  masterEditSubmit: document.querySelector("#master-edit-submit"),
+  masterDeleteDialog: document.querySelector("#master-delete-dialog"),
+  masterDeleteTitle: document.querySelector("#master-delete-title"),
+  masterDeleteCopy: document.querySelector("#master-delete-copy"),
+  masterDeleteCancel: document.querySelector("#master-delete-cancel"),
+  masterDeleteConfirm: document.querySelector("#master-delete-confirm"),
   totalInvoiced: document.querySelector("#total-invoiced"),
   totalDispatched: document.querySelector("#total-dispatched"),
   totalRemaining: document.querySelector("#total-remaining"),
@@ -184,7 +255,7 @@ const selectors = {
   skuSelect: document.querySelector("select[name='sku']"),
   pageViews: document.querySelectorAll(".page-view"),
   pageLinks: document.querySelectorAll("[data-page-link]"),
-  writableOnly: document.querySelectorAll(".writable-only")
+  writableOnly: document.querySelectorAll(".writable-only"),
 };
 
 setToday(selectors.dispatchForm.elements.date);
@@ -200,11 +271,19 @@ function loadState() {
   }
 
   const parsed = JSON.parse(stored);
-  parsed.customers = parsed.customers || Array.from(new Set((parsed.invoice || []).map((item) => item.customer || "CustomerA")));
+  parsed.customers =
+    parsed.customers ||
+    Array.from(
+      new Set(
+        (parsed.invoice || []).map((item) => item.customer || "CustomerA"),
+      ),
+    );
   parsed.invoiceApprovals = parsed.invoiceApprovals || [];
   parsed.vehicles = parsed.vehicles || demoVehicles;
   parsed.drivers = parsed.drivers || demoDrivers;
-  const customers = new Set((parsed.invoice || []).map((item) => item.customer || "CustomerA"));
+  const customers = new Set(
+    (parsed.invoice || []).map((item) => item.customer || "CustomerA"),
+  );
   return customers.size >= 20 ? parsed : structuredClone(demoState);
 }
 
@@ -215,7 +294,12 @@ function loadSession() {
 
 function loadSettings() {
   const stored = localStorage.getItem(SETTINGS_KEY);
-  const defaults = { theme: "light", background: "default", accent: "teal", textSize: "comfortable" };
+  const defaults = {
+    theme: "light",
+    background: "default",
+    accent: "teal",
+    textSize: "comfortable",
+  };
   return stored ? { ...defaults, ...JSON.parse(stored) } : defaults;
 }
 
@@ -249,14 +333,18 @@ function buildDemoInvoice() {
     const lineCount = 3 + (customerIndex % 3);
     return Array.from({ length: lineCount }, (_, lineIndex) => {
       const item = demoItems[(customerIndex + lineIndex) % demoItems.length];
-      const quantity = 80 + ((customerIndex + 2) * (lineIndex + 3) * 17) % 520;
-      const day = String(1 + ((customerIndex + lineIndex) % 17)).padStart(2, "0");
+      const quantity =
+        80 + (((customerIndex + 2) * (lineIndex + 3) * 17) % 520);
+      const day = String(1 + ((customerIndex + lineIndex) % 17)).padStart(
+        2,
+        "0",
+      );
       return {
         customer,
         date: `2026-05-${day}`,
         sku: item.sku,
         quantity,
-        unit: item.unit
+        unit: item.unit,
       };
     });
   });
@@ -289,12 +377,18 @@ function customerDispatchTotals() {
 }
 
 function inventoryRows(customer = "") {
-  const invoiceItems = customer ? state.invoice.filter((item) => item.customer === customer) : state.invoice;
-  const dispatchItems = customer ? state.dispatches.filter((item) => item.customer === customer) : state.dispatches;
+  const invoiceItems = customer
+    ? state.invoice.filter((item) => item.customer === customer)
+    : state.invoice;
+  const dispatchItems = customer
+    ? state.dispatches.filter((item) => item.customer === customer)
+    : state.dispatches;
   const invoiced = invoiceTotals(invoiceItems);
   const dispatched = dispatchTotals(dispatchItems);
   const units = skuUnits(invoiceItems);
-  const skus = Array.from(new Set([...Object.keys(invoiced), ...Object.keys(dispatched)])).sort();
+  const skus = Array.from(
+    new Set([...Object.keys(invoiced), ...Object.keys(dispatched)]),
+  ).sort();
 
   return skus.map((sku) => {
     const invoiceQuantity = invoiced[sku] || 0;
@@ -304,7 +398,7 @@ function inventoryRows(customer = "") {
       invoiceQuantity,
       dispatchedQuantity,
       remainingQuantity: invoiceQuantity - dispatchedQuantity,
-      unit: units[sku] || "don vi"
+      unit: units[sku] || "don vi",
     };
   });
 }
@@ -329,7 +423,10 @@ function stockRows() {
       const dispatchedForSku = dispatched[key] || 0;
       const alreadyUsed = dispatchedUsed[key] || 0;
       const quantity = Number(item.quantity);
-      const deducted = Math.min(quantity, Math.max(dispatchedForSku - alreadyUsed, 0));
+      const deducted = Math.min(
+        quantity,
+        Math.max(dispatchedForSku - alreadyUsed, 0),
+      );
       dispatchedUsed[key] = alreadyUsed + deducted;
 
       return {
@@ -337,7 +434,7 @@ function stockRows() {
         sku,
         unit: item.unit || "don vi",
         date: item.date || "2026-05-17",
-        remainingQuantity: quantity - deducted
+        remainingQuantity: quantity - deducted,
       };
     })
     .filter((row) => row.remainingQuantity > 0);
@@ -353,7 +450,7 @@ function customerSummaries() {
         customer: row.customer,
         itemTypes: new Set(),
         totalQuantity: 0,
-        latestDate: row.date
+        latestDate: row.date,
       });
     }
 
@@ -368,9 +465,13 @@ function customerSummaries() {
   return Array.from(summaries.values())
     .map((summary) => ({
       ...summary,
-      itemTypeCount: summary.itemTypes.size
+      itemTypeCount: summary.itemTypes.size,
     }))
-    .sort((a, b) => b.totalQuantity - a.totalQuantity || a.customer.localeCompare(b.customer));
+    .sort(
+      (a, b) =>
+        b.totalQuantity - a.totalQuantity ||
+        a.customer.localeCompare(b.customer),
+    );
 }
 
 function tripGroups(customerFilter = "") {
@@ -379,18 +480,27 @@ function tripGroups(customerFilter = "") {
   state.dispatches
     .filter((item) => !customerFilter || item.customer === customerFilter)
     .forEach((item) => {
-    const customer = item.customer || "CustomerA";
-    const key = `${item.date}-${customer}-${item.truck}-${item.driver}`;
-    if (!groups.has(key)) {
-      groups.set(key, { date: item.date, customer, truck: item.truck, driver: item.driver, items: [], total: 0 });
-    }
+      const customer = item.customer || "CustomerA";
+      const key = `${item.date}-${customer}-${item.truck}-${item.driver}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          date: item.date,
+          customer,
+          truck: item.truck,
+          driver: item.driver,
+          items: [],
+          total: 0,
+        });
+      }
 
-    const trip = groups.get(key);
-    trip.items.push(`${item.sku}: ${item.quantity}`);
-    trip.total += Number(item.quantity);
+      const trip = groups.get(key);
+      trip.items.push(`${item.sku}: ${item.quantity}`);
+      trip.total += Number(item.quantity);
     });
 
-  return Array.from(groups.values()).sort((a, b) => a.date.localeCompare(b.date));
+  return Array.from(groups.values()).sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
 }
 
 function render() {
@@ -402,15 +512,24 @@ function render() {
 
   const rows = inventoryRows();
   const totalInvoiced = rows.reduce((sum, row) => sum + row.invoiceQuantity, 0);
-  const totalDispatched = rows.reduce((sum, row) => sum + Math.min(row.invoiceQuantity, row.dispatchedQuantity), 0);
-  const totalRemaining = rows.reduce((sum, row) => sum + Math.max(row.remainingQuantity, 0), 0);
+  const totalDispatched = rows.reduce(
+    (sum, row) => sum + Math.min(row.invoiceQuantity, row.dispatchedQuantity),
+    0,
+  );
+  const totalRemaining = rows.reduce(
+    (sum, row) => sum + Math.max(row.remainingQuantity, 0),
+    0,
+  );
   const extraItems = rows.filter((row) => row.remainingQuantity < 0);
   const readyToBill = totalRemaining === 0 && extraItems.length === 0;
 
   selectors.totalInvoiced.textContent = totalInvoiced.toLocaleString("vi-VN");
-  selectors.totalDispatched.textContent = totalDispatched.toLocaleString("vi-VN");
+  selectors.totalDispatched.textContent =
+    totalDispatched.toLocaleString("vi-VN");
   selectors.totalRemaining.textContent = totalRemaining.toLocaleString("vi-VN");
-  selectors.billingStatus.textContent = readyToBill ? "Đủ điều kiện" : "Đang chờ";
+  selectors.billingStatus.textContent = readyToBill
+    ? "Đủ điều kiện"
+    : "Đang chờ";
 
   const summaries = customerSummaries();
   renderCustomerCards(summaries);
@@ -432,22 +551,30 @@ function render() {
 }
 
 function tripMarkupForCustomer(customer) {
-  return tripGroups(customer).map((trip) => `
+  return (
+    tripGroups(customer)
+      .map(
+        (trip) => `
     <article class="trip-card">
       <div>
-        <strong>${trip.truck}</strong>
-        <span>${trip.customer} - ${trip.driver} - ${formatDate(trip.date)}</span>
+        <strong>${escapeHtml(trip.truck)}</strong>
+        <span>${escapeHtml(trip.customer)} - ${escapeHtml(trip.driver)} - ${formatDate(trip.date)}</span>
       </div>
-      <p>${trip.items.join(" | ")}</p>
+      <p>${trip.items.map(escapeHtml).join(" | ")}</p>
       <small>Tổng số lượng chuyến xe: ${trip.total.toLocaleString("vi-VN")}</small>
     </article>
-  `).join("") || sampleTripCard("Khách hàng này chưa có chuyến xuất hàng.");
+  `,
+      )
+      .join("") || sampleTripCard("Khách hàng này chưa có chuyến xuất hàng.")
+  );
 }
 
-function sampleTripCard(message = "Chọn khách hàng để xem các chuyến xe liên quan.") {
+function sampleTripCard(
+  message = "Chọn khách hàng để xem các chuyến xe liên quan.",
+) {
   return `
     <article class="trip-card">
-      <p>${message}</p>
+      <p>${escapeHtml(message)}</p>
     </article>
   `;
 }
@@ -455,8 +582,11 @@ function sampleTripCard(message = "Chọn khách hàng để xem các chuyến x
 function customerInventorySummary(customer) {
   const rows = stockRows().filter((row) => row.customer === customer);
   return {
-    remainingQuantity: rows.reduce((sum, row) => sum + row.remainingQuantity, 0),
-    itemTypeCount: new Set(rows.map((row) => row.sku)).size
+    remainingQuantity: rows.reduce(
+      (sum, row) => sum + row.remainingQuantity,
+      0,
+    ),
+    itemTypeCount: new Set(rows.map((row) => row.sku)).size,
   };
 }
 
@@ -465,7 +595,8 @@ function renderReceiptCustomerView() {
 
   if (!selectedCustomer) {
     selectors.customerDetailTitle.textContent = "Tổng hợp hàng nhập";
-    selectors.customerDetailCopy.textContent = "Chọn khách hàng từ Tổng quan hoặc danh sách bên trên để xem dữ liệu thực tế.";
+    selectors.customerDetailCopy.textContent =
+      "Chọn khách hàng từ Tổng quan hoặc danh sách bên trên để xem dữ liệu thực tế.";
     selectors.stockTable.innerHTML = sampleTableRow(3);
     selectors.stockPagination.innerHTML = "";
     selectors.inventoryTable.innerHTML = sampleTableRow(4);
@@ -485,36 +616,73 @@ function renderReceiptCustomerView() {
   selectors.customerDetailTitle.textContent = `Tổng hợp hàng nhập - ${selectedCustomer}`;
   selectors.customerDetailCopy.textContent = `${summaryRows.length} loại hàng đã được ghi nhận.`;
 
-  selectors.stockTable.innerHTML = summaryPage.rows.map((row) => `
+  selectors.stockTable.innerHTML =
+    summaryPage.rows
+      .map(
+        (row) => `
     <tr>
-      <td><strong>${row.sku}</strong></td>
+      <td><strong>${escapeHtml(row.sku)}</strong></td>
       <td>${row.quantity.toLocaleString("vi-VN")}</td>
-      <td>${row.unit}</td>
+      <td>${escapeHtml(row.unit)}</td>
     </tr>
-  `).join("") || sampleTableRow(3, "Khách hàng này chưa có dữ liệu nhập hàng.");
-  renderTablePagination(selectors.stockPagination, receiptSummaryPage, summaryPage.pageCount, "summary");
+  `,
+      )
+      .join("") ||
+    sampleTableRow(3, "Khách hàng này chưa có dữ liệu nhập hàng.");
+  renderTablePagination(
+    selectors.stockPagination,
+    receiptSummaryPage,
+    summaryPage.pageCount,
+    "summary",
+  );
 
-  selectors.inventoryTable.innerHTML = historyPage.rows.map((row) => `
+  selectors.inventoryTable.innerHTML =
+    historyPage.rows
+      .map(
+        (row) => `
     <tr>
       <td>${formatDate(row.date)}</td>
-      <td><strong>${row.sku}</strong></td>
+      <td><strong>${escapeHtml(row.sku)}</strong></td>
       <td>${Number(row.quantity).toLocaleString("vi-VN")}</td>
-      <td>${row.unit || "đơn vị"}</td>
+      <td>${escapeHtml(row.unit || "đơn vị")}</td>
     </tr>
-  `).join("") || sampleTableRow(4, "Khách hàng này chưa có lịch sử nhập hàng.");
-  renderTablePagination(selectors.receiptHistoryPagination, receiptHistoryPage, historyPage.pageCount, "history");
+  `,
+      )
+      .join("") ||
+    sampleTableRow(4, "Khách hàng này chưa có lịch sử nhập hàng.");
+  renderTablePagination(
+    selectors.receiptHistoryPagination,
+    receiptHistoryPage,
+    historyPage.pageCount,
+    "history",
+  );
 }
 
 function renderTablePagination(container, currentPage, pageCount, tableName) {
-  container.innerHTML = paginationMarkup({ page: currentPage, pageCount, scopeAttribute: "data-receipt-page", scope: tableName });
+  container.innerHTML = paginationMarkup({
+    page: currentPage,
+    pageCount,
+    scopeAttribute: "data-receipt-page",
+    scope: tableName,
+  });
 }
 
 function renderDispatchPagination(page, pageCount) {
-  selectors.dispatchHistoryPagination.innerHTML = paginationMarkup({ page, pageCount, scopeAttribute: "data-dispatch-page", scope: "history" });
+  selectors.dispatchHistoryPagination.innerHTML = paginationMarkup({
+    page,
+    pageCount,
+    scopeAttribute: "data-dispatch-page",
+    scope: "history",
+  });
 }
 
 function renderReportPagination(container, page, pageCount, tableName) {
-  container.innerHTML = paginationMarkup({ page, pageCount, scopeAttribute: "data-report-page", scope: tableName });
+  container.innerHTML = paginationMarkup({
+    page,
+    pageCount,
+    scopeAttribute: "data-report-page",
+    scope: tableName,
+  });
 }
 
 function resetReceiptPages() {
@@ -522,7 +690,9 @@ function resetReceiptPages() {
   receiptHistoryPage = 1;
 }
 
-function showDispatchToast(message = "Xuất hàng thành công. Lịch sử bên dưới đã được cập nhật.") {
+function showDispatchToast(
+  message = "Xuất hàng thành công. Lịch sử bên dưới đã được cập nhật.",
+) {
   window.clearTimeout(dispatchToastTimer);
   selectors.dispatchSuccess.textContent = message;
   selectors.dispatchSuccess.hidden = false;
@@ -536,14 +706,83 @@ function showDispatchToast(message = "Xuất hàng thành công. Lịch sử bê
 function openInvoiceConfirmDialog(customer) {
   pendingInvoiceCustomer = customer;
   selectors.invoiceConfirmTitle.textContent = `Xuất hóa đơn cho ${customer}?`;
-  selectors.invoiceConfirmCopy.textContent = "Sau khi đồng ý, khách hàng sẽ được ghi nhận vào lịch sử xuất hóa đơn và được xóa khỏi danh sách đủ điều kiện.";
-  selectors.invoiceConfirmDialog.hidden = false;
-  selectors.invoiceConfirmApprove.focus();
+  selectors.invoiceConfirmCopy.textContent =
+    "Sau khi đồng ý, khách hàng sẽ được ghi nhận vào lịch sử xuất hóa đơn và được xóa khỏi danh sách đủ điều kiện.";
+  showDialog(selectors.invoiceConfirmDialog, selectors.invoiceConfirmApprove);
 }
 
 function closeInvoiceConfirmDialog() {
   pendingInvoiceCustomer = "";
-  selectors.invoiceConfirmDialog.hidden = true;
+  hideDialog(selectors.invoiceConfirmDialog);
+}
+
+function syncMasterReferences(listName, oldValue, newValue = "") {
+  if (listName === "customers") {
+    state.invoice.forEach((item) => {
+      if (item.customer === oldValue) item.customer = newValue;
+    });
+    state.dispatches.forEach((item) => {
+      if (item.customer === oldValue) item.customer = newValue;
+    });
+    (state.invoiceApprovals || []).forEach((item) => {
+      if (item.customer === oldValue) item.customer = newValue;
+    });
+    if (selectedCustomer === oldValue) {
+      selectedCustomer = newValue;
+    }
+    return;
+  }
+
+  if (listName === "vehicles") {
+    state.dispatches.forEach((item) => {
+      if (item.truck === oldValue) item.truck = newValue;
+    });
+    return;
+  }
+
+  if (listName === "drivers") {
+    state.dispatches.forEach((item) => {
+      if (item.driver === oldValue) item.driver = newValue;
+    });
+  }
+}
+
+function openMasterEditDialog(listName, index) {
+  const currentList = state[listName] || [];
+  const currentValue = currentList[index];
+  if (typeof currentValue !== "string") return;
+  const config = masterDataConfig[listName];
+  pendingMasterEdit = { listName, index };
+  selectors.masterEditTitle.textContent = `Sửa ${config.typeLabel}`;
+  selectors.masterEditCopy.textContent =
+    "Dữ liệu hiện tại đã được điền sẵn. Chọn Update để lưu thay đổi.";
+  selectors.masterEditLabel.textContent = config.fieldLabel;
+  selectors.masterEditInput.value = currentValue;
+  selectors.masterEditInput.setCustomValidity("");
+  showDialog(selectors.masterEditDialog, selectors.masterEditInput);
+}
+
+function closeMasterEditDialog() {
+  pendingMasterEdit = null;
+  selectors.masterEditForm.reset();
+  selectors.masterEditInput.setCustomValidity("");
+  hideDialog(selectors.masterEditDialog);
+}
+
+function openMasterDeleteDialog(listName, index) {
+  const currentList = state[listName] || [];
+  const currentValue = currentList[index];
+  if (typeof currentValue !== "string") return;
+  const config = masterDataConfig[listName];
+  pendingMasterDelete = { listName, index };
+  selectors.masterDeleteTitle.textContent = `Xóa ${config.typeLabel} này?`;
+  selectors.masterDeleteCopy.textContent = `"${currentValue}" sẽ bị xóa khỏi danh sách quản lý.`;
+  showDialog(selectors.masterDeleteDialog, selectors.masterDeleteConfirm);
+}
+
+function closeMasterDeleteDialog() {
+  pendingMasterDelete = null;
+  hideDialog(selectors.masterDeleteDialog);
 }
 
 function receiptSummaryRows(customer) {
@@ -560,23 +799,23 @@ function receiptSummaryRows(customer) {
       rows.get(key).quantity += Number(item.quantity);
     });
 
-  return Array.from(rows.values()).sort((a, b) => b.quantity - a.quantity || a.sku.localeCompare(b.sku));
-}
-
-function sampleTableRow(colspan, message = "Chưa chọn khách hàng. Đây là khu vực hiển thị dữ liệu sau khi chọn khách hàng.") {
-  return `
-    <tr>
-      <td colspan="${colspan}">${message}</td>
-    </tr>
-  `;
+  return Array.from(rows.values()).sort(
+    (a, b) => b.quantity - a.quantity || a.sku.localeCompare(b.sku),
+  );
 }
 
 function renderAccountingReport() {
-  const customers = Array.from(new Set(state.invoice.map((item) => item.customer || "CustomerA"))).sort();
-  const approvedCustomers = new Set((state.invoiceApprovals || []).map((item) => item.customer));
+  const customers = Array.from(
+    new Set(state.invoice.map((item) => item.customer || "CustomerA")),
+  ).sort();
+  const approvedCustomers = new Set(
+    (state.invoiceApprovals || []).map((item) => item.customer),
+  );
   const reportRows = customers.map((customer) => {
     const summary = customerInventorySummary(customer);
-    const customerDispatches = state.dispatches.filter((item) => (item.customer || "CustomerA") === customer);
+    const customerDispatches = state.dispatches.filter(
+      (item) => (item.customer || "CustomerA") === customer,
+    );
     const lastDispatchAt = latestDispatchTimestamp(customerDispatches);
     const status = summary.remainingQuantity === 0 ? "complete" : "pending";
     return {
@@ -585,11 +824,15 @@ function renderAccountingReport() {
       historyCount: customerDispatches.length,
       lastDispatchAt,
       completedAgo: relativeTimeFrom(lastDispatchAt),
-      status
+      status,
     };
   });
-  const completedRows = reportRows.filter((row) => row.status === "complete" && !approvedCustomers.has(row.customer));
-  const currentCustomer = completedRows.some((row) => row.customer === selectedReportCustomer)
+  const completedRows = reportRows.filter(
+    (row) => row.status === "complete" && !approvedCustomers.has(row.customer),
+  );
+  const currentCustomer = completedRows.some(
+    (row) => row.customer === selectedReportCustomer,
+  )
     ? selectedReportCustomer
     : completedRows[0]?.customer || "";
 
@@ -597,21 +840,25 @@ function renderAccountingReport() {
     selectedReportCustomer = currentCustomer;
   }
 
-  selectors.accountingReport.innerHTML = completedRows.map((row) => `
-    <article class="report-customer-card ${row.customer === currentCustomer ? "active" : ""}" data-report-customer="${row.customer}">
+  selectors.accountingReport.innerHTML =
+    completedRows
+      .map(
+        (row) => `
+    <article class="report-customer-card ${row.customer === currentCustomer ? "active" : ""}" data-report-customer="${escapeHtml(row.customer)}">
       <div class="report-card-title">
-        <strong>${row.customer}</strong>
+        <strong>${escapeHtml(row.customer)}</strong>
         <span class="status-pill complete">Hoàn thành</span>
       </div>
       <span class="report-meta">Hoàn thành ${row.completedAgo} - ${row.historyCount.toLocaleString("vi-VN")} dòng lịch sử xuất hàng</span>
       <button class="invoice-button" data-invoice-action="approve" type="button">Xuất hóa đơn</button>
     </article>
-  `).join("") || `
-    <div class="empty-state">
-      <strong>Chưa có khách hàng hoàn thành</strong>
-      <span>Khi hàng của khách được xuất hết, khách hàng sẽ xuất hiện ở đây để kế toán xuất hóa đơn.</span>
-    </div>
-  `;
+  `,
+      )
+      .join("") ||
+    emptyStateMarkup({
+      title: "Chưa có khách hàng hoàn thành",
+      copy: "Khi hàng của khách được xuất hết, khách hàng sẽ xuất hiện ở đây để kế toán xuất hóa đơn.",
+    });
 
   const history = state.dispatches
     .filter((item) => (item.customer || "CustomerA") === currentCustomer)
@@ -619,35 +866,65 @@ function renderAccountingReport() {
   const historyPage = paginateRows(history, reportHistoryPage);
   reportHistoryPage = historyPage.page;
 
-  selectors.reportHistoryTable.innerHTML = historyPage.rows.map((item) => `
+  selectors.reportHistoryTable.innerHTML =
+    historyPage.rows
+      .map(
+        (item) => `
     <tr>
       <td>${formatDate(item.date)}</td>
-      <td>${item.warehouse || "Thủ kho mẫu"}</td>
-      <td><strong>${item.truck}</strong></td>
-      <td>${item.driver}</td>
-      <td>${item.sku}</td>
+      <td>${escapeHtml(item.warehouse || "Thủ kho mẫu")}</td>
+      <td><strong>${escapeHtml(item.truck)}</strong></td>
+      <td>${escapeHtml(item.driver)}</td>
+      <td>${escapeHtml(item.sku)}</td>
       <td>${Number(item.quantity).toLocaleString("vi-VN")}</td>
     </tr>
-  `).join("") || sampleTableRow(6, currentCustomer ? "Chưa có lịch sử xuất hàng cho khách hàng này." : "Chọn khách hàng hoàn thành để xem lịch sử xuất hàng.");
-  renderReportPagination(selectors.reportHistoryPagination, reportHistoryPage, historyPage.pageCount, "dispatch");
+  `,
+      )
+      .join("") ||
+    sampleTableRow(
+      6,
+      currentCustomer
+        ? "Chưa có lịch sử xuất hàng cho khách hàng này."
+        : "Chọn khách hàng hoàn thành để xem lịch sử xuất hàng.",
+    );
+  renderReportPagination(
+    selectors.reportHistoryPagination,
+    reportHistoryPage,
+    historyPage.pageCount,
+    "dispatch",
+  );
 
-  const invoiceHistory = [...(state.invoiceApprovals || [])].sort((a, b) => b.date.localeCompare(a.date));
+  const invoiceHistory = [...(state.invoiceApprovals || [])].sort((a, b) =>
+    b.date.localeCompare(a.date),
+  );
   const invoicePage = paginateRows(invoiceHistory, invoiceHistoryPage);
   invoiceHistoryPage = invoicePage.page;
-  selectors.invoiceHistoryTable.innerHTML = invoicePage.rows.map((item) => `
+  selectors.invoiceHistoryTable.innerHTML =
+    invoicePage.rows
+      .map(
+        (item) => `
     <tr>
       <td>${formatDate(item.date)}</td>
-      <td>${item.customer}</td>
-      <td><span class="status-pill complete">${item.status || "Hoàn thành"}</span></td>
+      <td>${escapeHtml(item.customer)}</td>
+      <td><span class="status-pill complete">${escapeHtml(item.status || "Hoàn thành")}</span></td>
     </tr>
-  `).join("") || sampleTableRow(3, "Chưa có lịch sử xuất hóa đơn.");
-  renderReportPagination(selectors.invoiceHistoryPagination, invoiceHistoryPage, invoicePage.pageCount, "invoice");
+  `,
+      )
+      .join("") || sampleTableRow(3, "Chưa có lịch sử xuất hóa đơn.");
+  renderReportPagination(
+    selectors.invoiceHistoryPagination,
+    invoiceHistoryPage,
+    invoicePage.pageCount,
+    "invoice",
+  );
 }
 
 function latestDispatchTimestamp(dispatches) {
   return dispatches.reduce((latest, item) => {
     const timestamp = new Date(item.createdAt || item.date).getTime();
-    return Number.isFinite(timestamp) && timestamp > latest ? timestamp : latest;
+    return Number.isFinite(timestamp) && timestamp > latest
+      ? timestamp
+      : latest;
   }, 0);
 }
 
@@ -674,12 +951,10 @@ function relativeTimeFrom(timestamp) {
 
 function renderCustomerCards(summaries) {
   if (!summaries.length) {
-    selectors.customerGrid.innerHTML = `
-      <div class="empty-state">
-        <strong>Chưa có khách hàng đang có hàng trong kho</strong>
-        <span>Khi thủ kho nhập hàng, khách hàng sẽ xuất hiện tại đây để theo dõi nhanh.</span>
-      </div>
-    `;
+    selectors.customerGrid.innerHTML = emptyStateMarkup({
+      title: "Chưa có khách hàng đang có hàng trong kho",
+      copy: "Khi thủ kho nhập hàng, khách hàng sẽ xuất hiện tại đây để theo dõi nhanh.",
+    });
     selectors.customerPagination.innerHTML = "";
     return;
   }
@@ -690,19 +965,26 @@ function renderCustomerCards(summaries) {
   const start = (customerPage - 1) * pageSize;
   const visibleSummaries = summaries.slice(start, start + pageSize);
 
-  selectors.customerGrid.innerHTML = visibleSummaries.map((summary) => `
-    <button class="customer-card ${summary.customer === selectedCustomer ? "active" : ""}" data-customer="${summary.customer}" type="button">
-      <span>${summary.customer}</span>
+  selectors.customerGrid.innerHTML = visibleSummaries
+    .map(
+      (summary) => `
+    <button class="customer-card ${summary.customer === selectedCustomer ? "active" : ""}" data-customer="${escapeHtml(summary.customer)}" type="button">
+      <span>${escapeHtml(summary.customer)}</span>
       <strong>${summary.totalQuantity.toLocaleString("vi-VN")}</strong>
       <small>${summary.itemTypeCount} loại hàng - cập nhật ${formatDate(summary.latestDate)}</small>
     </button>
-  `).join("");
+  `,
+    )
+    .join("");
 
-  selectors.customerPagination.innerHTML = pageCount > 1 ? `
+  selectors.customerPagination.innerHTML =
+    pageCount > 1
+      ? `
     <button type="button" data-page-action="prev" ${customerPage === 1 ? "disabled" : ""}>Trước</button>
     <span>Trang ${customerPage} / ${pageCount}</span>
     <button type="button" data-page-action="next" ${customerPage === pageCount ? "disabled" : ""}>Sau</button>
-  ` : "";
+  `
+      : "";
 }
 
 function customerCardsPerPage() {
@@ -720,11 +1002,16 @@ function renderInventoryChart() {
   const maxValue = Math.max(...points.map((point) => point.quantity), 1);
   const minValue = Math.min(...points.map((point) => point.quantity), 0);
   const range = Math.max(maxValue - minValue, 1);
-  const path = points.map((point, index) => {
-    const x = padding + (index / (points.length - 1)) * (width - padding * 2);
-    const y = height - padding - ((point.quantity - minValue) / range) * (height - padding * 2);
-    return `${index === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
-  }).join(" ");
+  const path = points
+    .map((point, index) => {
+      const x = padding + (index / (points.length - 1)) * (width - padding * 2);
+      const y =
+        height -
+        padding -
+        ((point.quantity - minValue) / range) * (height - padding * 2);
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(" ");
   const areaPath = `${path} L ${width - padding} ${height - padding} L ${padding} ${height - padding} Z`;
   const first = points[0];
   const last = points[points.length - 1];
@@ -741,11 +1028,17 @@ function renderInventoryChart() {
       <path class="chart-grid" d="M ${padding} ${padding} H ${width - padding} M ${padding} ${height / 2} H ${width - padding} M ${padding} ${height - padding} H ${width - padding}" />
       <path class="chart-area" d="${areaPath}" />
       <path class="chart-line" d="${path}" />
-      ${points.map((point, index) => {
-        const x = padding + (index / (points.length - 1)) * (width - padding * 2);
-        const y = height - padding - ((point.quantity - minValue) / range) * (height - padding * 2);
-        return `<circle class="chart-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${index % 5 === 0 || index === points.length - 1 ? 4 : 2}" />`;
-      }).join("")}
+      ${points
+        .map((point, index) => {
+          const x =
+            padding + (index / (points.length - 1)) * (width - padding * 2);
+          const y =
+            height -
+            padding -
+            ((point.quantity - minValue) / range) * (height - padding * 2);
+          return `<circle class="chart-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${index % 5 === 0 || index === points.length - 1 ? 4 : 2}" />`;
+        })
+        .join("")}
     </svg>
     <div class="chart-axis">
       ${config.axis.map((label) => `<span>${label}</span>`).join("")}
@@ -758,19 +1051,30 @@ function periodConfig(period) {
     return { days: 7, label: "Tuần", axis: ["T2", "T4", "T6", "CN"] };
   }
   if (period === "quarter") {
-    return { days: 90, label: "Quý", axis: ["Ngày 1", "Ngày 30", "Ngày 60", "Ngày 90"] };
+    return {
+      days: 90,
+      label: "Quý",
+      axis: ["Ngày 1", "Ngày 30", "Ngày 60", "Ngày 90"],
+    };
   }
-  return { days: 31, label: "Tháng", axis: ["01/05", "10/05", "20/05", "31/05"] };
+  return {
+    days: 31,
+    label: "Tháng",
+    axis: ["01/05", "10/05", "20/05", "31/05"],
+  };
 }
 
 function inventoryTrend(dayCount) {
   const days = Array.from({ length: dayCount }, (_, index) => ({
     day: index + 1,
-    quantity: 0
+    quantity: 0,
   }));
 
   state.invoice.forEach((item) => {
-    const day = Math.min(new Date(item.date || "2026-05-01").getDate(), dayCount);
+    const day = Math.min(
+      new Date(item.date || "2026-05-01").getDate(),
+      dayCount,
+    );
     days.forEach((point) => {
       if (point.day >= day) {
         point.quantity += Number(item.quantity);
@@ -779,7 +1083,10 @@ function inventoryTrend(dayCount) {
   });
 
   state.dispatches.forEach((item) => {
-    const day = Math.min(new Date(item.date || "2026-05-01").getDate(), dayCount);
+    const day = Math.min(
+      new Date(item.date || "2026-05-01").getDate(),
+      dayCount,
+    );
     days.forEach((point) => {
       if (point.day >= day) {
         point.quantity -= Number(item.quantity);
@@ -789,7 +1096,7 @@ function inventoryTrend(dayCount) {
 
   return days.map((point) => ({
     ...point,
-    quantity: Math.max(point.quantity, 0)
+    quantity: Math.max(point.quantity, 0),
   }));
 }
 
@@ -806,7 +1113,6 @@ function renderSession() {
       field.disabled = !canWrite;
     });
   });
-
 }
 
 function renderPage() {
@@ -817,14 +1123,16 @@ function renderPage() {
   }
 
   const page = pages[activePage];
-  selectors.pageKicker.textContent = page.kicker;
   selectors.pageTitle.textContent = page.title;
   selectors.pageSubtitle.textContent = page.subtitle;
   selectors.overviewPeriodControl.hidden = activePage !== "tong-quan";
 
   selectors.pageViews.forEach((view) => {
-    const allowedRoles = view.dataset.roles ? view.dataset.roles.split(" ") : pages[view.dataset.page].roles;
-    view.hidden = view.dataset.page !== activePage || !allowedRoles.includes(activeRole);
+    const allowedRoles = view.dataset.roles
+      ? view.dataset.roles.split(" ")
+      : pages[view.dataset.page].roles;
+    view.hidden =
+      view.dataset.page !== activePage || !allowedRoles.includes(activeRole);
   });
 
   selectors.pageLinks.forEach((link) => {
@@ -837,7 +1145,9 @@ function renderPage() {
 }
 
 function formatDate(value) {
-  return new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(new Date(value));
+  return new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(
+    new Date(value),
+  );
 }
 
 function normalizeSku(value) {
@@ -850,41 +1160,68 @@ function setToday(input) {
 
 function renderCustomerOptions() {
   const customers = allCustomers();
-  selectors.customerList.innerHTML = customers.map((customer) => `<option value="${customer}"></option>`).join("");
-  const stockCustomer = selectedCustomer || selectors.stockForm.elements.customer.value;
-  const dispatchCustomer = selectors.dispatchForm.elements.customer.value || selectedCustomer;
+  selectors.customerList.innerHTML = customers
+    .map((customer) => `<option value="${escapeHtml(customer)}"></option>`)
+    .join("");
+  const stockCustomer =
+    selectedCustomer || selectors.stockForm.elements.customer.value;
+  const dispatchCustomer =
+    selectors.dispatchForm.elements.customer.value || selectedCustomer;
   const customerOptions = customerSelectOptions(customers);
 
   selectors.stockForm.elements.customer.innerHTML = customerOptions;
   selectors.dispatchForm.elements.customer.innerHTML = customerOptions;
-  selectors.stockForm.elements.customer.value = customers.includes(stockCustomer) ? stockCustomer : "";
-  selectors.dispatchForm.elements.customer.value = customers.includes(dispatchCustomer) ? dispatchCustomer : "";
+  selectors.stockForm.elements.customer.value = customers.includes(
+    stockCustomer,
+  )
+    ? stockCustomer
+    : "";
+  selectors.dispatchForm.elements.customer.value = customers.includes(
+    dispatchCustomer,
+  )
+    ? dispatchCustomer
+    : "";
 }
 
 function customerSelectOptions(customers) {
   return `
     <option value="">Chọn khách hàng</option>
-    ${customers.map((customer) => `<option value="${customer}">${customer}</option>`).join("")}
+    ${customers.map((customer) => optionMarkup({ value: customer })).join("")}
   `;
 }
 
 function allCustomers() {
-  return Array.from(new Set([
-    ...(state.customers || []),
-    ...state.invoice.map((item) => item.customer || "CustomerA")
-  ])).sort();
+  return Array.from(
+    new Set([
+      ...(state.customers || []),
+      ...state.invoice.map((item) => item.customer || "CustomerA"),
+    ]),
+  ).sort();
 }
 
 function renderDispatchSkuOptions() {
-  const customer = selectors.dispatchForm.elements.customer.value || selectedCustomer;
+  const customer =
+    selectors.dispatchForm.elements.customer.value || selectedCustomer;
   const rows = stockRows().filter((row) => row.customer === customer);
   const currentSku = selectors.skuSelect.value;
-  selectors.skuSelect.innerHTML = rows.map((row) => `
-    <option value="${row.sku}" ${row.sku === currentSku ? "selected" : ""}>${row.sku} - còn ${row.remainingQuantity.toLocaleString("vi-VN")} ${row.unit}</option>
-  `).join("");
-  const selectedRow = rows.find((row) => row.sku === selectors.skuSelect.value) || rows[0];
-  selectors.dispatchForm.elements.quantity.value = selectedRow ? selectedRow.remainingQuantity : "";
-  selectors.dispatchForm.elements.quantity.max = selectedRow ? selectedRow.remainingQuantity : "";
+  selectors.skuSelect.innerHTML = rows
+    .map(
+      (row) =>
+        optionMarkup({
+          value: row.sku,
+          label: `${row.sku} - còn ${row.remainingQuantity.toLocaleString("vi-VN")} ${row.unit}`,
+          selectedValue: currentSku,
+        }),
+    )
+    .join("");
+  const selectedRow =
+    rows.find((row) => row.sku === selectors.skuSelect.value) || rows[0];
+  selectors.dispatchForm.elements.quantity.value = selectedRow
+    ? selectedRow.remainingQuantity
+    : "";
+  selectors.dispatchForm.elements.quantity.max = selectedRow
+    ? selectedRow.remainingQuantity
+    : "";
 }
 
 function renderDispatchHistory() {
@@ -892,7 +1229,7 @@ function renderDispatchHistory() {
   const filters = {
     date: form.elements.date.value,
     truck: form.elements.truck.value,
-    driver: form.elements.driver.value
+    driver: form.elements.driver.value,
   };
   const rows = state.dispatches
     .filter((item) => !filters.date || item.date === filters.date)
@@ -902,37 +1239,49 @@ function renderDispatchHistory() {
   const page = paginateRows(rows, dispatchHistoryPage);
   dispatchHistoryPage = page.page;
 
-  selectors.dispatchHistoryTable.innerHTML = page.rows.map((item) => `
+  selectors.dispatchHistoryTable.innerHTML =
+    page.rows
+      .map(
+        (item) => `
     <tr>
       <td>${formatDate(item.date)}</td>
-      <td>${item.customer}</td>
-      <td><strong>${item.truck}</strong></td>
-      <td>${item.driver}</td>
-      <td>${item.sku}</td>
+      <td>${escapeHtml(item.customer)}</td>
+      <td><strong>${escapeHtml(item.truck)}</strong></td>
+      <td>${escapeHtml(item.driver)}</td>
+      <td>${escapeHtml(item.sku)}</td>
       <td>${Number(item.quantity).toLocaleString("vi-VN")}</td>
     </tr>
-  `).join("") || sampleTableRow(6, "Chưa có lịch sử xuất hàng phù hợp với bộ lọc hiện tại.");
+  `,
+      )
+      .join("") ||
+    sampleTableRow(6, "Chưa có lịch sử xuất hàng phù hợp với bộ lọc hiện tại.");
   renderDispatchPagination(dispatchHistoryPage, page.pageCount);
 }
 
 function renderMasterData() {
   const selectedTruck = selectors.dispatchForm.elements.truck.value;
   const selectedDriver = selectors.dispatchForm.elements.driver.value;
-  const selectedHistoryTruck = selectors.dispatchHistoryFilter.elements.truck.value;
-  const selectedHistoryDriver = selectors.dispatchHistoryFilter.elements.driver.value;
-  selectors.dispatchForm.elements.truck.innerHTML = state.vehicles.map((plate) => `
-    <option value="${plate}" ${plate === selectedTruck ? "selected" : ""}>${plate}</option>
-  `).join("");
-  selectors.dispatchForm.elements.driver.innerHTML = state.drivers.map((driver) => `
-    <option value="${driver}" ${driver === selectedDriver ? "selected" : ""}>${driver}</option>
-  `).join("");
+  const selectedHistoryTruck =
+    selectors.dispatchHistoryFilter.elements.truck.value;
+  const selectedHistoryDriver =
+    selectors.dispatchHistoryFilter.elements.driver.value;
+  selectors.dispatchForm.elements.truck.innerHTML = state.vehicles
+    .map((plate) =>
+      optionMarkup({ value: plate, selectedValue: selectedTruck }),
+    )
+    .join("");
+  selectors.dispatchForm.elements.driver.innerHTML = state.drivers
+    .map((driver) =>
+      optionMarkup({ value: driver, selectedValue: selectedDriver }),
+    )
+    .join("");
   selectors.dispatchHistoryFilter.elements.truck.innerHTML = `
     <option value="">Tất cả xe</option>
-    ${state.vehicles.map((plate) => `<option value="${plate}" ${plate === selectedHistoryTruck ? "selected" : ""}>${plate}</option>`).join("")}
+    ${state.vehicles.map((plate) => optionMarkup({ value: plate, selectedValue: selectedHistoryTruck })).join("")}
   `;
   selectors.dispatchHistoryFilter.elements.driver.innerHTML = `
     <option value="">Tất cả tài xế</option>
-    ${state.drivers.map((driver) => `<option value="${driver}" ${driver === selectedHistoryDriver ? "selected" : ""}>${driver}</option>`).join("")}
+    ${state.drivers.map((driver) => optionMarkup({ value: driver, selectedValue: selectedHistoryDriver })).join("")}
   `;
 
   state.customers = state.customers || allCustomers();
@@ -942,7 +1291,7 @@ function renderMasterData() {
     listName: "customers",
     listElement: selectors.customerManagementList,
     paginationElement: selectors.customerManagementPagination,
-    emptyMessage: "Chưa có khách hàng trong danh mục."
+    emptyMessage: "Chưa có khách hàng trong danh mục.",
   });
   vehicleManagementPage = renderMasterList({
     items: state.vehicles,
@@ -950,7 +1299,7 @@ function renderMasterData() {
     listName: "vehicles",
     listElement: selectors.vehicleList,
     paginationElement: selectors.vehiclePagination,
-    emptyMessage: "Chưa có xe vận chuyển trong danh mục."
+    emptyMessage: "Chưa có xe vận chuyển trong danh mục.",
   });
   driverManagementPage = renderMasterList({
     items: state.drivers,
@@ -958,29 +1307,22 @@ function renderMasterData() {
     listName: "drivers",
     listElement: selectors.driverList,
     paginationElement: selectors.driverPagination,
-    emptyMessage: "Chưa có tài xế trong danh mục."
+    emptyMessage: "Chưa có tài xế trong danh mục.",
   });
 }
 
-function renderMasterList({ items, page, listName, listElement, paginationElement, emptyMessage }) {
-  const numberedItems = items.map((value, index) => ({ value, index }));
-  const paginated = paginateRows(numberedItems, page);
-  listElement.innerHTML = paginated.rows.map((item) => `
-    <div class="master-item">
-      <strong>${item.value}</strong>
-      <div>
-        <button type="button" data-master="${listName}" data-action="edit" data-index="${item.index}">Sửa</button>
-        <button type="button" data-master="${listName}" data-action="delete" data-index="${item.index}">Xóa</button>
-      </div>
-    </div>
-  `).join("") || `<div class="empty-state">${emptyMessage}</div>`;
-  paginationElement.innerHTML = paginationMarkup({
-    page: paginated.page,
-    pageCount: paginated.pageCount,
-    scopeAttribute: "data-master-page",
-    scope: listName
-  });
-  return paginated.page;
+function renderMasterList({
+  items,
+  page,
+  listName,
+  listElement,
+  paginationElement,
+  emptyMessage,
+}) {
+  const view = masterListView({ items, page, listName, emptyMessage });
+  listElement.innerHTML = view.listHtml;
+  paginationElement.innerHTML = view.paginationHtml;
+  return view.page;
 }
 
 function applySettings() {
@@ -1025,7 +1367,7 @@ selectors.stockForm.addEventListener("submit", (event) => {
     date: data.get("date"),
     sku: normalizeSku(data.get("sku")),
     quantity: Number(data.get("quantity")),
-    unit: data.get("unit").toString().trim()
+    unit: data.get("unit").toString().trim(),
   });
   ensureCustomer(data.get("customer").toString().trim());
   saveState();
@@ -1047,7 +1389,7 @@ selectors.dispatchForm.addEventListener("submit", (event) => {
     driver: data.get("driver").toString().trim(),
     sku: normalizeSku(data.get("sku")),
     quantity: Number(data.get("quantity")),
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   });
   ensureCustomer(customer);
   selectedCustomer = customer;
@@ -1056,8 +1398,15 @@ selectors.dispatchForm.addEventListener("submit", (event) => {
   setToday(selectors.dispatchForm.elements.date);
   selectors.dispatchForm.elements.customer.value = selectedCustomer;
   selectors.dispatchHistoryFilter.elements.date.value = data.get("date");
-  selectors.dispatchHistoryFilter.elements.truck.value = data.get("truck").toString().trim().toUpperCase();
-  selectors.dispatchHistoryFilter.elements.driver.value = data.get("driver").toString().trim();
+  selectors.dispatchHistoryFilter.elements.truck.value = data
+    .get("truck")
+    .toString()
+    .trim()
+    .toUpperCase();
+  selectors.dispatchHistoryFilter.elements.driver.value = data
+    .get("driver")
+    .toString()
+    .trim();
   dispatchHistoryPage = 1;
   showDispatchToast();
   render();
@@ -1068,7 +1417,7 @@ selectors.loginForm.addEventListener("submit", (event) => {
   const data = new FormData(event.currentTarget);
   saveSession({
     role: data.get("role"),
-    name: data.get("name").toString().trim()
+    name: data.get("name").toString().trim(),
   });
   render();
 });
@@ -1124,7 +1473,10 @@ function handleReceiptPagination(event) {
 }
 
 selectors.stockPagination.addEventListener("click", handleReceiptPagination);
-selectors.receiptHistoryPagination.addEventListener("click", handleReceiptPagination);
+selectors.receiptHistoryPagination.addEventListener(
+  "click",
+  handleReceiptPagination,
+);
 
 selectors.dispatchHistoryFilter.addEventListener("change", () => {
   dispatchHistoryPage = 1;
@@ -1164,7 +1516,11 @@ selectors.skuSelect.addEventListener("change", () => {
 
 selectors.vehicleForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const plate = new FormData(event.currentTarget).get("plate").toString().trim().toUpperCase();
+  const plate = new FormData(event.currentTarget)
+    .get("plate")
+    .toString()
+    .trim()
+    .toUpperCase();
   if (plate && !state.vehicles.includes(plate)) {
     state.vehicles.push(plate);
     vehicleManagementPage = Math.ceil(state.vehicles.length / 10);
@@ -1205,20 +1561,25 @@ selectors.settingsForm.addEventListener("change", (event) => {
     theme: form.elements.theme.value,
     background: form.elements.background.value,
     accent: form.elements.accent.value,
-    textSize: form.elements.textSize.value
+    textSize: form.elements.textSize.value,
   };
   saveSettings();
   applySettings();
 });
 
 document.querySelector("#master-data").addEventListener("click", (event) => {
-  const pageButton = event.target.closest("[data-master-page][data-page-action]");
+  const pageButton = event.target.closest(
+    "[data-master-page][data-page-action]",
+  );
   if (pageButton) {
     event.preventDefault();
     const delta = pageButton.dataset.pageAction === "next" ? 1 : -1;
-    if (pageButton.dataset.masterPage === "customers") customerManagementPage += delta;
-    if (pageButton.dataset.masterPage === "vehicles") vehicleManagementPage += delta;
-    if (pageButton.dataset.masterPage === "drivers") driverManagementPage += delta;
+    if (pageButton.dataset.masterPage === "customers")
+      customerManagementPage += delta;
+    if (pageButton.dataset.masterPage === "vehicles")
+      vehicleManagementPage += delta;
+    if (pageButton.dataset.masterPage === "drivers")
+      driverManagementPage += delta;
     renderMasterData();
     return;
   }
@@ -1230,31 +1591,11 @@ document.querySelector("#master-data").addEventListener("click", (event) => {
 
   const listName = button.dataset.master;
   const index = Number(button.dataset.index);
-  const currentList = state[listName] || [];
   if (button.dataset.action === "delete") {
-    const value = currentList[index];
-    state[listName] = (state[listName] || []).filter((item) => item !== value);
+    openMasterDeleteDialog(listName, index);
   } else {
-    const nextValue = window.prompt("Nhập giá trị mới", currentList[index]);
-    if (nextValue?.trim()) {
-      const normalizedValue = listName === "vehicles" ? nextValue.trim().toUpperCase() : nextValue.trim();
-      const oldValue = currentList[index];
-      state[listName] = (state[listName] || currentList).map((item) => item === oldValue ? normalizedValue : item);
-      if (listName === "customers") {
-        state.invoice.forEach((item) => {
-          if (item.customer === oldValue) item.customer = normalizedValue;
-        });
-        state.dispatches.forEach((item) => {
-          if (item.customer === oldValue) item.customer = normalizedValue;
-        });
-        (state.invoiceApprovals || []).forEach((item) => {
-          if (item.customer === oldValue) item.customer = normalizedValue;
-        });
-      }
-    }
+    openMasterEditDialog(listName, index);
   }
-  saveState();
-  render();
 });
 
 selectors.accountingReport.addEventListener("click", (event) => {
@@ -1275,23 +1616,93 @@ selectors.invoiceConfirmApprove.addEventListener("click", () => {
   state.invoiceApprovals.unshift({
     date: new Date().toISOString().slice(0, 10),
     customer: pendingInvoiceCustomer,
-    status: "Hoàn thành"
+    status: "Hoàn thành",
   });
   selectedReportCustomer = "";
   reportHistoryPage = 1;
   invoiceHistoryPage = 1;
   saveState();
-  showDispatchToast("Xuất hóa đơn và lịch sử xuất hóa đơn đã ghi nhận thành công.");
+  showDispatchToast(
+    "Xuất hóa đơn và lịch sử xuất hóa đơn đã ghi nhận thành công.",
+  );
   closeInvoiceConfirmDialog();
   render();
 });
 
-selectors.invoiceConfirmCancel.addEventListener("click", closeInvoiceConfirmDialog);
+bindDialogDismiss({
+  dialog: selectors.invoiceConfirmDialog,
+  cancelButton: selectors.invoiceConfirmCancel,
+  onDismiss: closeInvoiceConfirmDialog,
+});
 
-selectors.invoiceConfirmDialog.addEventListener("click", (event) => {
-  if (event.target === selectors.invoiceConfirmDialog) {
-    closeInvoiceConfirmDialog();
+selectors.masterEditForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!pendingMasterEdit) return;
+
+  const { listName, index } = pendingMasterEdit;
+  const currentList = state[listName] || [];
+  const oldValue = currentList[index];
+  const nextValue = normalizeMasterValue(
+    listName,
+    selectors.masterEditInput.value || "",
+  );
+
+  if (!nextValue) {
+    selectors.masterEditInput.setCustomValidity("Vui lòng nhập giá trị.");
+    selectors.masterEditInput.reportValidity();
+    return;
   }
+
+  const duplicateIndex = currentList.findIndex(
+    (item, itemIndex) => item === nextValue && itemIndex !== index,
+  );
+  if (duplicateIndex >= 0) {
+    selectors.masterEditInput.setCustomValidity(
+      "Giá trị này đã có trong danh sách.",
+    );
+    selectors.masterEditInput.reportValidity();
+    return;
+  }
+
+  selectors.masterEditInput.setCustomValidity("");
+  if (oldValue !== nextValue) {
+    state[listName] = currentList.map((item, itemIndex) =>
+      itemIndex === index ? nextValue : item,
+    );
+    syncMasterReferences(listName, oldValue, nextValue);
+    saveState();
+    render();
+  }
+
+  closeMasterEditDialog();
+});
+
+selectors.masterEditInput.addEventListener("input", () => {
+  selectors.masterEditInput.setCustomValidity("");
+});
+
+bindDialogDismiss({
+  dialog: selectors.masterEditDialog,
+  cancelButton: selectors.masterEditCancel,
+  onDismiss: closeMasterEditDialog,
+});
+
+selectors.masterDeleteConfirm.addEventListener("click", () => {
+  if (!pendingMasterDelete) return;
+  const { listName, index } = pendingMasterDelete;
+  const currentList = state[listName] || [];
+  const oldValue = currentList[index];
+  state[listName] = currentList.filter((_, itemIndex) => itemIndex !== index);
+  syncMasterReferences(listName, oldValue, "");
+  saveState();
+  closeMasterDeleteDialog();
+  render();
+});
+
+bindDialogDismiss({
+  dialog: selectors.masterDeleteDialog,
+  cancelButton: selectors.masterDeleteCancel,
+  onDismiss: closeMasterDeleteDialog,
 });
 
 function handleReportPagination(event) {
@@ -1309,8 +1720,14 @@ function handleReportPagination(event) {
   renderAccountingReport();
 }
 
-selectors.reportHistoryPagination.addEventListener("click", handleReportPagination);
-selectors.invoiceHistoryPagination.addEventListener("click", handleReportPagination);
+selectors.reportHistoryPagination.addEventListener(
+  "click",
+  handleReportPagination,
+);
+selectors.invoiceHistoryPagination.addEventListener(
+  "click",
+  handleReportPagination,
+);
 
 selectors.overviewPeriod.addEventListener("change", () => {
   overviewPeriod = selectors.overviewPeriod.value;
