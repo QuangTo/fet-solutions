@@ -184,6 +184,7 @@ h2 {
 .period-control {
   display: flex;
   flex: 0 0 auto;
+  width: auto;
   gap: 8px;
   align-items: center;
   font-size: 0.78rem;

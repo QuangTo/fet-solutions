@@ -147,6 +147,10 @@
     --panel-padding: 14px;
   }
 
+  .invoice-button {
+    --button-compact-height: 38px;
+  }
+
   .panel-heading {
     --panel-heading-gap: 8px;
     --panel-heading-margin: 14px;
@@ -174,12 +178,21 @@
     grid-template-columns: 1fr;
   }
 
+  label {
+    font-size: 0.82rem;
+  }
+
   input,
-  select,
+  select {
+    --control-height: 44px;
+    --control-padding-x: 10px;
+    font-size: 0.95rem;
+  }
+
   form button,
   .dialog-actions button,
   .ghost-button {
-    min-height: 46px;
+    min-height: 44px;
   }
 
   form button,
@@ -234,7 +247,7 @@
   .management-section-body .master-form button {
     width: auto;
     min-width: 72px;
-    min-height: 40px;
+    min-height: var(--control-height, 44px);
     border-radius: 8px;
     padding: 0 12px;
     font-size: 0.82rem;
@@ -297,7 +310,19 @@
   }
 
   table {
-    min-width: 520px;
+    --table-min-width: 520px;
+  }
+
+  .data-table--compact {
+    --table-min-width: 380px;
+  }
+
+  .data-table--medium {
+    --table-min-width: 460px;
+  }
+
+  .data-table--wide {
+    --table-min-width: 560px;
   }
 
   th,
@@ -326,7 +351,19 @@
 
 @media (max-width: 420px) {
   table {
-    min-width: 480px;
+    --table-min-width: 480px;
+  }
+
+  .data-table--compact {
+    --table-min-width: 360px;
+  }
+
+  .data-table--medium {
+    --table-min-width: 440px;
+  }
+
+  .data-table--wide {
+    --table-min-width: 540px;
   }
 
   th,

@@ -82,6 +82,7 @@ let receiptSummaryPage = 1;
 let receiptHistoryPage = 1;
 let dispatchHistoryPage = 1;
 let reportHistoryPage = 1;
+let reportCustomerPage = 1;
 let invoiceHistoryPage = 1;
 let customerManagementPage = 1;
 let vehicleManagementPage = 1;
@@ -115,6 +116,7 @@ const selectors = {
   dispatchForm: document.querySelector("#dispatch-form"),
   dispatchSuccess: document.querySelector("#dispatch-success"),
   dispatchHistoryFilter: document.querySelector("#dispatch-history-filter"),
+  dispatchHistoryShowAll: document.querySelector("#dispatch-history-show-all"),
   dispatchHistoryTable: document.querySelector("#dispatch-history-table"),
   dispatchHistoryPagination: document.querySelector(
     "#dispatch-history-pagination",
@@ -144,6 +146,9 @@ const selectors = {
     "#receipt-history-pagination",
   ),
   accountingReport: document.querySelector("#accounting-report"),
+  reportCustomerPagination: document.querySelector(
+    "#report-customer-pagination",
+  ),
   reportHistoryTable: document.querySelector("#report-history-table"),
   reportHistoryPagination: document.querySelector("#report-history-pagination"),
   invoiceHistoryTable: document.querySelector("#invoice-history-table"),
@@ -416,6 +421,15 @@ function stockRows() {
 function customerSummaries() {
   const rows = stockRows();
   const summaries = new Map();
+
+  allCustomers().forEach((customer) => {
+    summaries.set(customer, {
+      customer,
+      itemTypes: new Set(),
+      latestDate: "",
+      totalQuantity: 0,
+    });
+  });
 
   rows.forEach((row) => {
     if (!summaries.has(row.customer)) {
@@ -727,18 +741,29 @@ function renderAccountingReport() {
   const completedRows = reportRows.filter(
     (row) => row.status === "complete" && !approvedCustomers.has(row.customer),
   );
-  const currentCustomer = completedRows.some(
+  const customerPageSize = reportCustomerCardsPerPage();
+  const customerPageCount = Math.max(
+    Math.ceil(completedRows.length / customerPageSize),
+    1,
+  );
+  reportCustomerPage = Math.min(reportCustomerPage, customerPageCount);
+  const customerPageStart = (reportCustomerPage - 1) * customerPageSize;
+  const visibleCompletedRows = completedRows.slice(
+    customerPageStart,
+    customerPageStart + customerPageSize,
+  );
+  const currentCustomer = visibleCompletedRows.some(
     (row) => row.customer === selectedReportCustomer,
   )
     ? selectedReportCustomer
-    : completedRows[0]?.customer || "";
+    : visibleCompletedRows[0]?.customer || "";
 
   if (currentCustomer && selectedReportCustomer !== currentCustomer) {
     selectedReportCustomer = currentCustomer;
   }
 
   selectors.accountingReport.innerHTML =
-    completedRows
+    visibleCompletedRows
       .map(
         (row) => `
     <article class="report-customer-card ${row.customer === currentCustomer ? "active" : ""}" data-report-customer="${escapeHtml(row.customer)}">
@@ -758,6 +783,12 @@ function renderAccountingReport() {
       title: "Chưa có khách hàng hoàn thành",
       copy: "Khi hàng của khách được xuất hết, khách hàng sẽ xuất hiện ở đây để kế toán xuất hóa đơn.",
     });
+  renderReportPagination(
+    selectors.reportCustomerPagination,
+    reportCustomerPage,
+    customerPageCount,
+    "customers",
+  );
 
   const history = sortRowsByDate(
     state.dispatches.filter(
@@ -822,6 +853,12 @@ function renderAccountingReport() {
   );
 }
 
+function reportCustomerCardsPerPage() {
+  if (window.matchMedia("(max-width: 680px)").matches) return 3;
+  if (window.matchMedia("(max-width: 980px)").matches) return 4;
+  return 8;
+}
+
 function latestDispatchTimestamp(dispatches) {
   return dispatches.reduce((latest, item) => {
     const timestamp = new Date(item.createdAt || item.date).getTime();
@@ -874,7 +911,7 @@ function renderCustomerCards(summaries) {
     <button class="customer-card ${summary.customer === selectedCustomer ? "active" : ""}" data-customer="${escapeHtml(summary.customer)}" type="button">
       <span>${escapeHtml(summary.customer)}</span>
       <strong>${summary.totalQuantity.toLocaleString("vi-VN")}</strong>
-      <small>${summary.itemTypeCount} loại hàng - cập nhật ${formatDate(summary.latestDate)}</small>
+      <small>${summary.latestDate ? `${summary.itemTypeCount} loại hàng - cập nhật ${formatDate(summary.latestDate)}` : "Chưa có hàng trong kho"}</small>
     </button>
   `,
     )
@@ -1387,9 +1424,7 @@ selectors.dispatchForm.addEventListener("submit", async (event) => {
     selectedCustomer = customer;
     form.reset();
     setToday(form.elements.date);
-    selectors.dispatchHistoryFilter.elements.date.value = data.get("date");
-    selectors.dispatchHistoryFilter.elements.truck.value = truck;
-    selectors.dispatchHistoryFilter.elements.driver.value = driver;
+    selectors.dispatchHistoryFilter.reset();
     dispatchHistoryPage = 1;
     showToast();
     await refreshAndRender();
@@ -1482,6 +1517,12 @@ selectors.dispatchHistoryFilter.addEventListener("change", () => {
   renderDispatchHistory();
 });
 
+selectors.dispatchHistoryShowAll.addEventListener("click", () => {
+  selectors.dispatchHistoryFilter.reset();
+  dispatchHistoryPage = 1;
+  renderDispatchHistory();
+});
+
 selectors.dispatchHistoryPagination.addEventListener("click", (event) => {
   const button = event.target.closest("[data-dispatch-page][data-page-action]");
   if (!button) return;
@@ -1500,6 +1541,7 @@ selectors.customerPagination.addEventListener("click", (event) => {
 
 window.addEventListener("resize", () => {
   renderCustomerCards(customerSummaries());
+  renderAccountingReport();
 });
 
 selectors.dispatchForm.elements.customer.addEventListener("change", () => {
@@ -1750,6 +1792,9 @@ function handleReportPagination(event) {
   if (button.dataset.reportPage === "dispatch") {
     reportHistoryPage += delta;
   }
+  if (button.dataset.reportPage === "customers") {
+    reportCustomerPage += delta;
+  }
   if (button.dataset.reportPage === "invoice") {
     invoiceHistoryPage += delta;
   }
@@ -1757,6 +1802,10 @@ function handleReportPagination(event) {
 }
 
 selectors.reportHistoryPagination.addEventListener(
+  "click",
+  handleReportPagination,
+);
+selectors.reportCustomerPagination.addEventListener(
   "click",
   handleReportPagination,
 );
