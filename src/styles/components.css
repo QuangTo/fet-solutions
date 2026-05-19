@@ -288,7 +288,7 @@
 }
 
 .history-filter button {
-  min-width: 360px;
+  min-width: min(220px, 100%);
 }
 
 .inline-form > *,

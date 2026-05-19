@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const crypto = require("node:crypto");
 const express = require("express");
 const { ZodError } = require("zod");
 const { requestContext, requireRole } = require("./auth");
@@ -10,6 +11,9 @@ const {
   invoiceApprovalSchema,
   namedMasterSchema,
   receiptSchema,
+  settingSchema,
+  userSchema,
+  userUpdateSchema,
   vehicleSchema,
 } = require("./validators");
 
@@ -34,6 +38,155 @@ app.get("/api/health", async (_request, response) => {
 
 app.get("/api/access", (_request, response) => {
   response.json({ roles, pageAccess });
+});
+
+function publicUser(row) {
+  if (!row) return null;
+  return {
+    createdAt: row.createdAt,
+    id: row.id,
+    isActive: row.isActive,
+    name: row.name,
+    phone: row.phone,
+    role: row.role,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function hashPassword(password = "") {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
+
+function userRows() {
+  return repo.query(`
+    select
+      id,
+      display_name as name,
+      phone,
+      role,
+      is_active as "isActive",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    from users
+    where is_active = true
+    order by created_at desc
+    limit 200
+  `);
+}
+
+app.get("/api/users", requireRole("admin"), async (_request, response) => {
+  response.json(await userRows());
+});
+
+app.post("/api/users", requireRole("admin"), async (request, response) => {
+  const body = userSchema.parse(request.body);
+  const item = await repo.queryOne(
+    `
+      insert into users (display_name, phone, password_hash, role)
+      values ($1, $2, $3, $4)
+      on conflict (phone) do update
+      set display_name = excluded.display_name,
+          password_hash = excluded.password_hash,
+          role = excluded.role,
+          is_active = true,
+          updated_at = now()
+      returning
+        id,
+        display_name as name,
+        phone,
+        role,
+        is_active as "isActive",
+        created_at as "createdAt",
+        updated_at as "updatedAt"
+    `,
+    [body.name, body.phone, body.password ? hashPassword(body.password) : null, body.role],
+  );
+  response.status(201).json(publicUser(item));
+});
+
+app.patch("/api/users/:id", requireRole("admin"), async (request, response) => {
+  const body = userUpdateSchema.parse(request.body);
+  const current = await repo.queryOne(
+    "select id, display_name, phone, password_hash, role from users where id = $1 and is_active = true",
+    [request.params.id],
+  );
+  if (!current) {
+    response.status(404).json({ error: "NOT_FOUND" });
+    return;
+  }
+
+  const item = await repo.queryOne(
+    `
+      update users
+      set display_name = $1,
+          phone = $2,
+          password_hash = $3,
+          role = $4,
+          updated_at = now()
+      where id = $5 and is_active = true
+      returning
+        id,
+        display_name as name,
+        phone,
+        role,
+        is_active as "isActive",
+        created_at as "createdAt",
+        updated_at as "updatedAt"
+    `,
+    [
+      body.name || current.display_name,
+      body.phone || current.phone,
+      body.password ? hashPassword(body.password) : current.password_hash,
+      body.role || current.role,
+      request.params.id,
+    ],
+  );
+  response.json(publicUser(item));
+});
+
+app.delete("/api/users/:id", requireRole("admin"), async (request, response) => {
+  const item = await repo.queryOne(
+    `
+      update users
+      set is_active = false, updated_at = now()
+      where id = $1 and is_active = true
+      returning id
+    `,
+    [request.params.id],
+  );
+  if (!item) {
+    response.status(404).json({ error: "NOT_FOUND" });
+    return;
+  }
+  response.status(204).end();
+});
+
+app.get("/api/settings", requireRole("driver", "warehouse", "accountant"), async (_request, response) => {
+  response.json(
+    await repo.query(`
+      select key, value, updated_at as "updatedAt"
+      from app_settings
+      order by key
+    `),
+  );
+});
+
+app.put("/api/settings/:key", requireRole("admin"), async (request, response) => {
+  const body = settingSchema.parse({
+    key: request.params.key,
+    value: request.body.value,
+  });
+  const item = await repo.queryOne(
+    `
+      insert into app_settings (key, value)
+      values ($1, $2::jsonb)
+      on conflict (key) do update
+      set value = excluded.value, updated_at = now()
+      returning key, value, updated_at as "updatedAt"
+    `,
+    [body.key, JSON.stringify(body.value)],
+  );
+  response.json(item);
 });
 
 function registerMasterRoutes({ path, table, column, schema, entityType }) {
@@ -185,13 +338,8 @@ app.get("/api/inventory", requireRole("driver", "warehouse", "accountant"), asyn
   response.json(await repo.inventoryRows(request.query.customerId || null));
 });
 
-async function loadAppData() {
-  const [customers, vehicles, drivers, receipts, dispatches, inventory, billingReady, invoiceApprovals] =
-    await Promise.all([
-      repo.listMaster("customers", "name"),
-      repo.listMaster("vehicles", "plate"),
-      repo.listMaster("drivers", "name"),
-      repo.query(`
+function receiptRows() {
+  return repo.query(`
         select
           r.id,
           r.received_date as date,
@@ -210,8 +358,11 @@ async function loadAppData() {
         group by r.id, c.id, c.name
         order by r.received_date desc, r.created_at desc
         limit 500
-      `),
-      repo.query(`
+      `);
+}
+
+function dispatchRows() {
+  return repo.query(`
         select
           d.id,
           d.dispatch_date as date,
@@ -237,10 +388,11 @@ async function loadAppData() {
         group by d.id, c.id, c.name, v.id, v.plate, dr.id, dr.name
         order by d.dispatch_date desc, d.created_at desc
         limit 500
-      `),
-      repo.inventoryRows(),
-      repo.billingReadyCustomers(),
-      repo.query(`
+      `);
+}
+
+function invoiceApprovalRows() {
+  return repo.query(`
         select
           ia.id,
           ia.approval_date as date,
@@ -252,23 +404,92 @@ async function loadAppData() {
         join customers c on c.id = ia.customer_id
         order by ia.approval_date desc, ia.created_at desc
         limit 500
-      `),
-    ]);
+      `);
+}
+
+async function loadMasterData() {
+  const [customers, vehicles, drivers] = await Promise.all([
+    repo.listMaster("customers", "name"),
+    repo.listMaster("vehicles", "plate"),
+    repo.listMaster("drivers", "name"),
+  ]);
+
+  return { customers, drivers, vehicles };
+}
+
+async function loadOperationsData() {
+  const [receipts, dispatches, inventory] = await Promise.all([
+    receiptRows(),
+    dispatchRows(),
+    repo.inventoryRows(),
+  ]);
+
+  return { dispatches, inventory, receipts };
+}
+
+async function loadReceiptData() {
+  const [receipts, inventory] = await Promise.all([
+    receiptRows(),
+    repo.inventoryRows(),
+  ]);
+
+  return { inventory, receipts };
+}
+
+async function loadDispatchData() {
+  const [dispatches, inventory] = await Promise.all([
+    dispatchRows(),
+    repo.inventoryRows(),
+  ]);
+
+  return { dispatches, inventory };
+}
+
+async function loadReportData() {
+  const [billingReady, invoiceApprovals] = await Promise.all([
+    repo.billingReadyCustomers(),
+    invoiceApprovalRows(),
+  ]);
+
+  return { billingReady, invoiceApprovals };
+}
+
+async function loadAppData() {
+  const [masterData, operationsData, reportData] = await Promise.all([
+    loadMasterData(),
+    loadOperationsData(),
+    loadReportData(),
+  ]);
 
   return {
-    billingReady,
-    customers,
-    dispatches,
-    drivers,
-    inventory,
-    invoiceApprovals,
-    receipts,
-    vehicles,
+    ...masterData,
+    ...operationsData,
+    ...reportData,
   };
 }
 
 app.get("/api/app-data", requireRole("driver", "warehouse", "accountant"), async (_request, response) => {
   response.json(await loadAppData());
+});
+
+app.get("/api/master-data", requireRole("driver", "warehouse", "accountant"), async (_request, response) => {
+  response.json(await loadMasterData());
+});
+
+app.get("/api/operations-data", requireRole("driver", "warehouse", "accountant"), async (_request, response) => {
+  response.json(await loadOperationsData());
+});
+
+app.get("/api/receipt-data", requireRole("driver", "warehouse", "accountant"), async (_request, response) => {
+  response.json(await loadReceiptData());
+});
+
+app.get("/api/dispatch-data", requireRole("driver", "warehouse", "accountant"), async (_request, response) => {
+  response.json(await loadDispatchData());
+});
+
+app.get("/api/report-data", requireRole("accountant"), async (_request, response) => {
+  response.json(await loadReportData());
 });
 
 app.get("/api/jsonp", async (request, response) => {
@@ -310,6 +531,19 @@ function jsonpScript({ callback, token, payload }) {
 
 async function handleJsonpOperation({ method, path, payload, user }) {
   if (method === "GET" && path === "/app-data") return loadAppData();
+  if (method === "GET" && path === "/master-data") return loadMasterData();
+  if (method === "GET" && path === "/operations-data") return loadOperationsData();
+  if (method === "GET" && path === "/receipt-data") return loadReceiptData();
+  if (method === "GET" && path === "/dispatch-data") return loadDispatchData();
+  if (method === "GET" && path === "/report-data") return loadReportData();
+  if (method === "GET" && path === "/users") return userRows();
+  if (method === "GET" && path === "/settings") {
+    return repo.query(`
+      select key, value, updated_at as "updatedAt"
+      from app_settings
+      order by key
+    `);
+  }
   if (method === "POST" && path === "/receipts") {
     return repo.createReceipt(receiptSchema.parse(payload), user);
   }
@@ -318,6 +552,93 @@ async function handleJsonpOperation({ method, path, payload, user }) {
   }
   if (method === "POST" && path === "/invoice-approvals") {
     return repo.createInvoiceApproval(invoiceApprovalSchema.parse(payload), user);
+  }
+  if (method === "POST" && path === "/users") {
+    const body = userSchema.parse(payload);
+    const item = await repo.queryOne(
+      `
+        insert into users (display_name, phone, password_hash, role)
+        values ($1, $2, $3, $4)
+        on conflict (phone) do update
+        set display_name = excluded.display_name,
+            password_hash = excluded.password_hash,
+            role = excluded.role,
+            is_active = true,
+            updated_at = now()
+        returning
+          id,
+          display_name as name,
+          phone,
+          role,
+          is_active as "isActive",
+          created_at as "createdAt",
+          updated_at as "updatedAt"
+      `,
+      [body.name, body.phone, body.password ? hashPassword(body.password) : null, body.role],
+    );
+    return publicUser(item);
+  }
+  if (method === "PATCH" && path.startsWith("/users/")) {
+    const body = userUpdateSchema.parse(payload);
+    const id = path.split("/")[2];
+    const current = await repo.queryOne(
+      "select id, display_name, phone, password_hash, role from users where id = $1 and is_active = true",
+      [id],
+    );
+    if (!current) return null;
+    return publicUser(await repo.queryOne(
+      `
+        update users
+        set display_name = $1,
+            phone = $2,
+            password_hash = $3,
+            role = $4,
+            updated_at = now()
+        where id = $5 and is_active = true
+        returning
+          id,
+          display_name as name,
+          phone,
+          role,
+          is_active as "isActive",
+          created_at as "createdAt",
+          updated_at as "updatedAt"
+      `,
+      [
+        body.name || current.display_name,
+        body.phone || current.phone,
+        body.password ? hashPassword(body.password) : current.password_hash,
+        body.role || current.role,
+        id,
+      ],
+    ));
+  }
+  if (method === "DELETE" && path.startsWith("/users/")) {
+    return repo.queryOne(
+      `
+        update users
+        set is_active = false, updated_at = now()
+        where id = $1 and is_active = true
+        returning id
+      `,
+      [path.split("/")[2]],
+    );
+  }
+  if ((method === "PUT" || method === "POST") && path.startsWith("/settings/")) {
+    const body = settingSchema.parse({
+      key: path.split("/")[2],
+      value: payload.value,
+    });
+    return repo.queryOne(
+      `
+        insert into app_settings (key, value)
+        values ($1, $2::jsonb)
+        on conflict (key) do update
+        set value = excluded.value, updated_at = now()
+        returning key, value, updated_at as "updatedAt"
+      `,
+      [body.key, JSON.stringify(body.value)],
+    );
   }
 
   const masterMatch = path.match(/^\/(customers|vehicles|drivers)(?:\/(.+))?$/);

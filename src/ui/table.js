@@ -12,6 +12,27 @@ export function paginateRows(rows, currentPage, pageSize = TABLE_ROW_LIMIT) {
   };
 }
 
+export function useTable({
+  currentPage = 1,
+  filters = [],
+  pageSize = TABLE_ROW_LIMIT,
+  rows,
+  sort,
+}) {
+  const filteredRows = filters.reduce(
+    (nextRows, filter) => nextRows.filter(filter),
+    rows,
+  );
+  const sortedRows = sort ? [...filteredRows].sort(sort) : filteredRows;
+  const page = paginateRows(sortedRows, currentPage, pageSize);
+
+  return {
+    ...page,
+    filteredRows,
+    totalCount: rows.length,
+  };
+}
+
 export function paginationMarkup({ page, pageCount, scopeAttribute, scope }) {
   return pageCount > 1 ? `
     <button type="button" ${scopeAttribute}="${scope}" data-page-action="prev" ${page === 1 ? "disabled" : ""}>Trước</button>

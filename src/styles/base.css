@@ -24,6 +24,24 @@ select {
 button {
   border: 0;
   cursor: pointer;
+  transition:
+    filter 140ms ease,
+    opacity 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+button:not(:disabled):active,
+button.is-pressing:not(:disabled) {
+  filter: brightness(0.96) saturate(1.08);
+  transform: translateY(1px) scale(0.99);
+}
+
+button.is-loading {
+  cursor: wait;
+  filter: saturate(0.86);
+  opacity: 0.78;
+  pointer-events: none;
 }
 
 button:disabled,

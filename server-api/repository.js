@@ -5,6 +5,11 @@ async function query(text, params = []) {
   return result.rows;
 }
 
+async function queryOne(text, params = []) {
+  const result = await getPool().query(text, params);
+  return result.rows[0] || null;
+}
+
 async function transaction(work) {
   const client = await getPool().connect();
   try {
@@ -75,8 +80,75 @@ async function updateNamedMaster({ table, column, id, value, user, entityType })
   });
 }
 
+async function assertCustomerCanBeDeleted(client, customerId) {
+  const result = await client.query(
+    `
+      with receipts_by_sku as (
+        select ri.sku, sum(ri.quantity) as received_quantity
+        from receipts r
+        join receipt_items ri on ri.receipt_id = r.id
+        where r.customer_id = $1
+        group by ri.sku
+      ),
+      dispatches_by_sku as (
+        select di.sku, sum(di.quantity) as dispatched_quantity
+        from dispatches d
+        join dispatch_items di on di.dispatch_id = d.id
+        where d.customer_id = $1
+        group by di.sku
+      ),
+      inventory as (
+        select
+          coalesce(sum(r.received_quantity - coalesce(d.dispatched_quantity, 0)), 0) as remaining_quantity,
+          count(*) as item_count
+        from receipts_by_sku r
+        left join dispatches_by_sku d on d.sku = r.sku
+      )
+      select
+        i.remaining_quantity::float as "remainingQuantity",
+        i.item_count::int as "itemCount",
+        exists (
+          select 1
+          from invoice_approvals ia
+          where ia.customer_id = $1
+        ) as "hasInvoiceApproval"
+      from inventory i
+    `,
+    [customerId],
+  );
+
+  const usage = result.rows[0] || {
+    remainingQuantity: 0,
+    itemCount: 0,
+    hasInvoiceApproval: false,
+  };
+
+  if (Number(usage.remainingQuantity) > 0) {
+    const error = new Error("Không thể xóa khách hàng này vì vẫn còn hàng trong kho.");
+    error.statusCode = 409;
+    error.code = "CUSTOMER_DELETE_BLOCKED";
+    throw error;
+  }
+
+  if (Number(usage.itemCount) > 0 && !usage.hasInvoiceApproval) {
+    const error = new Error("Không thể xóa khách hàng này vì còn báo cáo cần xuất hóa đơn.");
+    error.statusCode = 409;
+    error.code = "CUSTOMER_DELETE_BLOCKED";
+    throw error;
+  }
+}
+
 async function softDeleteMaster({ table, id, user, entityType }) {
   return transaction(async (client) => {
+    if (table === "customers") {
+      const customer = await client.query(
+        "select id from customers where id = $1 and is_active = true",
+        [id],
+      );
+      if (!customer.rowCount) return null;
+      await assertCustomerCanBeDeleted(client, id);
+    }
+
     const result = await client.query(
       `
         update ${table}
@@ -385,6 +457,7 @@ module.exports = {
   inventoryRows,
   listMaster,
   query,
+  queryOne,
   softDeleteMaster,
   updateNamedMaster,
 };

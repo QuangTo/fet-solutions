@@ -12,6 +12,27 @@ const vehicleSchema = z.object({
   plate: z.string().trim().min(1).transform((value) => value.toUpperCase()),
 });
 
+const userRole = z.enum(["admin", "driver", "accountant", "warehouse"]);
+
+const userSchema = z.object({
+  name: z.string().trim().min(1),
+  password: z.string().min(6).optional(),
+  phone: z.string().trim().min(1),
+  role: userRole,
+});
+
+const userUpdateSchema = userSchema.partial().refine(
+  (data) => Object.keys(data).length > 0,
+  { message: "Cần ít nhất một trường để cập nhật." },
+);
+
+const settingSchema = z.object({
+  key: z.string().trim().min(1),
+  value: z.unknown().refine((value) => value !== undefined, {
+    message: "Cần giá trị setting.",
+  }),
+});
+
 const receiptItemSchema = z.object({
   sku: z.string().trim().min(1).transform((value) => value.toUpperCase()),
   quantity: positiveQuantity,
@@ -62,5 +83,8 @@ module.exports = {
   invoiceApprovalSchema,
   namedMasterSchema,
   receiptSchema,
+  settingSchema,
+  userSchema,
+  userUpdateSchema,
   vehicleSchema,
 };

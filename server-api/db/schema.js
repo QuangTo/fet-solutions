@@ -21,6 +21,8 @@ const timestamps = {
 const users = pgTable("users", {
   id: id(),
   displayName: text("display_name").notNull(),
+  phone: text("phone"),
+  passwordHash: text("password_hash"),
   role: text("role").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   ...timestamps,

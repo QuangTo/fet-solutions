@@ -1,4 +1,11 @@
 import { apiRequest } from "./api/client.js";
+import {
+  dispatchDataQuery,
+  masterDataQuery,
+  operationsDataQuery,
+  receiptDataQuery,
+  reportDataQuery,
+} from "./api/page-data.js";
 import { enhanceDateInputs } from "./ui/date-input.js";
 import { bindDialogDismiss, hideDialog, showDialog } from "./ui/dialog.js";
 import {
@@ -12,7 +19,7 @@ import {
   masterListView,
   normalizeMasterValue,
 } from "./ui/master-data.js";
-import { paginateRows, paginationMarkup } from "./ui/table.js";
+import { paginateRows, paginationMarkup, useTable } from "./ui/table.js";
 
 const SESSION_KEY = "fet-logistics-session";
 const SETTINGS_KEY = "fet-logistics-settings";
@@ -241,7 +248,7 @@ function getInitialPage() {
   return pages[normalizedPage] ? normalizedPage : "tong-quan";
 }
 
-async function navigateTo(page, { refresh = true } = {}) {
+async function navigateTo(page, { refresh = false } = {}) {
   activePage = pages[page] ? page : "tong-quan";
   window.history.replaceState(null, "", `#${activePage}`);
   setMobileNavOpen(false);
@@ -266,38 +273,85 @@ function normalizeRole(role = "warehouse") {
 }
 
 async function refreshAppData() {
-  const data = await apiRequest("/app-data", {}, session);
-  state = hydrateState(data);
+  const activeRole = normalizeRole(session?.role || "warehouse");
+  const pageQueries = [
+    masterDataQuery(session, { force: true }),
+    operationsDataQuery(session, { force: true }),
+  ];
+
+  if (["admin", "accountant"].includes(activeRole)) {
+    pageQueries.push(reportDataQuery(session, { force: true }));
+  }
+
+  const dataParts = await Promise.all(pageQueries);
+  dataParts.forEach(updateState);
   if (selectedCustomer && !state.customers.includes(selectedCustomer)) {
     selectedCustomer = "";
   }
 }
 
-function hydrateState(data) {
-  const customers = data.customers || [];
-  const vehicles = data.vehicles || [];
-  const drivers = data.drivers || [];
-  return {
-    billingReady: data.billingReady || [],
-    customerIds: Object.fromEntries(customers.map((item) => [item.label, item.id])),
-    customerRecords: customers,
-    customers: customers.map((item) => item.label),
-    dispatches: flattenDispatches(data.dispatches || []),
-    driverIds: Object.fromEntries(drivers.map((item) => [item.label, item.id])),
-    driverRecords: drivers,
-    drivers: drivers.map((item) => item.label),
-    inventory: (data.inventory || []).map((row) => ({
+async function refreshMasterData() {
+  updateState(await masterDataQuery(session, { force: true }));
+}
+
+async function refreshOperationsData() {
+  updateState(await operationsDataQuery(session, { force: true }));
+}
+
+async function refreshReceiptData() {
+  updateState(await receiptDataQuery(session, { force: true }));
+}
+
+async function refreshDispatchData() {
+  updateState(await dispatchDataQuery(session, { force: true }));
+}
+
+async function refreshReportData() {
+  updateState(await reportDataQuery(session, { force: true }));
+}
+
+function updateState(data) {
+  if (data.customers) {
+    state.customerRecords = data.customers;
+    state.customerIds = Object.fromEntries(
+      data.customers.map((item) => [item.label, item.id]),
+    );
+    state.customers = data.customers.map((item) => item.label);
+  }
+  if (data.vehicles) {
+    state.vehicleRecords = data.vehicles;
+    state.vehicleIds = Object.fromEntries(
+      data.vehicles.map((item) => [item.label, item.id]),
+    );
+    state.vehicles = data.vehicles.map((item) => item.label);
+  }
+  if (data.drivers) {
+    state.driverRecords = data.drivers;
+    state.driverIds = Object.fromEntries(
+      data.drivers.map((item) => [item.label, item.id]),
+    );
+    state.drivers = data.drivers.map((item) => item.label);
+  }
+  if (data.dispatches) {
+    state.dispatches = flattenDispatches(data.dispatches);
+  }
+  if (data.inventory) {
+    state.inventory = data.inventory.map((row) => ({
       ...row,
       invoiceQuantity: Number(row.receivedQuantity || 0),
       dispatchedQuantity: Number(row.dispatchedQuantity || 0),
       remainingQuantity: Number(row.remainingQuantity || 0),
-    })),
-    invoice: flattenReceipts(data.receipts || []),
-    invoiceApprovals: data.invoiceApprovals || [],
-    vehicleIds: Object.fromEntries(vehicles.map((item) => [item.label, item.id])),
-    vehicleRecords: vehicles,
-    vehicles: vehicles.map((item) => item.label),
-  };
+    }));
+  }
+  if (data.receipts) {
+    state.invoice = flattenReceipts(data.receipts);
+  }
+  if (data.billingReady) {
+    state.billingReady = data.billingReady;
+  }
+  if (data.invoiceApprovals) {
+    state.invoiceApprovals = data.invoiceApprovals;
+  }
 }
 
 function flattenReceipts(receipts) {
@@ -351,6 +405,37 @@ function normalizeApiDate(value) {
 
 async function refreshAndRender() {
   await refreshAppData();
+  render();
+}
+
+async function refreshOperationsAndRender({ refreshMasters = false } = {}) {
+  await Promise.all([
+    refreshOperationsData(),
+    refreshMasters ? refreshMasterData() : Promise.resolve(),
+  ]);
+  render();
+}
+
+async function refreshReceiptAndRender({ refreshMasters = false } = {}) {
+  await Promise.all([
+    refreshReceiptData(),
+    refreshMasters ? refreshMasterData() : Promise.resolve(),
+  ]);
+  render();
+}
+
+async function refreshDispatchAndRender() {
+  await refreshDispatchData();
+  render();
+}
+
+async function refreshMastersAndOperationsAndRender() {
+  await Promise.all([refreshMasterData(), refreshOperationsData()]);
+  render();
+}
+
+async function refreshReportsAndRender() {
+  await refreshReportData();
   render();
 }
 
@@ -623,6 +708,28 @@ function showToast(
     selectors.dispatchSuccess.classList.remove("visible");
     selectors.dispatchSuccess.hidden = true;
   }, 3000);
+}
+
+function setButtonBusy(button, isBusy) {
+  if (!button) return;
+  button.classList.toggle("is-loading", isBusy);
+  button.disabled = isBusy;
+  button.setAttribute("aria-busy", isBusy.toString());
+}
+
+async function withButtonBusy(button, task) {
+  setButtonBusy(button, true);
+  try {
+    return await task();
+  } finally {
+    setButtonBusy(button, false);
+  }
+}
+
+function refreshInBackground(task) {
+  task().catch((error) => {
+    showToast(`Không cập nhật được dữ liệu mới: ${error.message}`);
+  });
 }
 
 function openInvoiceConfirmDialog(customer) {
@@ -1104,13 +1211,17 @@ function formatDate(value) {
 }
 
 function sortRowsByDate(rows, sortKey) {
+  return [...rows].sort(dateComparator(sortKey));
+}
+
+function dateComparator(sortKey) {
   const direction = dateSortDirections[sortKey] || "desc";
-  return [...rows].sort((a, b) => {
+  return (a, b) => {
     const comparison = normalizeApiDate(a.date).localeCompare(
       normalizeApiDate(b.date),
     );
     return direction === "asc" ? comparison : -comparison;
-  });
+  };
 }
 
 function resetDateSortPage(sortKey) {
@@ -1230,12 +1341,16 @@ function renderDispatchHistory() {
     truck: form.elements.truck.value,
     driver: form.elements.driver.value,
   };
-  const rows = state.dispatches
-    .filter((item) => !filters.date || item.date === filters.date)
-    .filter((item) => !filters.truck || item.truck === filters.truck)
-    .filter((item) => !filters.driver || item.driver === filters.driver);
-  const sortedRows = sortRowsByDate(rows, "dispatchHistory");
-  const page = paginateRows(sortedRows, dispatchHistoryPage);
+  const page = useTable({
+    currentPage: dispatchHistoryPage,
+    filters: [
+      (item) => !filters.date || item.date === filters.date,
+      (item) => !filters.truck || item.truck === filters.truck,
+      (item) => !filters.driver || item.driver === filters.driver,
+    ],
+    rows: state.dispatches,
+    sort: dateComparator("dispatchHistory"),
+  });
   dispatchHistoryPage = page.page;
 
   selectors.dispatchHistoryTable.innerHTML =
@@ -1243,12 +1358,12 @@ function renderDispatchHistory() {
       .map(
         (item) => `
     <tr>
-      <td>${formatDate(item.date)}</td>
-      <td>${escapeHtml(item.customer)}</td>
-      <td><strong>${escapeHtml(item.truck)}</strong></td>
-      <td>${escapeHtml(item.driver)}</td>
-      <td>${escapeHtml(item.sku)}</td>
-      <td>${Number(item.quantity).toLocaleString("vi-VN")}</td>
+      <td data-label="Ngày xuất">${formatDate(item.date)}</td>
+      <td data-label="Khách hàng">${escapeHtml(item.customer)}</td>
+      <td data-label="Xe"><strong>${escapeHtml(item.truck)}</strong></td>
+      <td data-label="Tài xế">${escapeHtml(item.driver)}</td>
+      <td data-label="Loại hàng">${escapeHtml(item.sku)}</td>
+      <td data-label="Số lượng">${Number(item.quantity).toLocaleString("vi-VN")}</td>
     </tr>
   `,
       )
@@ -1356,7 +1471,9 @@ selectors.stockForm.addEventListener("submit", async (event) => {
   const form = event.currentTarget;
   const data = new FormData(form);
   const customer = data.get("customer").toString().trim();
-  try {
+  const isNewCustomer = !allCustomers().includes(customer);
+  await withButtonBusy(event.submitter, async () => {
+    try {
     await apiRequest(
       "/receipts",
       {
@@ -1380,11 +1497,14 @@ selectors.stockForm.addEventListener("submit", async (event) => {
     resetReceiptPages();
     resetItemFields(form);
     setToday(form.elements.date);
-    await refreshAndRender();
     showToast("Nhập hàng thành công. Dữ liệu nhập kho đã được cập nhật.");
-  } catch (error) {
-    showToast(error.message);
-  }
+    refreshInBackground(() =>
+      refreshReceiptAndRender({ refreshMasters: isNewCustomer }),
+    );
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
 });
 
 selectors.dispatchForm.addEventListener("submit", async (event) => {
@@ -1394,7 +1514,8 @@ selectors.dispatchForm.addEventListener("submit", async (event) => {
   const customer = data.get("customer").toString().trim();
   const truck = data.get("truck").toString().trim().toUpperCase();
   const driver = data.get("driver").toString().trim();
-  try {
+  await withButtonBusy(event.submitter, async () => {
+    try {
     await apiRequest(
       "/dispatches",
       {
@@ -1427,10 +1548,11 @@ selectors.dispatchForm.addEventListener("submit", async (event) => {
     selectors.dispatchHistoryFilter.reset();
     dispatchHistoryPage = 1;
     showToast();
-    await refreshAndRender();
-  } catch (error) {
-    showToast(error.message);
-  }
+    refreshInBackground(refreshDispatchAndRender);
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
 });
 
 selectors.loginForm.addEventListener("submit", (event) => {
@@ -1563,48 +1685,63 @@ selectors.vehicleForm.addEventListener("submit", async (event) => {
     .toString()
     .trim()
     .toUpperCase();
-  if (plate) {
-    await apiRequest(
-      "/vehicles",
-      { body: JSON.stringify({ plate }), method: "POST" },
-      session,
-    );
-    showToast("Thêm xe vận chuyển thành công.");
-  }
-  form.reset();
-  await refreshAndRender();
+  await withButtonBusy(event.submitter, async () => {
+    if (plate) {
+      await apiRequest(
+        "/vehicles",
+        { body: JSON.stringify({ plate }), method: "POST" },
+        session,
+      );
+      showToast("Thêm xe vận chuyển thành công.");
+    }
+    form.reset();
+    refreshInBackground(async () => {
+      await refreshMasterData();
+      render();
+    });
+  });
 });
 
 selectors.driverForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   const name = new FormData(form).get("name").toString().trim();
-  if (name) {
-    await apiRequest(
-      "/drivers",
-      { body: JSON.stringify({ name }), method: "POST" },
-      session,
-    );
-    showToast("Thêm tài xế thành công.");
-  }
-  form.reset();
-  await refreshAndRender();
+  await withButtonBusy(event.submitter, async () => {
+    if (name) {
+      await apiRequest(
+        "/drivers",
+        { body: JSON.stringify({ name }), method: "POST" },
+        session,
+      );
+      showToast("Thêm tài xế thành công.");
+    }
+    form.reset();
+    refreshInBackground(async () => {
+      await refreshMasterData();
+      render();
+    });
+  });
 });
 
 selectors.customerForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   const name = new FormData(form).get("name").toString().trim();
-  if (name) {
-    await apiRequest(
-      "/customers",
-      { body: JSON.stringify({ name }), method: "POST" },
-      session,
-    );
-    showToast("Thêm khách hàng thành công.");
-  }
-  form.reset();
-  await refreshAndRender();
+  await withButtonBusy(event.submitter, async () => {
+    if (name) {
+      await apiRequest(
+        "/customers",
+        { body: JSON.stringify({ name }), method: "POST" },
+        session,
+      );
+      showToast("Thêm khách hàng thành công.");
+    }
+    form.reset();
+    refreshInBackground(async () => {
+      await refreshMasterData();
+      render();
+    });
+  });
 });
 
 selectors.settingsForm.addEventListener("change", (event) => {
@@ -1616,6 +1753,13 @@ selectors.settingsForm.addEventListener("change", (event) => {
     textSize: form.elements.textSize.value,
   };
   saveSettings();
+  refreshInBackground(() =>
+    apiRequest(
+      "/settings/ui",
+      { body: JSON.stringify({ value: settings }), method: "PUT" },
+      session,
+    ),
+  );
   applySettings();
 });
 
@@ -1664,7 +1808,8 @@ selectors.accountingReport.addEventListener("click", (event) => {
 
 selectors.invoiceConfirmApprove.addEventListener("click", async () => {
   if (!pendingInvoiceCustomer) return;
-  try {
+  await withButtonBusy(selectors.invoiceConfirmApprove, async () => {
+    try {
     await apiRequest(
       "/invoice-approvals",
       {
@@ -1684,10 +1829,11 @@ selectors.invoiceConfirmApprove.addEventListener("click", async () => {
       "Xuất hóa đơn và lịch sử xuất hóa đơn đã ghi nhận thành công.",
     );
     closeInvoiceConfirmDialog();
-    await refreshAndRender();
-  } catch (error) {
-    showToast(error.message);
-  }
+    refreshInBackground(refreshReportsAndRender);
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
 });
 
 bindDialogDismiss({
@@ -1726,7 +1872,8 @@ selectors.masterEditForm.addEventListener("submit", async (event) => {
   }
 
   selectors.masterEditInput.setCustomValidity("");
-  try {
+  await withButtonBusy(event.submitter, async () => {
+    try {
     if (oldValue !== nextValue) {
       await apiRequest(
         `${masterApiPath(listName)}/${masterId(listName, oldValue)}`,
@@ -1741,10 +1888,11 @@ selectors.masterEditForm.addEventListener("submit", async (event) => {
 
     closeMasterEditDialog();
     showToast(`Cập nhật ${masterDataConfig[listName].typeLabel} thành công.`);
-    await refreshAndRender();
-  } catch (error) {
-    showToast(error.message);
-  }
+    refreshInBackground(refreshMastersAndOperationsAndRender);
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
 });
 
 selectors.masterEditInput.addEventListener("input", () => {
@@ -1762,7 +1910,8 @@ selectors.masterDeleteConfirm.addEventListener("click", async () => {
   const { listName, index } = pendingMasterDelete;
   const currentList = state[listName] || [];
   const oldValue = currentList[index];
-  try {
+  await withButtonBusy(selectors.masterDeleteConfirm, async () => {
+    try {
     await apiRequest(
       `${masterApiPath(listName)}/${masterId(listName, oldValue)}`,
       { method: "DELETE" },
@@ -1771,10 +1920,11 @@ selectors.masterDeleteConfirm.addEventListener("click", async () => {
     if (selectedCustomer === oldValue) selectedCustomer = "";
     closeMasterDeleteDialog();
     showToast(`Xóa ${masterDataConfig[listName].typeLabel} thành công.`);
-    await refreshAndRender();
-  } catch (error) {
-    showToast(error.message);
-  }
+    refreshInBackground(refreshMastersAndOperationsAndRender);
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
 });
 
 bindDialogDismiss({
@@ -1834,7 +1984,7 @@ selectors.overviewPeriod.addEventListener("change", () => {
 window.addEventListener("hashchange", () => {
   setMobileNavOpen(false);
   activePage = getInitialPage();
-  refreshAndRender();
+  render();
 });
 
 window.addEventListener("keydown", (event) => {
