@@ -1,4 +1,8 @@
-const API_BASE_URL = "http://127.0.0.1:4175/api";
+const API_BASE_URL =
+  window.location.hostname === "127.0.0.1" ||
+  window.location.hostname === "localhost"
+    ? "http://127.0.0.1:4175/api"
+    : "/api";
 
 export async function apiRequest(path, options = {}, session = null) {
   const headers = {

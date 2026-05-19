@@ -14,8 +14,6 @@ const {
 } = require("./validators");
 
 const app = express();
-const port = Number(process.env.API_PORT || process.env.PORT || 4175);
-
 app.use(express.json({ limit: "1mb" }));
 app.use((request, response, next) => {
   response.setHeader("Access-Control-Allow-Origin", process.env.CORS_ORIGIN || "*");
@@ -409,6 +407,4 @@ app.use((error, _request, response, _next) => {
   });
 });
 
-app.listen(port, "127.0.0.1", () => {
-  console.log(`FET API running at http://127.0.0.1:${port}`);
-});
+module.exports = app;

@@ -5,8 +5,8 @@
 - Database: Supabase Postgres
 - API: Express
 - Validation: Zod
-- Schema source: `api/db/schema.js`
-- SQL migrations: `api/db/migrations/*.sql`
+- Schema source: `server-api/db/schema.js`
+- SQL migrations: `server-api/db/migrations/*.sql`
 - Drizzle config: `drizzle.config.js`
 
 This setup is intentionally small for an MVP with fewer than 100 users, while keeping the schema clean enough to move into a larger production setup later.
@@ -30,7 +30,7 @@ npm run db:seed
 
 `db:seed` truncates the MVP business tables and recreates sample customers, vehicles, drivers, receipts, dispatches, and one billing-ready customer.
 
-When schema changes later, update `api/db/schema.js` first and generate a draft migration with:
+When schema changes later, update `server-api/db/schema.js` first and generate a draft migration with:
 
 ```sh
 npm run db:generate

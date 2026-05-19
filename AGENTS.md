@@ -23,7 +23,7 @@ FET is a compact logistics SaaS for receiving customer goods, dispatching them b
 ## Checks
 
 - Run `npm run check` after JavaScript changes.
-- API changes live under `api/`; database setup and endpoint notes live in `docs/API_DB.md`.
+- API implementation changes live under `server-api/`; Vercel exposes only `api/[...path].js`; database setup and endpoint notes live in `docs/API_DB.md`.
 - Use role values `driver`, `warehouse`, `accountant`, and `admin`; normalize old `accounting` values when reading legacy UI/session data.
 - Dev server requires Node.js `20.19+` or `22.12+` because the installed Vite version depends on newer Node utilities.
 - Do not commit real customer data, secrets, database dumps, or generated build output unless explicitly requested.
