@@ -4,7 +4,7 @@
           data-page="nhap-hang"
           data-roles="admin warehouse driver"
         >
-          <div class="single-column">
+          <div class="single-column page-stack">
             <article class="panel">
               <div class="panel-heading">
                 <div>
@@ -16,38 +16,34 @@
                 </div>
               </div>
               <form id="stock-form" class="stock-form writable-only">
-                <div class="batch-fields">
-                  <label>
-                    Khách hàng
-                    <select name="customer" required></select>
-                  </label>
-                  <label>
-                    Ngày nhập kho
-                    <input name="date" type="date" required />
-                  </label>
-                </div>
-                <div class="line-fields">
-                  <label>
-                    Loại hàng
-                    <input name="sku" placeholder="A" required />
-                  </label>
-                  <label>
-                    Số lượng nhập
-                    <input
-                      name="quantity"
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="100"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Đơn vị
-                    <input name="unit" placeholder="tấn" required />
-                  </label>
-                  <button type="submit">Thêm hàng</button>
-                </div>
+                <label>
+                  Ngày nhập kho
+                  <input name="date" type="date" required />
+                </label>
+                <label>
+                  Khách hàng
+                  <select name="customer" required></select>
+                </label>
+                <label>
+                  Loại hàng
+                  <input name="sku" placeholder="A" required />
+                </label>
+                <label>
+                  Số lượng nhập
+                  <input
+                    name="quantity"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="100"
+                    required
+                  />
+                </label>
+                <label>
+                  Đơn vị
+                  <input name="unit" placeholder="tấn" required />
+                </label>
+                <button class="form-action" type="submit">Nhập hàng</button>
               </form>
             </article>
 
@@ -87,7 +83,16 @@
                 <table>
                   <thead>
                     <tr>
-                      <th>Ngày nhập</th>
+                      <th aria-sort="descending">
+                        <button
+                          class="table-sort-button"
+                          type="button"
+                          data-date-sort="receiptHistory"
+                        >
+                          Ngày nhập
+                          <span class="sort-indicator" aria-hidden="true"></span>
+                        </button>
+                      </th>
                       <th>Loại hàng</th>
                       <th>Số lượng</th>
                       <th>Đơn vị</th>

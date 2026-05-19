@@ -4,7 +4,7 @@
           data-page="xuat-hang"
           data-roles="admin warehouse driver"
         >
-          <div class="single-column">
+          <div class="single-column page-stack">
             <article class="panel">
               <div class="panel-heading">
                 <div>
@@ -74,7 +74,16 @@
                 <table>
                   <thead>
                     <tr>
-                      <th>Ngày xuất</th>
+                      <th aria-sort="descending">
+                        <button
+                          class="table-sort-button"
+                          type="button"
+                          data-date-sort="dispatchHistory"
+                        >
+                          Ngày xuất
+                          <span class="sort-indicator" aria-hidden="true"></span>
+                        </button>
+                      </th>
                       <th>Khách hàng</th>
                       <th>Xe</th>
                       <th>Tài xế</th>

@@ -92,17 +92,25 @@ let pendingMasterEdit = null;
 let pendingMasterDelete = null;
 let dispatchToastTimer;
 let overviewPeriod = "month";
+const dateSortDirections = {
+  dispatchHistory: "desc",
+  invoiceHistory: "desc",
+  receiptHistory: "desc",
+  reportHistory: "desc",
+};
 
 const selectors = {
   loginScreen: document.querySelector("#login-screen"),
   loginForm: document.querySelector("#login-form"),
-  activeUser: document.querySelector("#active-user"),
-  activeRole: document.querySelector("#active-role"),
+  mobileNavBackdrop: document.querySelector("#mobile-nav-backdrop"),
+  mobileNavToggle: document.querySelector("#mobile-nav-toggle"),
+  sidebarActiveUser: document.querySelector("#sidebar-active-user"),
+  sidebarActiveRole: document.querySelector("#sidebar-active-role"),
+  sidebarUserButton: document.querySelector("#sidebar-user-button"),
   pageTitle: document.querySelector("#page-title"),
   pageSubtitle: document.querySelector("#page-subtitle"),
   overviewPeriodControl: document.querySelector("#overview-period-control"),
   overviewPeriod: document.querySelector("#overview-period"),
-  logoutButton: document.querySelector("#logout-button"),
   stockForm: document.querySelector("#stock-form"),
   dispatchForm: document.querySelector("#dispatch-form"),
   dispatchSuccess: document.querySelector("#dispatch-success"),
@@ -163,7 +171,6 @@ const selectors = {
   totalInvoiced: document.querySelector("#total-invoiced"),
   totalDispatched: document.querySelector("#total-dispatched"),
   totalRemaining: document.querySelector("#total-remaining"),
-  billingStatus: document.querySelector("#billing-status"),
   skuSelect: document.querySelector("select[name='sku']"),
   pageViews: document.querySelectorAll(".page-view"),
   pageLinks: document.querySelectorAll("[data-page-link]"),
@@ -232,10 +239,21 @@ function getInitialPage() {
 async function navigateTo(page, { refresh = true } = {}) {
   activePage = pages[page] ? page : "tong-quan";
   window.history.replaceState(null, "", `#${activePage}`);
+  setMobileNavOpen(false);
   if (refresh) {
     await refreshAppData();
   }
   render();
+}
+
+function setMobileNavOpen(isOpen) {
+  document.body.classList.toggle("mobile-nav-open", isOpen);
+  selectors.mobileNavBackdrop.hidden = !isOpen;
+  selectors.mobileNavToggle.setAttribute("aria-expanded", isOpen.toString());
+  selectors.mobileNavToggle.setAttribute(
+    "aria-label",
+    isOpen ? "Đóng điều hướng" : "Mở điều hướng",
+  );
 }
 
 function normalizeRole(role = "warehouse") {
@@ -446,16 +464,11 @@ function render() {
     (sum, row) => sum + Math.max(row.remainingQuantity, 0),
     0,
   );
-  const extraItems = rows.filter((row) => row.remainingQuantity < 0);
-  const readyToBill = totalRemaining === 0 && extraItems.length === 0;
 
   selectors.totalInvoiced.textContent = totalInvoiced.toLocaleString("vi-VN");
   selectors.totalDispatched.textContent =
     totalDispatched.toLocaleString("vi-VN");
   selectors.totalRemaining.textContent = totalRemaining.toLocaleString("vi-VN");
-  selectors.billingStatus.textContent = readyToBill
-    ? "Đủ điều kiện"
-    : "Đang chờ";
 
   const summaries = customerSummaries();
   renderCustomerCards(summaries);
@@ -470,6 +483,7 @@ function render() {
   renderDispatchHistory();
 
   renderAccountingReport();
+  renderDateSortControls();
 }
 
 function customerInventorySummary(customer) {
@@ -498,9 +512,10 @@ function renderReceiptCustomerView() {
   }
 
   const summaryRows = receiptSummaryRows(selectedCustomer);
-  const historyRows = state.invoice
-    .filter((item) => item.customer === selectedCustomer)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const historyRows = sortRowsByDate(
+    state.invoice.filter((item) => item.customer === selectedCustomer),
+    "receiptHistory",
+  );
   const summaryPage = paginateRows(summaryRows, receiptSummaryPage);
   const historyPage = paginateRows(historyRows, receiptHistoryPage);
   receiptSummaryPage = summaryPage.page;
@@ -583,7 +598,7 @@ function resetReceiptPages() {
   receiptHistoryPage = 1;
 }
 
-function showDispatchToast(
+function showToast(
   message = "Xuất hàng thành công. Lịch sử bên dưới đã được cập nhật.",
 ) {
   window.clearTimeout(dispatchToastTimer);
@@ -593,7 +608,7 @@ function showDispatchToast(
   dispatchToastTimer = window.setTimeout(() => {
     selectors.dispatchSuccess.classList.remove("visible");
     selectors.dispatchSuccess.hidden = true;
-  }, 5000);
+  }, 3000);
 }
 
 function openInvoiceConfirmDialog(customer) {
@@ -729,9 +744,11 @@ function renderAccountingReport() {
     <article class="report-customer-card ${row.customer === currentCustomer ? "active" : ""}" data-report-customer="${escapeHtml(row.customer)}">
       <div class="report-card-title">
         <strong>${escapeHtml(row.customer)}</strong>
-        <span class="status-pill complete">Hoàn thành</span>
       </div>
-      <span class="report-meta">Hoàn thành ${row.completedAgo} - ${row.historyCount.toLocaleString("vi-VN")} dòng lịch sử xuất hàng</span>
+      <div class="report-meta">
+        <span>Hoàn thành ${row.completedAgo}</span>
+        <span>${row.historyCount.toLocaleString("vi-VN")} lần xuất hàng</span>
+      </div>
       <button class="invoice-button" data-invoice-action="approve" type="button">Xuất hóa đơn</button>
     </article>
   `,
@@ -742,9 +759,12 @@ function renderAccountingReport() {
       copy: "Khi hàng của khách được xuất hết, khách hàng sẽ xuất hiện ở đây để kế toán xuất hóa đơn.",
     });
 
-  const history = state.dispatches
-    .filter((item) => (item.customer || "CustomerA") === currentCustomer)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const history = sortRowsByDate(
+    state.dispatches.filter(
+      (item) => (item.customer || "CustomerA") === currentCustomer,
+    ),
+    "reportHistory",
+  );
   const historyPage = paginateRows(history, reportHistoryPage);
   reportHistoryPage = historyPage.page;
 
@@ -776,8 +796,9 @@ function renderAccountingReport() {
     "dispatch",
   );
 
-  const invoiceHistory = [...(state.invoiceApprovals || [])].sort((a, b) =>
-    b.date.localeCompare(a.date),
+  const invoiceHistory = sortRowsByDate(
+    state.invoiceApprovals || [],
+    "invoiceHistory",
   );
   const invoicePage = paginateRows(invoiceHistory, invoiceHistoryPage);
   invoiceHistoryPage = invoicePage.page;
@@ -986,8 +1007,8 @@ function renderSession() {
   const activeRole = normalizeRole(session?.role || "warehouse");
   document.body.dataset.role = activeRole;
   selectors.loginScreen.hidden = Boolean(session);
-  selectors.activeUser.textContent = session?.name || "Người dùng mẫu";
-  selectors.activeRole.textContent = roles[activeRole];
+  selectors.sidebarActiveUser.textContent = session?.name || "Người dùng mẫu";
+  selectors.sidebarActiveRole.textContent = roles[activeRole];
 
   selectors.writableOnly.forEach((form) => {
     const isMasterForm = form.classList.contains("master-form");
@@ -1031,9 +1052,64 @@ function renderPage() {
 }
 
 function formatDate(value) {
-  return new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" }).format(
-    new Date(value),
-  );
+  if (!value) return "";
+  const normalized = normalizeApiDate(value);
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.toString();
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${date.getFullYear()}`;
+}
+
+function sortRowsByDate(rows, sortKey) {
+  const direction = dateSortDirections[sortKey] || "desc";
+  return [...rows].sort((a, b) => {
+    const comparison = normalizeApiDate(a.date).localeCompare(
+      normalizeApiDate(b.date),
+    );
+    return direction === "asc" ? comparison : -comparison;
+  });
+}
+
+function resetDateSortPage(sortKey) {
+  if (sortKey === "receiptHistory") {
+    receiptHistoryPage = 1;
+  }
+  if (sortKey === "dispatchHistory") {
+    dispatchHistoryPage = 1;
+  }
+  if (sortKey === "reportHistory") {
+    reportHistoryPage = 1;
+  }
+  if (sortKey === "invoiceHistory") {
+    invoiceHistoryPage = 1;
+  }
+}
+
+function renderDateSortControls() {
+  document.querySelectorAll("[data-date-sort]").forEach((button) => {
+    const sortKey = button.dataset.dateSort;
+    const direction = dateSortDirections[sortKey] || "desc";
+    const label = direction === "asc" ? "tăng dần" : "giảm dần";
+    const indicator = button.querySelector(".sort-indicator");
+    const header = button.closest("th");
+
+    button.setAttribute("aria-label", `Sắp xếp ngày ${label}`);
+    if (indicator) {
+      indicator.textContent = direction === "asc" ? "↑" : "↓";
+    }
+    if (header) {
+      header.setAttribute(
+        "aria-sort",
+        direction === "asc" ? "ascending" : "descending",
+      );
+    }
+  });
 }
 
 function normalizeSku(value) {
@@ -1120,9 +1196,9 @@ function renderDispatchHistory() {
   const rows = state.dispatches
     .filter((item) => !filters.date || item.date === filters.date)
     .filter((item) => !filters.truck || item.truck === filters.truck)
-    .filter((item) => !filters.driver || item.driver === filters.driver)
-    .sort((a, b) => b.date.localeCompare(a.date));
-  const page = paginateRows(rows, dispatchHistoryPage);
+    .filter((item) => !filters.driver || item.driver === filters.driver);
+  const sortedRows = sortRowsByDate(rows, "dispatchHistory");
+  const page = paginateRows(sortedRows, dispatchHistoryPage);
   dispatchHistoryPage = page.page;
 
   selectors.dispatchHistoryTable.innerHTML =
@@ -1268,9 +1344,9 @@ selectors.stockForm.addEventListener("submit", async (event) => {
     resetItemFields(form);
     setToday(form.elements.date);
     await refreshAndRender();
-    showDispatchToast("Thêm hàng thành công. Dữ liệu nhập kho đã được cập nhật.");
+    showToast("Nhập hàng thành công. Dữ liệu nhập kho đã được cập nhật.");
   } catch (error) {
-    showDispatchToast(error.message);
+    showToast(error.message);
   }
 });
 
@@ -1315,10 +1391,10 @@ selectors.dispatchForm.addEventListener("submit", async (event) => {
     selectors.dispatchHistoryFilter.elements.truck.value = truck;
     selectors.dispatchHistoryFilter.elements.driver.value = driver;
     dispatchHistoryPage = 1;
-    showDispatchToast();
+    showToast();
     await refreshAndRender();
   } catch (error) {
-    showDispatchToast(error.message);
+    showToast(error.message);
   }
 });
 
@@ -1332,10 +1408,21 @@ selectors.loginForm.addEventListener("submit", (event) => {
   render();
 });
 
-selectors.logoutButton.addEventListener("click", () => {
+function showRoleSwitcher() {
   localStorage.removeItem(SESSION_KEY);
   session = null;
+  setMobileNavOpen(false);
   render();
+}
+
+selectors.sidebarUserButton.addEventListener("click", showRoleSwitcher);
+
+selectors.mobileNavToggle.addEventListener("click", () => {
+  setMobileNavOpen(!document.body.classList.contains("mobile-nav-open"));
+});
+
+selectors.mobileNavBackdrop.addEventListener("click", () => {
+  setMobileNavOpen(false);
 });
 
 selectors.pageLinks.forEach((link) => {
@@ -1440,6 +1527,7 @@ selectors.vehicleForm.addEventListener("submit", async (event) => {
       { body: JSON.stringify({ plate }), method: "POST" },
       session,
     );
+    showToast("Thêm xe vận chuyển thành công.");
   }
   form.reset();
   await refreshAndRender();
@@ -1455,6 +1543,7 @@ selectors.driverForm.addEventListener("submit", async (event) => {
       { body: JSON.stringify({ name }), method: "POST" },
       session,
     );
+    showToast("Thêm tài xế thành công.");
   }
   form.reset();
   await refreshAndRender();
@@ -1470,6 +1559,7 @@ selectors.customerForm.addEventListener("submit", async (event) => {
       { body: JSON.stringify({ name }), method: "POST" },
       session,
     );
+    showToast("Thêm khách hàng thành công.");
   }
   form.reset();
   await refreshAndRender();
@@ -1548,13 +1638,13 @@ selectors.invoiceConfirmApprove.addEventListener("click", async () => {
     selectedReportCustomer = "";
     reportHistoryPage = 1;
     invoiceHistoryPage = 1;
-    showDispatchToast(
+    showToast(
       "Xuất hóa đơn và lịch sử xuất hóa đơn đã ghi nhận thành công.",
     );
     closeInvoiceConfirmDialog();
     await refreshAndRender();
   } catch (error) {
-    showDispatchToast(error.message);
+    showToast(error.message);
   }
 });
 
@@ -1594,20 +1684,25 @@ selectors.masterEditForm.addEventListener("submit", async (event) => {
   }
 
   selectors.masterEditInput.setCustomValidity("");
-  if (oldValue !== nextValue) {
-    await apiRequest(
-      `${masterApiPath(listName)}/${masterId(listName, oldValue)}`,
-      {
-        body: JSON.stringify(masterPayload(listName, nextValue)),
-        method: "PATCH",
-      },
-      session,
-    );
-    if (selectedCustomer === oldValue) selectedCustomer = nextValue;
-  }
+  try {
+    if (oldValue !== nextValue) {
+      await apiRequest(
+        `${masterApiPath(listName)}/${masterId(listName, oldValue)}`,
+        {
+          body: JSON.stringify(masterPayload(listName, nextValue)),
+          method: "PATCH",
+        },
+        session,
+      );
+      if (selectedCustomer === oldValue) selectedCustomer = nextValue;
+    }
 
-  closeMasterEditDialog();
-  await refreshAndRender();
+    closeMasterEditDialog();
+    showToast(`Cập nhật ${masterDataConfig[listName].typeLabel} thành công.`);
+    await refreshAndRender();
+  } catch (error) {
+    showToast(error.message);
+  }
 });
 
 selectors.masterEditInput.addEventListener("input", () => {
@@ -1625,14 +1720,19 @@ selectors.masterDeleteConfirm.addEventListener("click", async () => {
   const { listName, index } = pendingMasterDelete;
   const currentList = state[listName] || [];
   const oldValue = currentList[index];
-  await apiRequest(
-    `${masterApiPath(listName)}/${masterId(listName, oldValue)}`,
-    { method: "DELETE" },
-    session,
-  );
-  if (selectedCustomer === oldValue) selectedCustomer = "";
-  closeMasterDeleteDialog();
-  await refreshAndRender();
+  try {
+    await apiRequest(
+      `${masterApiPath(listName)}/${masterId(listName, oldValue)}`,
+      { method: "DELETE" },
+      session,
+    );
+    if (selectedCustomer === oldValue) selectedCustomer = "";
+    closeMasterDeleteDialog();
+    showToast(`Xóa ${masterDataConfig[listName].typeLabel} thành công.`);
+    await refreshAndRender();
+  } catch (error) {
+    showToast(error.message);
+  }
 });
 
 bindDialogDismiss({
@@ -1665,21 +1765,40 @@ selectors.invoiceHistoryPagination.addEventListener(
   handleReportPagination,
 );
 
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-date-sort]");
+  if (!button) return;
+  const sortKey = button.dataset.dateSort;
+  if (!dateSortDirections[sortKey]) return;
+
+  dateSortDirections[sortKey] =
+    dateSortDirections[sortKey] === "asc" ? "desc" : "asc";
+  resetDateSortPage(sortKey);
+  render();
+});
+
 selectors.overviewPeriod.addEventListener("change", () => {
   overviewPeriod = selectors.overviewPeriod.value;
   renderInventoryChart();
 });
 
 window.addEventListener("hashchange", () => {
+  setMobileNavOpen(false);
   activePage = getInitialPage();
   refreshAndRender();
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    setMobileNavOpen(false);
+  }
 });
 
 async function initializeApp() {
   try {
     await refreshAppData();
   } catch (error) {
-    showDispatchToast(`Chưa kết nối được API: ${error.message}`);
+    showToast(`Chưa kết nối được API: ${error.message}`);
   }
   render();
 }

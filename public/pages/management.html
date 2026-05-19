@@ -4,66 +4,69 @@
           data-page="quan-ly"
           data-roles="admin warehouse"
         >
-          <div class="management-grid">
-            <article class="panel">
-              <div class="panel-heading">
-                <div>
-                  <h2>Khách hàng</h2>
-                  <p>
-                    Lưu danh sách khách hàng để dùng thống nhất khi nhập, xuất
-                    và báo cáo.
-                  </p>
-                </div>
+          <article class="panel management-panel">
+            <details class="management-section">
+              <summary>
+                <span>Quản lý Khách hàng</span>
+                <span class="management-chevron" aria-hidden="true">›</span>
+              </summary>
+              <div class="management-section-body">
+                <p>
+                  Lưu danh sách khách hàng để dùng thống nhất khi nhập, xuất và
+                  báo cáo.
+                </p>
+                <form id="customer-form" class="master-form writable-only">
+                  <label>
+                    Tên khách hàng
+                    <input name="name" placeholder="ABC" required />
+                  </label>
+                  <button type="submit">Thêm</button>
+                </form>
+                <div id="customer-management-list" class="master-list"></div>
+                <div id="customer-management-pagination" class="pagination"></div>
               </div>
-              <form id="customer-form" class="master-form writable-only">
-                <label>
-                  Tên khách hàng
-                  <input name="name" placeholder="ABC" required />
-                </label>
-                <button type="submit">Thêm</button>
-              </form>
-              <div id="customer-management-list" class="master-list"></div>
-              <div id="customer-management-pagination" class="pagination"></div>
-            </article>
+            </details>
 
-            <article class="panel">
-              <div class="panel-heading">
-                <div>
-                  <h2>Xe vận chuyển</h2>
-                  <p>
-                    Lưu biển số xe để thủ kho chọn nhanh khi lập phiếu xuất.
-                  </p>
-                </div>
+            <details class="management-section">
+              <summary>
+                <span>Quản lý Xe vận chuyển</span>
+                <span class="management-chevron" aria-hidden="true">›</span>
+              </summary>
+              <div class="management-section-body">
+                <p>
+                  Lưu biển số xe để thủ kho chọn nhanh khi lập phiếu xuất.
+                </p>
+                <form id="vehicle-form" class="master-form writable-only">
+                  <label>
+                    Biển số xe
+                    <input name="plate" placeholder="51C..." required />
+                  </label>
+                  <button type="submit">Thêm</button>
+                </form>
+                <div id="vehicle-list" class="master-list"></div>
+                <div id="vehicle-pagination" class="pagination"></div>
               </div>
-              <form id="vehicle-form" class="master-form writable-only">
-                <label>
-                  Biển số xe
-                  <input name="plate" placeholder="51C..." required />
-                </label>
-                <button type="submit">Thêm</button>
-              </form>
-              <div id="vehicle-list" class="master-list"></div>
-              <div id="vehicle-pagination" class="pagination"></div>
-            </article>
+            </details>
 
-            <article class="panel">
-              <div class="panel-heading">
-                <div>
-                  <h2>Tài xế</h2>
-                  <p>
-                    Lưu danh sách tài xế để gán đúng người phụ trách chuyến xe.
-                  </p>
-                </div>
+            <details class="management-section">
+              <summary>
+                <span>Quản lý Tài xế</span>
+                <span class="management-chevron" aria-hidden="true">›</span>
+              </summary>
+              <div class="management-section-body">
+                <p>
+                  Lưu danh sách tài xế để gán đúng người phụ trách chuyến xe.
+                </p>
+                <form id="driver-form" class="master-form writable-only">
+                  <label>
+                    Tên tài xế
+                    <input name="name" placeholder="Nguyễn A" required />
+                  </label>
+                  <button type="submit">Thêm</button>
+                </form>
+                <div id="driver-list" class="master-list"></div>
+                <div id="driver-pagination" class="pagination"></div>
               </div>
-              <form id="driver-form" class="master-form writable-only">
-                <label>
-                  Tên tài xế
-                  <input name="name" placeholder="Nguyễn A" required />
-                </label>
-                <button type="submit">Thêm</button>
-              </form>
-              <div id="driver-list" class="master-list"></div>
-              <div id="driver-pagination" class="pagination"></div>
-            </article>
-          </div>
+            </details>
+          </article>
         </section>

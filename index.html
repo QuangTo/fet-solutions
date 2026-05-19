@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FET Quản lý vận tải</title>
+    <title>Quản lý vận tải</title>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
@@ -42,6 +42,25 @@
     </section>
 
     <main class="app-shell">
+      <button
+        id="mobile-nav-toggle"
+        class="mobile-nav-toggle"
+        type="button"
+        aria-label="Mở điều hướng"
+        aria-controls="primary-navigation"
+        aria-expanded="false"
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z" />
+        </svg>
+      </button>
+      <button
+        id="mobile-nav-backdrop"
+        class="mobile-nav-backdrop"
+        type="button"
+        aria-label="Đóng điều hướng"
+        hidden
+      ></button>
       <aside class="sidebar">
         <div class="brand">
           <div class="brand-mark">FET</div>
@@ -50,7 +69,11 @@
             <span>Quản lý vận tải</span>
           </div>
         </div>
-        <nav class="nav-list" aria-label="Điều hướng chính">
+        <nav
+          id="primary-navigation"
+          class="nav-list"
+          aria-label="Điều hướng chính"
+        >
           <a href="#tong-quan" data-page-link="tong-quan">
             <svg aria-hidden="true" viewBox="0 0 24 24">
               <path
@@ -91,7 +114,7 @@
             </svg>
             <span>Quản lý</span>
           </a>
-          <a class="nav-settings" href="#cai-dat" data-page-link="cai-dat">
+          <a href="#cai-dat" data-page-link="cai-dat">
             <svg aria-hidden="true" viewBox="0 0 24 24">
               <path
                 d="M19.4 13.5a7.8 7.8 0 0 0 0-3l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2h-4l-.4 3a7.6 7.6 0 0 0-2.6 1.5l-2.4-1-2 3.5 2 1.5a7.8 7.8 0 0 0 0 3l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 3h4l.4-3a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.5-2-1.5ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"
@@ -100,6 +123,15 @@
             <span>Cài đặt</span>
           </a>
         </nav>
+        <button
+          id="sidebar-user-button"
+          class="sidebar-user-card"
+          type="button"
+          aria-label="Đổi vai trò"
+        >
+          <span id="sidebar-active-user">Chưa đăng nhập</span>
+          <strong id="sidebar-active-role">Thủ kho</strong>
+        </button>
       </aside>
 
       <section class="workspace">
@@ -112,7 +144,6 @@
                 tiếp.
               </p>
               <label id="overview-period-control" class="period-control">
-                Kỳ xem dữ liệu
                 <select id="overview-period">
                   <option value="week">Tuần</option>
                   <option value="month" selected>Tháng</option>
@@ -120,15 +151,6 @@
                 </select>
               </label>
             </div>
-          </div>
-          <div class="user-bar">
-            <div>
-              <span id="active-user">Chưa đăng nhập</span>
-              <strong id="active-role">Thủ kho</strong>
-            </div>
-            <button id="logout-button" class="ghost-button" type="button">
-              Đổi vai trò
-            </button>
           </div>
         </header>
 

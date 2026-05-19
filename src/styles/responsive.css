@@ -1,44 +1,116 @@
 @media (max-width: 980px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  body.mobile-nav-open {
+    overflow: hidden;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
     height: auto;
+    min-width: 0;
     min-height: 100vh;
     overflow: visible;
   }
 
-  .sidebar {
-    position: sticky;
+  .mobile-nav-toggle {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 24;
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--paper);
+    color: var(--accent-strong);
+    box-shadow: 0 12px 28px rgba(15, 32, 48, 0.12);
+    transition:
+      opacity 160ms ease,
+      transform 160ms ease,
+      visibility 160ms ease;
+  }
+
+  body.mobile-nav-open .mobile-nav-toggle {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-8px);
+    visibility: hidden;
+  }
+
+  .mobile-nav-toggle svg {
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+  }
+
+  .mobile-nav-backdrop {
+    position: fixed;
     top: 0;
-    z-index: 5;
-    height: auto;
-    overflow: visible;
-    padding: 16px;
+    right: 0;
+    bottom: 0;
+    left: min(300px, 84vw);
+    z-index: 14;
+    display: block;
+    background: rgba(10, 18, 28, 0.36);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 18;
+    width: min(300px, 84vw);
+    height: 100dvh;
+    overflow: hidden;
+    padding: 18px 14px;
+    box-shadow: 18px 0 42px rgba(7, 17, 27, 0.26);
+    transform: translateX(-105%);
+    transition:
+      transform 180ms ease,
+      visibility 180ms ease;
+    visibility: hidden;
+  }
+
+  body.mobile-nav-open .sidebar {
+    transform: translateX(0);
+    visibility: visible;
   }
 
   .workspace {
     height: auto;
     overflow: visible;
+    padding: 82px 24px 28px;
   }
 
   .nav-list {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     flex: none;
-    overflow-x: auto;
-    margin-top: 16px;
+    gap: 6px;
+    overflow-y: auto;
+    margin-top: 20px;
   }
 
-  .nav-settings {
-    margin-top: 0;
+  .nav-list a {
+    min-height: 42px;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.95rem;
   }
 
-  .metric-grid,
+  h1 {
+    font-size: 2rem;
+  }
+
   .report-grid {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .management-grid {
-    gap: 16px;
   }
 
   .customer-grid,
@@ -53,40 +125,212 @@
 
 @media (max-width: 680px) {
   .workspace {
-    padding: 18px 14px;
+    padding: 78px 16px 24px;
+  }
+
+  .page-view,
+  .page-stack,
+  .single-column,
+  .management-grid {
+    --page-stack-gap: 14px;
+  }
+
+  h1 {
+    font-size: 1.65rem;
+  }
+
+  h2 {
+    font-size: 1rem;
+  }
+
+  .panel {
+    --panel-padding: 14px;
+  }
+
+  .panel-heading {
+    --panel-heading-gap: 8px;
+    --panel-heading-margin: 14px;
+  }
+
+  .panel-heading p {
+    line-height: 1.45;
   }
 
   .topbar,
-  .title-row,
   .panel-heading,
   .trip-card div {
     display: grid;
   }
 
-  .user-bar,
   .inline-form,
   .dispatch-form,
   .stock-form,
   .master-form,
   .settings-form,
   .history-filter,
-  .batch-fields,
-  .line-fields,
   .customer-grid,
   .report-customer-grid,
   .metric-grid {
     grid-template-columns: 1fr;
   }
 
-  .user-bar {
+  input,
+  select,
+  form button,
+  .dialog-actions button,
+  .ghost-button {
+    min-height: 46px;
+  }
+
+  form button,
+  .form-action,
+  .ghost-button {
     width: 100%;
-  }
-
-  .user-bar {
-    align-items: stretch;
-  }
-
-  .user-bar div {
     min-width: 0;
+  }
+
+  .period-control,
+  .report-filter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .period-control {
+    max-width: none;
+    width: auto;
+    justify-self: start;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+  }
+
+  .pagination button {
+    min-height: 42px;
+    min-width: 92px;
+  }
+
+  .management-panel {
+    gap: 10px;
+  }
+
+  .management-section summary {
+    min-height: 54px;
+    padding: 0 10px;
+    font-size: 0.96rem;
+  }
+
+  .management-section-body {
+    padding: 12px 10px 10px;
+  }
+
+  .management-section-body .master-form {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .management-section-body .master-form button {
+    width: auto;
+    min-width: 72px;
+    min-height: 40px;
+    border-radius: 8px;
+    padding: 0 12px;
+    font-size: 0.82rem;
+  }
+
+  .master-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    justify-content: stretch;
+    padding: 8px;
+  }
+
+  .master-item strong {
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+  }
+
+  .master-item > div {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 5px;
+    justify-content: flex-end;
+    width: auto;
+  }
+
+  .master-item button {
+    width: auto;
+    min-width: 0;
+    min-height: 28px;
+    border-radius: 6px;
+    padding: 0 8px;
+    font-size: 0.72rem;
+  }
+
+  .dialog-backdrop {
+    padding: 12px;
+  }
+
+  .dialog-panel {
+    padding: 18px;
+  }
+
+  .dialog-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .toast-message {
+    top: 12px;
+    right: 12px;
+    max-width: min(300px, calc(100vw - 24px));
+  }
+
+  .table-wrap {
+    margin-right: -4px;
+    margin-left: -4px;
+    padding-inline: 4px;
+  }
+
+  table {
+    min-width: 520px;
+  }
+
+  th,
+  td {
+    padding: 9px 7px;
+  }
+
+  th {
+    font-size: 0.72rem;
+  }
+
+  td {
+    font-size: 0.86rem;
+  }
+
+  .table-sort-button {
+    gap: 4px;
+  }
+
+  .sort-indicator {
+    width: 16px;
+    height: 16px;
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 420px) {
+  table {
+    min-width: 480px;
+  }
+
+  th,
+  td {
+    padding: 8px 6px;
   }
 }
