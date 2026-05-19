@@ -1,12 +1,12 @@
-const { pool } = require("./db/client");
+const { getPool } = require("./db/client");
 
 async function query(text, params = []) {
-  const result = await pool.query(text, params);
+  const result = await getPool().query(text, params);
   return result.rows;
 }
 
 async function transaction(work) {
-  const client = await pool.connect();
+  const client = await getPool().connect();
   try {
     await client.query("begin");
     const result = await work(client);
