@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Car,
+  ChevronRight,
   FileCheck2,
   LayoutDashboard,
   Menu,
@@ -257,7 +258,10 @@ export default function FetNextApp() {
       ) : null}
       <button
         aria-label={mobileNavOpen ? "Đóng điều hướng" : "Mở điều hướng"}
-        className="fixed left-4 top-4 z-40 grid h-11 w-11 place-items-center rounded-lg border border-slate-200 bg-white text-emerald-700 shadow-lg lg:hidden"
+        className={cn(
+          "fixed left-4 top-4 z-40 grid h-11 w-11 place-items-center rounded-lg border border-slate-200 bg-white text-emerald-700 shadow-lg transition lg:hidden",
+          mobileNavOpen && "pointer-events-none opacity-0",
+        )}
         onClick={() => setMobileNavOpen((value) => !value)}
         type="button"
       >
@@ -316,7 +320,10 @@ export default function FetNextApp() {
             )}
           </div>
           {visiblePage !== "tong-quan" ? (
-            <Badge tone={operationsQuery.isFetching ? "amber" : "green"}>
+            <Badge
+              className="w-fit justify-self-end self-end"
+              tone={operationsQuery.isFetching ? "amber" : "green"}
+            >
               {operationsQuery.isFetching ? "Đang đồng bộ" : "Dữ liệu mới nhất"}
             </Badge>
           ) : null}
@@ -742,6 +749,7 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
             <Field>
               Ngày nhập kho
               <Input
+                className="min-w-0"
                 required
                 type="date"
                 value={form.date}
@@ -750,20 +758,21 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
             </Field>
             <Field>
               Khách hàng
-              <Input
-                list="customers"
+              <Select
                 required
                 value={form.customer}
                 onChange={(event) => {
                   setForm({ ...form, customer: event.target.value });
                   setSelectedCustomer(event.target.value);
                 }}
-              />
-              <datalist id="customers">
+              >
+                <option value="">Chọn khách hàng</option>
                 {customers.map((name) => (
-                  <option key={name} value={name} />
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
                 ))}
-              </datalist>
+              </Select>
             </Field>
             <Field>
               Loại hàng
@@ -934,6 +943,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
             <Field>
               Ngày xuất
               <Input
+                className="min-w-0"
                 required
                 type="date"
                 value={form.date}
@@ -1035,6 +1045,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
           <Field>
             Ngày xuất
             <Input
+              className="min-w-0"
               type="date"
               value={filters.date}
               onChange={(event) => {
@@ -1190,7 +1201,7 @@ function ReportsPage({ mutation, session, state }) {
         <DispatchTable rows={history} />
       </DataTableCard>
       <DataTableCard title="Lịch sử xuất hóa đơn" description="Các khách hàng đã được ghi nhận.">
-        <Table>
+        <Table className="min-w-[520px]">
           <thead>
             <tr>
               <Th>Ngày</Th>
@@ -1204,7 +1215,9 @@ function ReportsPage({ mutation, session, state }) {
                 <tr key={item.id}>
                   <Td>{formatDate(item.date)}</Td>
                   <Td>{item.customer}</Td>
-                  <Td><Badge tone="green">{item.status || "Hoàn thành"}</Badge></Td>
+                  <Td className="whitespace-nowrap">
+                    <Badge tone="green">{item.status || "Hoàn thành"}</Badge>
+                  </Td>
                 </tr>
               ))
             ) : (
@@ -1273,8 +1286,7 @@ const masterSections = [
 ];
 
 function ManagementPage({ mutation, state }) {
-  const [activeList, setActiveList] = useState("customers");
-  const activeSection = masterSections.find((item) => item.listName === activeList);
+  const [activeList, setActiveList] = useState("");
   const recordsByList = {
     customers: state.customerRecords,
     drivers: state.driverRecords,
@@ -1282,45 +1294,42 @@ function ManagementPage({ mutation, state }) {
   };
 
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-3 md:grid-cols-3">
-        {masterSections.map((section) => {
-          const Icon = section.icon;
-          const count = recordsByList[section.listName]?.length || 0;
-          const isActive = section.listName === activeList;
-          return (
+    <div className="grid gap-3">
+      {masterSections.map((section) => {
+        const isActive = section.listName === activeList;
+        return (
+          <Card className="overflow-hidden" key={section.listName}>
             <button
+              aria-expanded={isActive}
               className={cn(
-                "grid gap-3 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50",
-                isActive && "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-100",
+                "flex min-h-16 w-full items-center justify-between gap-3 px-4 text-left transition hover:bg-slate-50 sm:px-5",
+                isActive && "border-b border-slate-100 bg-slate-50",
               )}
-              key={section.listName}
-              onClick={() => setActiveList(section.listName)}
+              onClick={() =>
+                setActiveList(isActive ? "" : section.listName)
+              }
               type="button"
             >
-              <div className="flex items-center justify-between gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <Badge tone={isActive ? "green" : "default"}>{count} mục</Badge>
-              </div>
-              <div>
-                <strong className="block text-base font-black text-slate-950">
-                  {section.label}
-                </strong>
-                <span className="mt-1 block text-sm leading-5 text-slate-500">
-                  {section.description}
-                </span>
-              </div>
+              <strong className="text-base font-black text-slate-950 sm:text-lg">
+                Quản lý {section.label}
+              </strong>
+              <ChevronRight
+                className={cn(
+                  "h-6 w-6 shrink-0 text-slate-500 transition",
+                  isActive && "rotate-90 text-emerald-700",
+                )}
+              />
             </button>
-          );
-        })}
-      </div>
-      <MasterSection
-        config={activeSection}
-        mutation={mutation}
-        records={recordsByList[activeSection.listName] || []}
-      />
+            {isActive ? (
+              <MasterSection
+                config={section}
+                mutation={mutation}
+                records={recordsByList[section.listName] || []}
+              />
+            ) : null}
+          </Card>
+        );
+      })}
     </div>
   );
 }
@@ -1354,8 +1363,8 @@ function MasterSection({ config, mutation, records }) {
   }, [search, records.length]);
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="border-b border-slate-100 bg-slate-50/70">
+    <>
+      <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-emerald-600 text-white shadow-sm">
@@ -1368,8 +1377,8 @@ function MasterSection({ config, mutation, records }) {
           </div>
           <Badge tone="green">{filteredRecords.length} / {records.length} mục</Badge>
         </div>
-      </CardHeader>
-      <CardContent className="grid gap-4 p-4 lg:p-5">
+      </div>
+      <div className="grid gap-4 p-4 lg:p-5">
         <form
           className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:grid-cols-[minmax(0,1fr)_auto]"
           onSubmit={(event) => {
@@ -1406,7 +1415,7 @@ function MasterSection({ config, mutation, records }) {
             Cập nhật danh mục sẽ đồng bộ vào dropdown nghiệp vụ.
           </span>
         </div>
-        <Table>
+        <Table className="min-w-[720px]">
           <thead>
             <tr>
               <Th>{label}</Th>
@@ -1427,7 +1436,9 @@ function MasterSection({ config, mutation, records }) {
                       <strong className="min-w-0 truncate text-slate-900">{item.label}</strong>
                     </div>
                   </Td>
-                  <Td><Badge tone="green">Đang dùng</Badge></Td>
+                  <Td className="whitespace-nowrap">
+                    <Badge tone="green">Đang dùng</Badge>
+                  </Td>
                   <Td>{formatDate(item.updatedAt || item.createdAt)}</Td>
                   <Td>
                     <div className="flex justify-end gap-2">
@@ -1469,7 +1480,7 @@ function MasterSection({ config, mutation, records }) {
           pageCount={recordView.pageCount}
           onPageChange={setPage}
         />
-      </CardContent>
+      </div>
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>
           <DialogTitle className="text-lg font-black text-slate-950">Sửa {label}</DialogTitle>
@@ -1510,7 +1521,7 @@ function MasterSection({ config, mutation, records }) {
           </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 }
 
