@@ -86,8 +86,14 @@ app.use((request, response, next) => {
 });
 app.use(requestContext);
 
-app.get("/api/health", async (_request, response) => {
+app.get("/api/health", (_request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  response.json({ ok: true });
+});
+
+app.get("/api/ready", async (_request, response) => {
   await repo.query("select 1 as ok");
+  response.setHeader("Cache-Control", "no-store");
   response.json({ ok: true });
 });
 
@@ -475,69 +481,30 @@ function invoiceApprovalRows() {
 }
 
 async function loadMasterData() {
-  return cachedRead("master", async () => {
-    const [customers, vehicles, drivers] = await Promise.all([
-      repo.listMaster("customers", "name"),
-      repo.listMaster("vehicles", "plate"),
-      repo.listMaster("drivers", "name"),
-    ]);
-
-    return { customers, drivers, vehicles };
-  }, cacheTtl.master);
+  return cachedRead("master", () => repo.masterData(), cacheTtl.master);
 }
 
 async function loadOperationsData() {
-  return cachedRead("operations", async () => {
-    const [receipts, dispatches, inventory] = await Promise.all([
-      receiptRows(),
-      dispatchRows(),
-      repo.inventoryRows(),
-    ]);
-
-    return { dispatches, inventory, receipts };
-  }, cacheTtl.operations);
+  return cachedRead("operations", () => repo.operationsData(), cacheTtl.operations);
 }
 
 async function loadReceiptData() {
-  return cachedRead("receipt", async () => {
-    const [receipts, inventory] = await Promise.all([
-      receiptRows(),
-      repo.inventoryRows(),
-    ]);
-
-    return { inventory, receipts };
-  }, cacheTtl.receipt);
+  return cachedRead("receipt", () => repo.receiptData(), cacheTtl.receipt);
 }
 
 async function loadDispatchData() {
-  return cachedRead("dispatch", async () => {
-    const [dispatches, inventory] = await Promise.all([
-      dispatchRows(),
-      repo.inventoryRows(),
-    ]);
-
-    return { dispatches, inventory };
-  }, cacheTtl.dispatch);
+  return cachedRead("dispatch", () => repo.dispatchData(), cacheTtl.dispatch);
 }
 
 async function loadReportData() {
-  return cachedRead("report", async () => {
-    const [billingReady, invoiceApprovals] = await Promise.all([
-      repo.billingReadyCustomers(),
-      invoiceApprovalRows(),
-    ]);
-
-    return { billingReady, invoiceApprovals };
-  }, cacheTtl.report);
+  return cachedRead("report", () => repo.reportData(), cacheTtl.report);
 }
 
 async function loadAppData() {
   return cachedRead("app", async () => {
-    const [masterData, operationsData, reportData] = await Promise.all([
-      loadMasterData(),
-      loadOperationsData(),
-      loadReportData(),
-    ]);
+    const masterData = await loadMasterData();
+    const operationsData = await loadOperationsData();
+    const reportData = await loadReportData();
 
     return {
       ...masterData,

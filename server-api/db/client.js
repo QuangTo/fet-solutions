@@ -25,10 +25,12 @@ function requireDatabaseUrl() {
 function getPool() {
   if (!pool) {
     pool = new Pool({
+      application_name: process.env.PG_APPLICATION_NAME || "fet-api",
       connectionTimeoutMillis: numberEnv("PG_CONNECTION_TIMEOUT_MS", 5_000),
       connectionString: requireDatabaseUrl(),
       idleTimeoutMillis: numberEnv("PG_IDLE_TIMEOUT_MS", 10_000),
       max: numberEnv("PG_POOL_MAX", process.env.VERCEL ? 3 : 10),
+      options: `-c statement_timeout=${numberEnv("PG_STATEMENT_TIMEOUT_MS", 8_000)} -c idle_in_transaction_session_timeout=${numberEnv("PG_IDLE_TX_TIMEOUT_MS", 8_000)}`,
       ssl:
         process.env.DATABASE_SSL === "false"
           ? false
