@@ -253,15 +253,14 @@ async function createReceipt(data, user) {
       [customerId, user.id, data.receivedByName || user.name, data.date],
     );
 
-    for (const item of data.items) {
-      await client.query(
-        `
-          insert into receipt_items (receipt_id, sku, quantity, unit)
-          values ($1, $2, $3, $4)
-        `,
-        [receipt.rows[0].id, item.sku, item.quantity, item.unit],
-      );
-    }
+    await client.query(
+      `
+        insert into receipt_items (receipt_id, sku, quantity, unit)
+        select $1, item.sku, item.quantity, item.unit
+        from jsonb_to_recordset($2::jsonb) as item(sku text, quantity numeric, unit text)
+      `,
+      [receipt.rows[0].id, JSON.stringify(data.items)],
+    );
 
     await audit(client, user, "create", "receipt", receipt.rows[0].id, {
       customerId,
@@ -276,6 +275,7 @@ async function createDispatch(data, user) {
     const customerId = await ensureCustomer(client, data);
     const vehicleId = await ensureVehicle(client, data);
     const driverId = await ensureDriver(client, data);
+    await client.query("select pg_advisory_xact_lock(hashtext($1))", [`dispatch:${customerId}`]);
     const inventory = await availableInventory(client, customerId);
     const remainingBySku = new Map(
       inventory.map((row) => [row.sku, Number(row.remainingQuantity)]),
@@ -310,15 +310,14 @@ async function createDispatch(data, user) {
       ],
     );
 
-    for (const item of data.items) {
-      await client.query(
-        `
-          insert into dispatch_items (dispatch_id, sku, quantity, unit)
-          values ($1, $2, $3, $4)
-        `,
-        [dispatch.rows[0].id, item.sku, item.quantity, item.unit],
-      );
-    }
+    await client.query(
+      `
+        insert into dispatch_items (dispatch_id, sku, quantity, unit)
+        select $1, item.sku, item.quantity, item.unit
+        from jsonb_to_recordset($2::jsonb) as item(sku text, quantity numeric, unit text)
+      `,
+      [dispatch.rows[0].id, JSON.stringify(data.items)],
+    );
 
     await audit(client, user, "create", "dispatch", dispatch.rows[0].id, {
       customerId,

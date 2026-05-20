@@ -158,17 +158,21 @@ export default function FetNextApp() {
   }, [toast]);
 
   const activeRole = normalizeRole(session?.role || "warehouse");
+  const visiblePage = pages[activePage]?.roles.includes(activeRole)
+    ? activePage
+    : "tong-quan";
+  const needsOperations = ["tong-quan", "nhap-hang", "xuat-hang", "bao-cao"].includes(visiblePage);
   const masterQuery = useQuery({
     ...pageQueryOptions("master", session),
     enabled: Boolean(session),
   });
   const operationsQuery = useQuery({
     ...pageQueryOptions("operations", session),
-    enabled: Boolean(session),
+    enabled: Boolean(session) && needsOperations,
   });
   const reportQuery = useQuery({
     ...pageQueryOptions("report", session),
-    enabled: Boolean(session) && ["admin", "accountant"].includes(activeRole),
+    enabled: Boolean(session) && visiblePage === "bao-cao" && ["admin", "accountant"].includes(activeRole),
   });
 
   const state = useMemo(
@@ -244,9 +248,6 @@ export default function FetNextApp() {
 
   if (!session) return <LoginScreen onLogin={saveSession} />;
 
-  const visiblePage = pages[activePage].roles.includes(activeRole)
-    ? activePage
-    : "tong-quan";
   const page = pages[visiblePage];
 
   return (

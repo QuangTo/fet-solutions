@@ -18,6 +18,41 @@ const {
 } = require("./validators");
 
 const app = express();
+const readCache = new Map();
+const cacheTtl = {
+  app: 10_000,
+  master: 5 * 60_000,
+  operations: 15_000,
+  receipt: 15_000,
+  dispatch: 15_000,
+  report: 30_000,
+};
+
+function cachedRead(key, loader, ttlMs = 15_000) {
+  const now = Date.now();
+  const cached = readCache.get(key);
+  if (cached && cached.expiresAt > now) return cached.promise;
+
+  const promise = Promise.resolve()
+    .then(loader)
+    .catch((error) => {
+      readCache.delete(key);
+      throw error;
+    });
+  readCache.set(key, { expiresAt: now + ttlMs, promise });
+  return promise;
+}
+
+function invalidateReadCache() {
+  readCache.clear();
+}
+
+async function writeThrough(work) {
+  const result = await work();
+  invalidateReadCache();
+  return result;
+}
+
 app.use(express.json({ limit: "1mb" }));
 app.use((request, response, next) => {
   const configuredOrigins = (process.env.CORS_ORIGIN || "")
@@ -224,6 +259,7 @@ function registerMasterRoutes({ path, table, column, schema, entityType }) {
       user: request.user,
       entityType,
     });
+    invalidateReadCache();
     response.status(201).json(item);
   });
 
@@ -242,6 +278,7 @@ function registerMasterRoutes({ path, table, column, schema, entityType }) {
       response.status(404).json({ error: "NOT_FOUND" });
       return;
     }
+    invalidateReadCache();
     response.json(item);
   });
 
@@ -256,6 +293,7 @@ function registerMasterRoutes({ path, table, column, schema, entityType }) {
       response.status(404).json({ error: "NOT_FOUND" });
       return;
     }
+    invalidateReadCache();
     response.status(204).end();
   });
 }
@@ -313,6 +351,7 @@ app.get("/api/receipts", requireRole("driver", "warehouse"), async (request, res
 app.post("/api/receipts", requireRole("driver", "warehouse"), async (request, response) => {
   const body = receiptSchema.parse(request.body);
   const receipt = await repo.createReceipt(body, request.user);
+  invalidateReadCache();
   response.status(201).json(receipt);
 });
 
@@ -351,11 +390,19 @@ app.get("/api/dispatches", requireRole("driver", "warehouse", "accountant"), asy
 app.post("/api/dispatches", requireRole("driver", "warehouse"), async (request, response) => {
   const body = dispatchSchema.parse(request.body);
   const dispatch = await repo.createDispatch(body, request.user);
+  invalidateReadCache();
   response.status(201).json(dispatch);
 });
 
 app.get("/api/inventory", requireRole("driver", "warehouse", "accountant"), async (request, response) => {
-  response.json(await repo.inventoryRows(request.query.customerId || null));
+  const customerId = request.query.customerId || null;
+  response.json(
+    await cachedRead(
+      `inventory:${customerId || "all"}`,
+      () => repo.inventoryRows(customerId),
+      cacheTtl.operations,
+    ),
+  );
 });
 
 function receiptRows() {
@@ -428,64 +475,76 @@ function invoiceApprovalRows() {
 }
 
 async function loadMasterData() {
-  const [customers, vehicles, drivers] = await Promise.all([
-    repo.listMaster("customers", "name"),
-    repo.listMaster("vehicles", "plate"),
-    repo.listMaster("drivers", "name"),
-  ]);
+  return cachedRead("master", async () => {
+    const [customers, vehicles, drivers] = await Promise.all([
+      repo.listMaster("customers", "name"),
+      repo.listMaster("vehicles", "plate"),
+      repo.listMaster("drivers", "name"),
+    ]);
 
-  return { customers, drivers, vehicles };
+    return { customers, drivers, vehicles };
+  }, cacheTtl.master);
 }
 
 async function loadOperationsData() {
-  const [receipts, dispatches, inventory] = await Promise.all([
-    receiptRows(),
-    dispatchRows(),
-    repo.inventoryRows(),
-  ]);
+  return cachedRead("operations", async () => {
+    const [receipts, dispatches, inventory] = await Promise.all([
+      receiptRows(),
+      dispatchRows(),
+      repo.inventoryRows(),
+    ]);
 
-  return { dispatches, inventory, receipts };
+    return { dispatches, inventory, receipts };
+  }, cacheTtl.operations);
 }
 
 async function loadReceiptData() {
-  const [receipts, inventory] = await Promise.all([
-    receiptRows(),
-    repo.inventoryRows(),
-  ]);
+  return cachedRead("receipt", async () => {
+    const [receipts, inventory] = await Promise.all([
+      receiptRows(),
+      repo.inventoryRows(),
+    ]);
 
-  return { inventory, receipts };
+    return { inventory, receipts };
+  }, cacheTtl.receipt);
 }
 
 async function loadDispatchData() {
-  const [dispatches, inventory] = await Promise.all([
-    dispatchRows(),
-    repo.inventoryRows(),
-  ]);
+  return cachedRead("dispatch", async () => {
+    const [dispatches, inventory] = await Promise.all([
+      dispatchRows(),
+      repo.inventoryRows(),
+    ]);
 
-  return { dispatches, inventory };
+    return { dispatches, inventory };
+  }, cacheTtl.dispatch);
 }
 
 async function loadReportData() {
-  const [billingReady, invoiceApprovals] = await Promise.all([
-    repo.billingReadyCustomers(),
-    invoiceApprovalRows(),
-  ]);
+  return cachedRead("report", async () => {
+    const [billingReady, invoiceApprovals] = await Promise.all([
+      repo.billingReadyCustomers(),
+      invoiceApprovalRows(),
+    ]);
 
-  return { billingReady, invoiceApprovals };
+    return { billingReady, invoiceApprovals };
+  }, cacheTtl.report);
 }
 
 async function loadAppData() {
-  const [masterData, operationsData, reportData] = await Promise.all([
-    loadMasterData(),
-    loadOperationsData(),
-    loadReportData(),
-  ]);
+  return cachedRead("app", async () => {
+    const [masterData, operationsData, reportData] = await Promise.all([
+      loadMasterData(),
+      loadOperationsData(),
+      loadReportData(),
+    ]);
 
-  return {
-    ...masterData,
-    ...operationsData,
-    ...reportData,
-  };
+    return {
+      ...masterData,
+      ...operationsData,
+      ...reportData,
+    };
+  }, cacheTtl.app);
 }
 
 app.get("/api/app-data", requireRole("driver", "warehouse", "accountant"), async (_request, response) => {
@@ -565,17 +624,17 @@ async function handleJsonpOperation({ method, path, payload, user }) {
     `);
   }
   if (method === "POST" && path === "/receipts") {
-    return repo.createReceipt(receiptSchema.parse(payload), user);
+    return writeThrough(() => repo.createReceipt(receiptSchema.parse(payload), user));
   }
   if (method === "POST" && path === "/dispatches") {
-    return repo.createDispatch(dispatchSchema.parse(payload), user);
+    return writeThrough(() => repo.createDispatch(dispatchSchema.parse(payload), user));
   }
   if (method === "POST" && path === "/invoice-approvals") {
-    return repo.createInvoiceApproval(invoiceApprovalSchema.parse(payload), user);
+    return writeThrough(() => repo.createInvoiceApproval(invoiceApprovalSchema.parse(payload), user));
   }
   if (method === "POST" && path === "/users") {
     const body = userSchema.parse(payload);
-    const item = await repo.queryOne(
+    const item = await writeThrough(() => repo.queryOne(
       `
         insert into users (display_name, phone, password_hash, role)
         values ($1, $2, $3, $4)
@@ -595,7 +654,7 @@ async function handleJsonpOperation({ method, path, payload, user }) {
           updated_at as "updatedAt"
       `,
       [body.name, body.phone, body.password ? hashPassword(body.password) : null, body.role],
-    );
+    ));
     return publicUser(item);
   }
   if (method === "PATCH" && path.startsWith("/users/")) {
@@ -606,7 +665,7 @@ async function handleJsonpOperation({ method, path, payload, user }) {
       [id],
     );
     if (!current) return null;
-    return publicUser(await repo.queryOne(
+    return publicUser(await writeThrough(() => repo.queryOne(
       `
         update users
         set display_name = $1,
@@ -631,10 +690,10 @@ async function handleJsonpOperation({ method, path, payload, user }) {
         body.role || current.role,
         id,
       ],
-    ));
+    )));
   }
   if (method === "DELETE" && path.startsWith("/users/")) {
-    return repo.queryOne(
+    return writeThrough(() => repo.queryOne(
       `
         update users
         set is_active = false, updated_at = now()
@@ -642,14 +701,14 @@ async function handleJsonpOperation({ method, path, payload, user }) {
         returning id
       `,
       [path.split("/")[2]],
-    );
+    ));
   }
   if ((method === "PUT" || method === "POST") && path.startsWith("/settings/")) {
     const body = settingSchema.parse({
       key: path.split("/")[2],
       value: payload.value,
     });
-    return repo.queryOne(
+    return writeThrough(() => repo.queryOne(
       `
         insert into app_settings (key, value)
         values ($1, $2::jsonb)
@@ -658,7 +717,7 @@ async function handleJsonpOperation({ method, path, payload, user }) {
         returning key, value, updated_at as "updatedAt"
       `,
       [body.key, JSON.stringify(body.value)],
-    );
+    ));
   }
 
   const masterMatch = path.match(/^\/(customers|vehicles|drivers)(?:\/(.+))?$/);
@@ -670,32 +729,32 @@ async function handleJsonpOperation({ method, path, payload, user }) {
     }[masterMatch[1]];
     if (method === "POST") {
       const body = config.schema.parse(payload);
-      return repo.createNamedMaster({
+      return writeThrough(() => repo.createNamedMaster({
         table: config.table,
         column: config.column,
         value: body[config.column] || body.name,
         user,
         entityType: config.entityType,
-      });
+      }));
     }
     if (method === "PATCH") {
       const body = config.schema.parse(payload);
-      return repo.updateNamedMaster({
+      return writeThrough(() => repo.updateNamedMaster({
         table: config.table,
         column: config.column,
         id: masterMatch[2],
         value: body[config.column] || body.name,
         user,
         entityType: config.entityType,
-      });
+      }));
     }
     if (method === "DELETE") {
-      return repo.softDeleteMaster({
+      return writeThrough(() => repo.softDeleteMaster({
         table: config.table,
         id: masterMatch[2],
         user,
         entityType: config.entityType,
-      });
+      }));
     }
   }
 
@@ -705,12 +764,18 @@ async function handleJsonpOperation({ method, path, payload, user }) {
 }
 
 app.get("/api/reports/billing-ready", requireRole("accountant"), async (_request, response) => {
-  response.json(await repo.billingReadyCustomers());
+  response.json(
+    await cachedRead(
+      "billing-ready",
+      () => repo.billingReadyCustomers(),
+      cacheTtl.report,
+    ),
+  );
 });
 
 app.get("/api/invoice-approvals", requireRole("accountant"), async (_request, response) => {
   response.json(
-    await repo.query(`
+    await cachedRead("invoice-approvals", () => repo.query(`
       select
         ia.id,
         ia.approval_date as date,
@@ -722,13 +787,14 @@ app.get("/api/invoice-approvals", requireRole("accountant"), async (_request, re
       join customers c on c.id = ia.customer_id
       order by ia.approval_date desc, ia.created_at desc
       limit 200
-    `),
+    `), cacheTtl.report),
   );
 });
 
 app.post("/api/invoice-approvals", requireRole("accountant"), async (request, response) => {
   const body = invoiceApprovalSchema.parse(request.body);
   const approval = await repo.createInvoiceApproval(body, request.user);
+  invalidateReadCache();
   response.status(201).json(approval);
 });
 

@@ -7,6 +7,11 @@ const schema = require("./schema");
 let pool;
 let db;
 
+function numberEnv(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
 function requireDatabaseUrl() {
   const connectionString = process.env.DATABASE_URL;
   if (connectionString) return connectionString;
@@ -20,7 +25,10 @@ function requireDatabaseUrl() {
 function getPool() {
   if (!pool) {
     pool = new Pool({
+      connectionTimeoutMillis: numberEnv("PG_CONNECTION_TIMEOUT_MS", 5_000),
       connectionString: requireDatabaseUrl(),
+      idleTimeoutMillis: numberEnv("PG_IDLE_TIMEOUT_MS", 10_000),
+      max: numberEnv("PG_POOL_MAX", process.env.VERCEL ? 3 : 10),
       ssl:
         process.env.DATABASE_SSL === "false"
           ? false
