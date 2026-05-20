@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 export function Table({ className, ...props }) {
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full max-w-full overflow-x-auto overscroll-x-contain">
       <table className={cn("w-full border-collapse text-sm", className)} {...props} />
     </div>
   );

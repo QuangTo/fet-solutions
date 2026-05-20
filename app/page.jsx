@@ -1581,7 +1581,7 @@ function SettingsPage({ settings, setSettings }) {
 
 function DataTableCard({ children, className, description, title }) {
   return (
-    <Card className={className}>
+    <Card className={cn("min-w-0", className)}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>

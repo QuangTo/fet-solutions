@@ -4,7 +4,7 @@ export function Card({ className, ...props }) {
   return (
     <section
       className={cn(
-        "rounded-lg border border-slate-200 bg-white shadow-sm",
+        "min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm",
         className,
       )}
       {...props}
@@ -32,5 +32,5 @@ export function CardDescription({ className, ...props }) {
 }
 
 export function CardContent({ className, ...props }) {
-  return <div className={cn("p-5 pt-2", className)} {...props} />;
+  return <div className={cn("min-w-0 p-5 pt-2", className)} {...props} />;
 }
