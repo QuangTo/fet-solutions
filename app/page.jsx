@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  CalendarDays,
   Car,
   ChevronRight,
   FileCheck2,
@@ -78,6 +79,8 @@ const iconMap = {
 };
 
 const emptyState = composeState({});
+const primaryActionButtonShellClass = "w-[clamp(10rem,34%,14rem)] max-w-full justify-self-center";
+const operationActionButtonShellClass = "w-[clamp(20rem,68%,28rem)] max-w-full justify-self-center";
 
 function number(value) {
   return Number(value || 0).toLocaleString("vi-VN");
@@ -123,6 +126,24 @@ function Pagination({ onPageChange, page, pageCount }) {
       >
         Sau
       </Button>
+    </div>
+  );
+}
+
+function PeriodSelect({ includeAll = false, value, onChange, className }) {
+  return (
+    <div className={cn("relative w-full shrink-0 sm:w-36", className)}>
+      <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-700" />
+      <Select
+        className="h-9 rounded-md py-0 pl-9 pr-2 text-xs font-black"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="week">Tuần</option>
+        <option value="month">Tháng</option>
+        <option value="quarter">Quý</option>
+        {includeAll ? <option value="all">Tất cả</option> : null}
+      </Select>
     </div>
   );
 }
@@ -209,7 +230,7 @@ function LoadingSkeleton({ page }) {
   if (page === "nhap-hang") {
     return (
       <div className="grid gap-4">
-        <div className="grid items-stretch gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+        <div className="grid items-stretch gap-4 xl:grid-cols-2">
           <FormSkeleton title="Ghi nhận hàng nhập" fields={5} />
           <TableSkeleton columns={3} rows={5} title="Tổng hợp hàng nhập" />
         </div>
@@ -252,7 +273,7 @@ function FormSkeleton({ fields = 4, title }) {
               <Skeleton className="h-11 w-full" />
             </div>
           ))}
-          <Skeleton className="h-11 w-full lg:col-span-2" />
+          <Skeleton className={cn("h-11 lg:col-span-2", operationActionButtonShellClass)} />
         </div>
       </CardContent>
     </Card>
@@ -288,6 +309,134 @@ function TableSkeleton({ columns = 4, rows = 5, title }) {
       </div>
     </DataTableCard>
   );
+}
+
+function prependById(rows = [], item) {
+  if (!item?.id) return rows;
+  return [item, ...rows.filter((row) => row.id !== item.id)];
+}
+
+function upsertById(rows = [], item) {
+  if (!item?.id) return rows;
+  const exists = rows.some((row) => row.id === item.id);
+  const nextRows = exists
+    ? rows.map((row) => (row.id === item.id ? { ...row, ...item } : row))
+    : [...rows, item];
+  return nextRows.sort((a, b) => (a.label || "").localeCompare(b.label || ""));
+}
+
+function normalizeMasterItem(item, listName) {
+  const label = item?.label || item?.name || item?.plate || "";
+  return {
+    createdAt: item?.createdAt || item?.created_at,
+    id: item?.id,
+    isActive: item?.isActive ?? item?.is_active ?? true,
+    label,
+    updatedAt: item?.updatedAt || item?.updated_at || item?.createdAt || item?.created_at,
+  };
+}
+
+function masterListFromPath(path = "") {
+  return path.split("/").filter(Boolean)[0];
+}
+
+function addMasterRecord(master, listName, item) {
+  const normalized = normalizeMasterItem(item, listName);
+  if (!normalized.id || !normalized.label) return master;
+  return {
+    ...master,
+    [listName]: upsertById(master?.[listName] || [], normalized),
+  };
+}
+
+function removeMasterRecord(master, listName, id) {
+  return {
+    ...master,
+    [listName]: (master?.[listName] || []).filter((item) => item.id !== id),
+  };
+}
+
+function applyReceiptInventory(inventory = [], receipt) {
+  let nextInventory = inventory;
+  (receipt.items || []).forEach((item) => {
+    const quantity = Number(item.quantity || 0);
+    let touched = false;
+    nextInventory = nextInventory.map((row) => {
+      const sameCustomer = row.customerId === receipt.customerId || row.customer === receipt.customer;
+      if (!sameCustomer || row.sku !== item.sku) return row;
+      touched = true;
+      return {
+        ...row,
+        receivedQuantity: Number(row.receivedQuantity || 0) + quantity,
+        remainingQuantity: Number(row.remainingQuantity || 0) + quantity,
+        unit: item.unit || row.unit,
+      };
+    });
+    if (!touched) {
+      nextInventory = [
+        ...nextInventory,
+        {
+          customer: receipt.customer,
+          customerId: receipt.customerId,
+          dispatchedQuantity: 0,
+          receivedQuantity: quantity,
+          remainingQuantity: quantity,
+          sku: item.sku,
+          unit: item.unit || "đơn vị",
+        },
+      ];
+    }
+  });
+  return nextInventory;
+}
+
+function applyDispatchInventory(inventory = [], dispatch) {
+  let nextInventory = inventory;
+  (dispatch.items || []).forEach((item) => {
+    const quantity = Number(item.quantity || 0);
+    nextInventory = nextInventory.map((row) => {
+      const sameCustomer = row.customerId === dispatch.customerId || row.customer === dispatch.customer;
+      if (!sameCustomer || row.sku !== item.sku) return row;
+      return {
+        ...row,
+        dispatchedQuantity: Number(row.dispatchedQuantity || 0) + quantity,
+        remainingQuantity: Math.max(Number(row.remainingQuantity || 0) - quantity, 0),
+      };
+    });
+  });
+  return nextInventory;
+}
+
+function receiptMasterRecord(receipt) {
+  return {
+    createdAt: receipt.createdAt,
+    id: receipt.customerId,
+    label: receipt.customer,
+    updatedAt: receipt.createdAt,
+  };
+}
+
+function dispatchMasterRecords(dispatch) {
+  return {
+    customer: {
+      createdAt: dispatch.createdAt,
+      id: dispatch.customerId,
+      label: dispatch.customer,
+      updatedAt: dispatch.createdAt,
+    },
+    driver: {
+      createdAt: dispatch.createdAt,
+      id: dispatch.driverId,
+      label: dispatch.driver,
+      updatedAt: dispatch.createdAt,
+    },
+    vehicle: {
+      createdAt: dispatch.createdAt,
+      id: dispatch.vehicleId,
+      label: dispatch.plate,
+      updatedAt: dispatch.createdAt,
+    },
+  };
 }
 
 export default function FetNextApp() {
@@ -358,38 +507,90 @@ export default function FetNextApp() {
     [masterQuery.data, operationsQuery.data, reportQuery.data],
   );
 
-  const invalidateData = () =>
-    queryClient.invalidateQueries({ queryKey: ["page-data"] });
+  const pageDataKey = (pageName) => ["page-data", pageName, session?.role, session?.name];
+  const updatePageData = (pageName, updater) => {
+    queryClient.setQueryData(pageDataKey(pageName), (current) =>
+      current ? updater(current) : current,
+    );
+  };
+  const markPagesStale = (pageNames) => {
+    pageNames.forEach((pageName) => {
+      queryClient.invalidateQueries({
+        queryKey: pageDataKey(pageName),
+        refetchType: "inactive",
+      });
+    });
+  };
 
   const mutationOptions = {
     onError: (error) => setToast(error.message),
-    onSuccess: () => invalidateData(),
   };
   const receiptMutation = useMutation({
     ...mutationOptions,
     mutationFn: (payload) =>
       apiRequest("/receipts", { body: JSON.stringify(payload), method: "POST" }, session),
-    onSuccess: () => {
+    onSuccess: (receipt) => {
+      updatePageData("operations", (data) => ({
+        ...data,
+        inventory: applyReceiptInventory(data.inventory || [], receipt),
+        receipts: prependById(data.receipts || [], receipt),
+      }));
+      updatePageData("receipt", (data) => ({
+        ...data,
+        inventory: applyReceiptInventory(data.inventory || [], receipt),
+        receipts: prependById(data.receipts || [], receipt),
+      }));
+      updatePageData("master", (data) => addMasterRecord(data, "customers", receiptMasterRecord(receipt)));
+      markPagesStale(["master", "operations", "receipt", "dispatch", "report"]);
       setToast("Nhập hàng thành công.");
-      invalidateData();
     },
   });
   const dispatchMutation = useMutation({
     ...mutationOptions,
     mutationFn: (payload) =>
       apiRequest("/dispatches", { body: JSON.stringify(payload), method: "POST" }, session),
-    onSuccess: () => {
+    onSuccess: (dispatch) => {
+      const records = dispatchMasterRecords(dispatch);
+      updatePageData("operations", (data) => ({
+        ...data,
+        dispatches: prependById(data.dispatches || [], dispatch),
+        inventory: applyDispatchInventory(data.inventory || [], dispatch),
+      }));
+      updatePageData("dispatch", (data) => ({
+        ...data,
+        dispatches: prependById(data.dispatches || [], dispatch),
+        inventory: applyDispatchInventory(data.inventory || [], dispatch),
+      }));
+      updatePageData("master", (data) =>
+        addMasterRecord(
+          addMasterRecord(
+            addMasterRecord(data, "customers", records.customer),
+            "vehicles",
+            records.vehicle,
+          ),
+          "drivers",
+          records.driver,
+        ),
+      );
+      markPagesStale(["master", "operations", "receipt", "dispatch", "report"]);
       setToast("Xuất hàng thành công.");
-      invalidateData();
     },
   });
   const masterMutation = useMutation({
     ...mutationOptions,
     mutationFn: ({ body, method, path }) =>
       apiRequest(path, { body: body ? JSON.stringify(body) : undefined, method }, session),
-    onSuccess: () => {
+    onSuccess: (item, variables) => {
+      const listName = masterListFromPath(variables.path);
+      updatePageData("master", (data) => {
+        if (variables.method === "DELETE") {
+          const id = variables.path.split("/").filter(Boolean)[1];
+          return removeMasterRecord(data, listName, id);
+        }
+        return addMasterRecord(data, listName, item);
+      });
+      markPagesStale(["master", "operations", "receipt", "dispatch", "report"]);
       setToast("Danh mục đã được cập nhật.");
-      invalidateData();
     },
   });
   const invoiceMutation = useMutation({
@@ -400,9 +601,26 @@ export default function FetNextApp() {
         { body: JSON.stringify(payload), method: "POST" },
         session,
       ),
-    onSuccess: () => {
+    onSuccess: (approval, payload) => {
+      const customer =
+        state.customerRecords.find((item) => item.id === payload.customerId)?.label ||
+        state.billingReady.find((item) => item.customerId === payload.customerId)?.customer ||
+        "";
+      const invoiceApproval = {
+        approvedByName: payload.approvedByName || session?.name || "Kế toán mẫu",
+        customer,
+        customerId: payload.customerId,
+        date: approval.approval_date || approval.date || todayIso(),
+        id: approval.id,
+        status: approval.status || payload.status,
+      };
+      updatePageData("report", (data) => ({
+        ...data,
+        billingReady: (data.billingReady || []).filter((item) => item.customerId !== payload.customerId),
+        invoiceApprovals: prependById(data.invoiceApprovals || [], invoiceApproval),
+      }));
+      markPagesStale(["report"]);
       setToast("Xuất hóa đơn đã được ghi nhận.");
-      invalidateData();
     },
   });
 
@@ -474,18 +692,7 @@ export default function FetNextApp() {
                 <p className="max-w-3xl text-sm leading-6 text-slate-600">
                   {page.subtitle}
                 </p>
-                <label className="w-full shrink-0 sm:w-32">
-                  <span className="sr-only">Kỳ xem</span>
-                  <Select
-                    className="h-9 rounded-md px-2 text-sm"
-                    value={overviewPeriod}
-                    onChange={(event) => setOverviewPeriod(event.target.value)}
-                  >
-                    <option value="week">Tuần</option>
-                    <option value="month">Tháng</option>
-                    <option value="quarter">Quý</option>
-                  </Select>
-                </label>
+                <PeriodSelect value={overviewPeriod} onChange={setOverviewPeriod} />
               </div>
             ) : (
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
@@ -666,6 +873,15 @@ const overviewPeriodOptions = {
   quarter: { days: 90, label: "quý" },
   week: { days: 7, label: "tuần" },
 };
+
+function periodLabel(period) {
+  if (period === "all") return "toàn bộ";
+  return overviewPeriodOptions[period]?.label || overviewPeriodOptions.week.label;
+}
+
+function periodDescription(prefix, period) {
+  return period === "all" ? `${prefix} toàn bộ.` : `${prefix} trong ${periodLabel(period)}.`;
+}
 
 function periodWindow(period) {
   const config = overviewPeriodOptions[period] || overviewPeriodOptions.week;
@@ -883,11 +1099,16 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
   });
   const [summaryPage, setSummaryPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
+  const [historyPeriod, setHistoryPeriod] = useState("week");
   const customers = allCustomers(state);
   const customer = form.customer || selectedCustomer;
+  const historyWindow = historyPeriod === "all" ? null : periodWindow(historyPeriod);
   const summary = paginate(receiptSummaryRows(state, customer), summaryPage);
   const history = paginate(
-    state.invoice.filter((item) => item.customer === customer).sort(dateComparator("desc")),
+    state.invoice
+      .filter((item) => item.customer === customer)
+      .filter((item) => !historyWindow || dateInWindow(item.date, historyWindow))
+      .sort(dateComparator("desc")),
     historyPage,
   );
 
@@ -895,9 +1116,13 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
     setForm((current) => ({ ...current, customer: selectedCustomer }));
   }, [selectedCustomer]);
 
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [customer, historyPeriod]);
+
   return (
     <div className="grid gap-4">
-      <div className="grid items-stretch gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+      <div className="grid items-stretch gap-4 xl:grid-cols-2">
       <Card className="h-full">
         <CardHeader>
           <CardTitle>Ghi nhận hàng nhập</CardTitle>
@@ -982,9 +1207,11 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
                 />
               </Field>
             </div>
-            <Button disabled={mutation.isPending} type="submit">
-              Nhập hàng
-            </Button>
+            <div className={operationActionButtonShellClass}>
+              <Button className="w-full" disabled={mutation.isPending} type="submit">
+                Nhập hàng
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -1018,7 +1245,11 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
           <Pagination page={summary.page} pageCount={summary.pageCount} onPageChange={setSummaryPage} />
         </DataTableCard>
       </div>
-        <DataTableCard title="Lịch sử nhập hàng" description="Theo dõi từng lần nhập hàng.">
+        <DataTableCard
+          title="Lịch sử nhập hàng"
+          description={periodDescription("Theo dõi từng lần nhập hàng", historyPeriod)}
+          actions={<PeriodSelect includeAll value={historyPeriod} onChange={setHistoryPeriod} />}
+        >
           <Table>
             <thead>
               <tr>
@@ -1059,7 +1290,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
     sku: "",
     truck: "",
   });
-  const [filters, setFilters] = useState({ date: "", driver: "", truck: "" });
+  const [filters, setFilters] = useState({ date: "", driver: "", period: "week", truck: "" });
   const [page, setPage] = useState(1);
 
   const customerStock = availableRows.filter((row) => row.customer === form.customer);
@@ -1080,6 +1311,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
   }, [selectedStock?.sku]);
 
   const rows = state.dispatches
+    .filter((item) => filters.date || filters.period === "all" || dateInWindow(item.date, periodWindow(filters.period)))
     .filter((item) => !filters.date || item.date === filters.date)
     .filter((item) => !filters.truck || item.truck === filters.truck)
     .filter((item) => !filters.driver || item.driver === filters.driver)
@@ -1115,7 +1347,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
                 warehouseName: session?.name || "Thủ kho mẫu",
               });
               setSelectedCustomer(customerName);
-              setFilters({ date: "", driver: "", truck: "" });
+              setFilters({ date: "", driver: "", period: "week", truck: "" });
               setPage(1);
             }}
           >
@@ -1210,14 +1442,26 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
                 onChange={(event) => setForm({ ...form, quantity: event.target.value })}
               />
             </Field>
-            <Button className="lg:col-span-2" disabled={mutation.isPending} type="submit">
-              Xuất hàng
-            </Button>
+            <div className={cn(operationActionButtonShellClass, "lg:col-span-2")}>
+              <Button className="w-full" disabled={mutation.isPending} type="submit">
+                Xuất hàng
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
       <DataTableCard
-        description="Lọc nhanh các chuyến đã xuất theo ngày, xe và tài xế."
+        description={periodDescription("Lọc nhanh các chuyến đã xuất", filters.period)}
+        actions={
+          <PeriodSelect
+            includeAll
+            value={filters.period}
+            onChange={(period) => {
+              setFilters({ ...filters, period });
+              setPage(1);
+            }}
+          />
+        }
         title="Lịch sử xuất hàng"
       >
         <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto]">
@@ -1270,7 +1514,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
           <Button
             className="self-end"
             onClick={() => {
-              setFilters({ date: "", driver: "", truck: "" });
+              setFilters({ date: "", driver: "", period: "all", truck: "" });
               setPage(1);
             }}
             type="button"
@@ -1360,6 +1604,7 @@ function ReportsPage({ mutation, session, state }) {
                     {row.itemTypeCount} loại hàng đã hoàn tất
                   </span>
                   <Button
+                    className="w-full"
                     onClick={(event) => {
                       event.stopPropagation();
                       setConfirmCustomer(row);
@@ -1559,7 +1804,7 @@ function MasterSection({ config, mutation, records }) {
       </div>
       <div className="grid gap-4 p-4 lg:p-5">
         <form
-          className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:grid-cols-[minmax(0,1fr)_auto]"
+          className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:grid-cols-[minmax(0,1fr)_minmax(10rem,24%)]"
           onSubmit={(event) => {
             event.preventDefault();
             if (!value.trim()) return;
@@ -1575,10 +1820,12 @@ function MasterSection({ config, mutation, records }) {
               onChange={(event) => setValue(event.target.value)}
             />
           </Field>
-          <Button className="self-end" disabled={mutation.isPending} type="submit">
-            <Plus className="h-4 w-4" />
-            Thêm
-          </Button>
+          <div className={cn(primaryActionButtonShellClass, "self-end")}>
+            <Button className="w-full" disabled={mutation.isPending} type="submit">
+              <Plus className="h-4 w-4" />
+              Thêm
+            </Button>
+          </div>
         </form>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:max-w-sm">
@@ -1757,12 +2004,15 @@ function SettingsPage({ settings, setSettings }) {
   );
 }
 
-function DataTableCard({ children, className, description, title }) {
+function DataTableCard({ actions, children, className, description, title }) {
   return (
     <Card className={cn("min-w-0", className)}>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+      <CardHeader className={cn(actions && "sm:flex sm:flex-row sm:items-end sm:justify-between sm:gap-4")}>
+        <div className="min-w-0 space-y-1.5">
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </div>
+        {actions ? <div className="shrink-0">{actions}</div> : null}
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>

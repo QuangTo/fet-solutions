@@ -515,20 +515,25 @@ async function availableInventory(client, customerId, skus = []) {
 async function createReceipt(data, user) {
   return transaction(async (client) => {
     const customerId = await ensureCustomer(client, data);
+    const customerName =
+      data.customerName ||
+      (await client.query("select name from customers where id = $1", [customerId])).rows[0]?.name ||
+      "";
     const receipt = await client.query(
       `
         insert into receipts (customer_id, received_by_id, received_by_name, received_date)
         values ($1, $2, $3, $4)
-        returning *
+        returning id, received_date, received_by_name, created_at
       `,
       [customerId, user.id, data.receivedByName || user.name, data.date],
     );
 
-    await client.query(
+    const items = await client.query(
       `
         insert into receipt_items (receipt_id, sku, quantity, unit)
         select $1, item.sku, item.quantity, item.unit
         from jsonb_to_recordset($2::jsonb) as item(sku text, quantity numeric, unit text)
+        returning id, sku, quantity::float as quantity, unit
       `,
       [receipt.rows[0].id, JSON.stringify(data.items)],
     );
@@ -537,7 +542,15 @@ async function createReceipt(data, user) {
       customerId,
       itemCount: data.items.length,
     });
-    return receipt.rows[0];
+    return {
+      id: receipt.rows[0].id,
+      createdAt: receipt.rows[0].created_at,
+      customer: customerName,
+      customerId,
+      date: receipt.rows[0].received_date,
+      items: items.rows,
+      receivedByName: receipt.rows[0].received_by_name,
+    };
   });
 }
 
@@ -546,6 +559,18 @@ async function createDispatch(data, user) {
     const customerId = await ensureCustomer(client, data);
     const vehicleId = await ensureVehicle(client, data);
     const driverId = await ensureDriver(client, data);
+    const customerName =
+      data.customerName ||
+      (await client.query("select name from customers where id = $1", [customerId])).rows[0]?.name ||
+      "";
+    const plate =
+      data.plate ||
+      (await client.query("select plate from vehicles where id = $1", [vehicleId])).rows[0]?.plate ||
+      "";
+    const driverName =
+      data.driverName ||
+      (await client.query("select name from drivers where id = $1", [driverId])).rows[0]?.name ||
+      "";
     await client.query("select pg_advisory_xact_lock(hashtext($1))", [`dispatch:${customerId}`]);
     const requestedSkus = Array.from(new Set(data.items.map((item) => item.sku)));
     const inventory = await availableInventory(client, customerId, requestedSkus);
@@ -570,7 +595,7 @@ async function createDispatch(data, user) {
           customer_id, vehicle_id, driver_id, warehouse_user_id, warehouse_name, dispatch_date
         )
         values ($1, $2, $3, $4, $5, $6)
-        returning *
+        returning id, dispatch_date, warehouse_name, created_at
       `,
       [
         customerId,
@@ -582,11 +607,12 @@ async function createDispatch(data, user) {
       ],
     );
 
-    await client.query(
+    const items = await client.query(
       `
         insert into dispatch_items (dispatch_id, sku, quantity, unit)
         select $1, item.sku, item.quantity, item.unit
         from jsonb_to_recordset($2::jsonb) as item(sku text, quantity numeric, unit text)
+        returning id, sku, quantity::float as quantity, unit
       `,
       [dispatch.rows[0].id, JSON.stringify(data.items)],
     );
@@ -597,7 +623,19 @@ async function createDispatch(data, user) {
       driverId,
       itemCount: data.items.length,
     });
-    return dispatch.rows[0];
+    return {
+      id: dispatch.rows[0].id,
+      createdAt: dispatch.rows[0].created_at,
+      customer: customerName,
+      customerId,
+      date: dispatch.rows[0].dispatch_date,
+      driver: driverName,
+      driverId,
+      items: items.rows,
+      plate,
+      vehicleId,
+      warehouse: dispatch.rows[0].warehouse_name,
+    };
   });
 }
 

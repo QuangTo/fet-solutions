@@ -27,6 +27,11 @@ const cacheTtl = {
   dispatch: 15_000,
   report: 30_000,
 };
+const cacheGroups = {
+  master: ["app", "master"],
+  operations: ["app", "operations", "receipt", "dispatch", "inventory:"],
+  report: ["app", "report", "billing-ready", "invoice-approvals"],
+};
 
 function cachedRead(key, loader, ttlMs = 15_000) {
   const now = Date.now();
@@ -43,13 +48,25 @@ function cachedRead(key, loader, ttlMs = 15_000) {
   return promise;
 }
 
-function invalidateReadCache() {
-  readCache.clear();
+function invalidateReadCache(...patterns) {
+  if (!patterns.length) {
+    readCache.clear();
+    return;
+  }
+  for (const key of readCache.keys()) {
+    if (patterns.some((pattern) => key === pattern || key.startsWith(pattern))) {
+      readCache.delete(key);
+    }
+  }
 }
 
-async function writeThrough(work) {
+function invalidateCacheGroups(...groups) {
+  invalidateReadCache(...groups.flatMap((group) => cacheGroups[group] || []));
+}
+
+async function writeThrough(work, groups = []) {
   const result = await work();
-  invalidateReadCache();
+  invalidateCacheGroups(...groups);
   return result;
 }
 
@@ -265,7 +282,7 @@ function registerMasterRoutes({ path, table, column, schema, entityType }) {
       user: request.user,
       entityType,
     });
-    invalidateReadCache();
+    invalidateCacheGroups("master", "operations", "report");
     response.status(201).json(item);
   });
 
@@ -284,7 +301,7 @@ function registerMasterRoutes({ path, table, column, schema, entityType }) {
       response.status(404).json({ error: "NOT_FOUND" });
       return;
     }
-    invalidateReadCache();
+    invalidateCacheGroups("master", "operations", "report");
     response.json(item);
   });
 
@@ -299,7 +316,7 @@ function registerMasterRoutes({ path, table, column, schema, entityType }) {
       response.status(404).json({ error: "NOT_FOUND" });
       return;
     }
-    invalidateReadCache();
+    invalidateCacheGroups("master", "operations", "report");
     response.status(204).end();
   });
 }
@@ -357,7 +374,7 @@ app.get("/api/receipts", requireRole("driver", "warehouse"), async (request, res
 app.post("/api/receipts", requireRole("driver", "warehouse"), async (request, response) => {
   const body = receiptSchema.parse(request.body);
   const receipt = await repo.createReceipt(body, request.user);
-  invalidateReadCache();
+  invalidateCacheGroups("master", "operations", "report");
   response.status(201).json(receipt);
 });
 
@@ -396,7 +413,7 @@ app.get("/api/dispatches", requireRole("driver", "warehouse", "accountant"), asy
 app.post("/api/dispatches", requireRole("driver", "warehouse"), async (request, response) => {
   const body = dispatchSchema.parse(request.body);
   const dispatch = await repo.createDispatch(body, request.user);
-  invalidateReadCache();
+  invalidateCacheGroups("master", "operations", "report");
   response.status(201).json(dispatch);
 });
 
@@ -591,13 +608,13 @@ async function handleJsonpOperation({ method, path, payload, user }) {
     `);
   }
   if (method === "POST" && path === "/receipts") {
-    return writeThrough(() => repo.createReceipt(receiptSchema.parse(payload), user));
+    return writeThrough(() => repo.createReceipt(receiptSchema.parse(payload), user), ["master", "operations", "report"]);
   }
   if (method === "POST" && path === "/dispatches") {
-    return writeThrough(() => repo.createDispatch(dispatchSchema.parse(payload), user));
+    return writeThrough(() => repo.createDispatch(dispatchSchema.parse(payload), user), ["master", "operations", "report"]);
   }
   if (method === "POST" && path === "/invoice-approvals") {
-    return writeThrough(() => repo.createInvoiceApproval(invoiceApprovalSchema.parse(payload), user));
+    return writeThrough(() => repo.createInvoiceApproval(invoiceApprovalSchema.parse(payload), user), ["report"]);
   }
   if (method === "POST" && path === "/users") {
     const body = userSchema.parse(payload);
@@ -702,7 +719,7 @@ async function handleJsonpOperation({ method, path, payload, user }) {
         value: body[config.column] || body.name,
         user,
         entityType: config.entityType,
-      }));
+      }), ["master", "operations", "report"]);
     }
     if (method === "PATCH") {
       const body = config.schema.parse(payload);
@@ -713,7 +730,7 @@ async function handleJsonpOperation({ method, path, payload, user }) {
         value: body[config.column] || body.name,
         user,
         entityType: config.entityType,
-      }));
+      }), ["master", "operations", "report"]);
     }
     if (method === "DELETE") {
       return writeThrough(() => repo.softDeleteMaster({
@@ -721,7 +738,7 @@ async function handleJsonpOperation({ method, path, payload, user }) {
         id: masterMatch[2],
         user,
         entityType: config.entityType,
-      }));
+      }), ["master", "operations", "report"]);
     }
   }
 
@@ -761,7 +778,7 @@ app.get("/api/invoice-approvals", requireRole("accountant"), async (_request, re
 app.post("/api/invoice-approvals", requireRole("accountant"), async (request, response) => {
   const body = invoiceApprovalSchema.parse(request.body);
   const approval = await repo.createInvoiceApproval(body, request.user);
-  invalidateReadCache();
+  invalidateCacheGroups("report");
   response.status(201).json(approval);
 });
 
