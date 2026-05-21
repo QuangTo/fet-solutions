@@ -67,7 +67,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyRow, Table, Td, Th } from "@/components/ui/table";
 
 const SESSION_KEY = "fet-logistics-session";
-const pageOrder = ["tong-quan", "nhap-hang", "xuat-hang", "bao-cao", "quan-ly", "cai-dat"];
+const pageOrder = [
+  "tong-quan",
+  "nhap-hang",
+  "xuat-hang",
+  "bao-cao",
+  "quan-ly",
+  "cai-dat",
+];
 const iconMap = {
   FileCheck2,
   LayoutDashboard,
@@ -78,8 +85,10 @@ const iconMap = {
 };
 
 const emptyState = composeState({});
-const primaryActionButtonShellClass = "w-[clamp(10rem,34%,14rem)] max-w-full justify-self-center";
-const operationActionButtonShellClass = "w-[clamp(20rem,68%,28rem)] max-w-full justify-self-center";
+const primaryActionButtonShellClass =
+  "w-[clamp(10rem,34%,14rem)] max-w-full justify-self-center";
+const operationActionButtonShellClass =
+  "w-[clamp(20rem,68%,28rem)] max-w-full justify-self-center";
 
 function number(value) {
   return Number(value || 0).toLocaleString("vi-VN");
@@ -131,7 +140,7 @@ function Pagination({ onPageChange, page, pageCount }) {
 
 const dataTableConfigs = {
   dispatch: {
-    columns: ["15%", "22%", "15%", "17%", "15%", "8%", "8%"],
+    columns: ["13%", "19%", "15%", "16%", "23%", "7%", "7%"],
     width: "min-w-[960px]",
   },
   invoice: {
@@ -155,7 +164,13 @@ const dataTableConfigs = {
 function DataTable({ children, className, width = "dispatch" }) {
   const config = dataTableConfigs[width] || dataTableConfigs.dispatch;
   return (
-    <Table className={cn(config.width, "table-fixed whitespace-nowrap", className)}>
+    <Table
+      className={cn(
+        config.width,
+        "fixed-data-table table-fixed whitespace-nowrap",
+        className,
+      )}
+    >
       <colgroup>
         {config.columns.map((columnWidth, index) => (
           <col key={`${width}-${index}`} style={{ width: columnWidth }} />
@@ -308,7 +323,12 @@ function FormSkeleton({ fields = 4, title }) {
               <Skeleton className="h-11 w-full" />
             </div>
           ))}
-          <Skeleton className={cn("h-11 lg:col-span-2", operationActionButtonShellClass)} />
+          <Skeleton
+            className={cn(
+              "h-11 lg:col-span-2",
+              operationActionButtonShellClass,
+            )}
+          />
         </div>
       </CardContent>
     </Card>
@@ -321,7 +341,9 @@ function TableSkeleton({ columns = 4, rows = 5, title }) {
       <div className="grid max-w-full gap-3 overflow-x-auto overscroll-x-contain">
         <div
           className="grid min-w-max gap-3"
-          style={{ gridTemplateColumns: `repeat(${columns}, minmax(88px, 1fr))` }}
+          style={{
+            gridTemplateColumns: `repeat(${columns}, minmax(88px, 1fr))`,
+          }}
         >
           {Array.from({ length: columns }).map((_, index) => (
             <Skeleton className="h-4" key={index} />
@@ -331,11 +353,17 @@ function TableSkeleton({ columns = 4, rows = 5, title }) {
           <div
             className="grid min-w-max gap-3 border-t border-slate-100 pt-3"
             key={rowIndex}
-            style={{ gridTemplateColumns: `repeat(${columns}, minmax(88px, 1fr))` }}
+            style={{
+              gridTemplateColumns: `repeat(${columns}, minmax(88px, 1fr))`,
+            }}
           >
             {Array.from({ length: columns }).map((_, columnIndex) => (
               <Skeleton
-                className={cn("h-5", columnIndex === 0 && "w-20", columnIndex === columns - 1 && "w-16")}
+                className={cn(
+                  "h-5",
+                  columnIndex === 0 && "w-20",
+                  columnIndex === columns - 1 && "w-16",
+                )}
                 key={columnIndex}
               />
             ))}
@@ -367,7 +395,11 @@ function normalizeMasterItem(item, listName) {
     id: item?.id,
     isActive: item?.isActive ?? item?.is_active ?? true,
     label,
-    updatedAt: item?.updatedAt || item?.updated_at || item?.createdAt || item?.created_at,
+    updatedAt:
+      item?.updatedAt ||
+      item?.updated_at ||
+      item?.createdAt ||
+      item?.created_at,
   };
 }
 
@@ -397,7 +429,9 @@ function applyReceiptInventory(inventory = [], receipt) {
     const quantity = Number(item.quantity || 0);
     let touched = false;
     nextInventory = nextInventory.map((row) => {
-      const sameCustomer = row.customerId === receipt.customerId || row.customer === receipt.customer;
+      const sameCustomer =
+        row.customerId === receipt.customerId ||
+        row.customer === receipt.customer;
       if (!sameCustomer || row.sku !== item.sku) return row;
       touched = true;
       return {
@@ -430,12 +464,17 @@ function applyDispatchInventory(inventory = [], dispatch) {
   (dispatch.items || []).forEach((item) => {
     const quantity = Number(item.quantity || 0);
     nextInventory = nextInventory.map((row) => {
-      const sameCustomer = row.customerId === dispatch.customerId || row.customer === dispatch.customer;
+      const sameCustomer =
+        row.customerId === dispatch.customerId ||
+        row.customer === dispatch.customer;
       if (!sameCustomer || row.sku !== item.sku) return row;
       return {
         ...row,
         dispatchedQuantity: Number(row.dispatchedQuantity || 0) + quantity,
-        remainingQuantity: Math.max(Number(row.remainingQuantity || 0) - quantity, 0),
+        remainingQuantity: Math.max(
+          Number(row.remainingQuantity || 0) - quantity,
+          0,
+        ),
       };
     });
   });
@@ -510,7 +549,12 @@ export default function FetNextApp() {
     ? activePage
     : "tong-quan";
   const needsMaster = visiblePage !== "cai-dat";
-  const needsOperations = ["tong-quan", "nhap-hang", "xuat-hang", "bao-cao"].includes(visiblePage);
+  const needsOperations = [
+    "tong-quan",
+    "nhap-hang",
+    "xuat-hang",
+    "bao-cao",
+  ].includes(visiblePage);
   const operationsPage =
     visiblePage === "nhap-hang"
       ? "receipt"
@@ -527,16 +571,22 @@ export default function FetNextApp() {
   });
   const reportQuery = useQuery({
     ...pageQueryOptions("report", session),
-    enabled: Boolean(session) && visiblePage === "bao-cao" && ["admin", "accountant"].includes(activeRole),
+    enabled:
+      Boolean(session) &&
+      visiblePage === "bao-cao" &&
+      ["admin", "accountant"].includes(activeRole),
   });
-  const isMasterLoading = needsMaster && !masterQuery.data && masterQuery.isPending;
-  const isOperationsLoading = needsOperations && !operationsQuery.data && operationsQuery.isPending;
+  const isMasterLoading =
+    needsMaster && !masterQuery.data && masterQuery.isPending;
+  const isOperationsLoading =
+    needsOperations && !operationsQuery.data && operationsQuery.isPending;
   const isReportLoading =
     visiblePage === "bao-cao" &&
     ["admin", "accountant"].includes(activeRole) &&
     !reportQuery.data &&
     reportQuery.isPending;
-  const isPageLoading = isMasterLoading || isOperationsLoading || isReportLoading;
+  const isPageLoading =
+    isMasterLoading || isOperationsLoading || isReportLoading;
 
   const state = useMemo(
     () =>
@@ -548,7 +598,12 @@ export default function FetNextApp() {
     [masterQuery.data, operationsQuery.data, reportQuery.data],
   );
 
-  const pageDataKey = (pageName) => ["page-data", pageName, session?.role, session?.name];
+  const pageDataKey = (pageName) => [
+    "page-data",
+    pageName,
+    session?.role,
+    session?.name,
+  ];
   const updatePageData = (pageName, updater) => {
     queryClient.setQueryData(pageDataKey(pageName), (current) =>
       current ? updater(current) : current,
@@ -557,8 +612,8 @@ export default function FetNextApp() {
   const markPagesStale = (pageNames) => {
     pageNames.forEach((pageName) => {
       queryClient.invalidateQueries({
-        queryKey: pageDataKey(pageName),
-        refetchType: "inactive",
+        queryKey: ["page-data", pageName],
+        refetchType: "all",
       });
     });
   };
@@ -569,7 +624,11 @@ export default function FetNextApp() {
   const receiptMutation = useMutation({
     ...mutationOptions,
     mutationFn: (payload) =>
-      apiRequest("/receipts", { body: JSON.stringify(payload), method: "POST" }, session),
+      apiRequest(
+        "/receipts",
+        { body: JSON.stringify(payload), method: "POST" },
+        session,
+      ),
     onSuccess: (receipt) => {
       updatePageData("operations", (data) => ({
         ...data,
@@ -581,7 +640,9 @@ export default function FetNextApp() {
         inventory: applyReceiptInventory(data.inventory || [], receipt),
         receipts: prependById(data.receipts || [], receipt),
       }));
-      updatePageData("master", (data) => addMasterRecord(data, "customers", receiptMasterRecord(receipt)));
+      updatePageData("master", (data) =>
+        addMasterRecord(data, "customers", receiptMasterRecord(receipt)),
+      );
       markPagesStale(["master", "operations", "receipt", "dispatch", "report"]);
       setToast("Nhập hàng thành công.");
     },
@@ -589,7 +650,11 @@ export default function FetNextApp() {
   const dispatchMutation = useMutation({
     ...mutationOptions,
     mutationFn: (payload) =>
-      apiRequest("/dispatches", { body: JSON.stringify(payload), method: "POST" }, session),
+      apiRequest(
+        "/dispatches",
+        { body: JSON.stringify(payload), method: "POST" },
+        session,
+      ),
     onSuccess: (dispatch) => {
       const records = dispatchMasterRecords(dispatch);
       updatePageData("operations", (data) => ({
@@ -620,7 +685,11 @@ export default function FetNextApp() {
   const masterMutation = useMutation({
     ...mutationOptions,
     mutationFn: ({ body, method, path }) =>
-      apiRequest(path, { body: body ? JSON.stringify(body) : undefined, method }, session),
+      apiRequest(
+        path,
+        { body: body ? JSON.stringify(body) : undefined, method },
+        session,
+      ),
     onSuccess: (item, variables) => {
       const listName = masterListFromPath(variables.path);
       updatePageData("master", (data) => {
@@ -644,11 +713,15 @@ export default function FetNextApp() {
       ),
     onSuccess: (approval, payload) => {
       const customer =
-        state.customerRecords.find((item) => item.id === payload.customerId)?.label ||
-        state.billingReady.find((item) => item.customerId === payload.customerId)?.customer ||
+        state.customerRecords.find((item) => item.id === payload.customerId)
+          ?.label ||
+        state.billingReady.find(
+          (item) => item.customerId === payload.customerId,
+        )?.customer ||
         "";
       const invoiceApproval = {
-        approvedByName: payload.approvedByName || session?.name || "Kế toán mẫu",
+        approvedByName:
+          payload.approvedByName || session?.name || "Kế toán mẫu",
         customer,
         customerId: payload.customerId,
         date: approval.approval_date || approval.date || todayIso(),
@@ -657,8 +730,13 @@ export default function FetNextApp() {
       };
       updatePageData("report", (data) => ({
         ...data,
-        billingReady: (data.billingReady || []).filter((item) => item.customerId !== payload.customerId),
-        invoiceApprovals: prependById(data.invoiceApprovals || [], invoiceApproval),
+        billingReady: (data.billingReady || []).filter(
+          (item) => item.customerId !== payload.customerId,
+        ),
+        invoiceApprovals: prependById(
+          data.invoiceApprovals || [],
+          invoiceApproval,
+        ),
       }));
       markPagesStale(["report"]);
       setToast("Xuất hóa đơn đã được ghi nhận.");
@@ -666,7 +744,10 @@ export default function FetNextApp() {
   });
 
   const saveSession = (nextSession) => {
-    const normalized = { ...nextSession, role: normalizeRole(nextSession.role) };
+    const normalized = {
+      ...nextSession,
+      role: normalizeRole(nextSession.role),
+    };
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(normalized));
     setSession(normalized);
   };
@@ -683,7 +764,12 @@ export default function FetNextApp() {
   const page = pages[visiblePage];
 
   return (
-    <main className={cn("app-grid", settings.density === "compact" && "text-[14px]")}>
+    <main
+      className={cn(
+        "app-grid",
+        settings.density === "compact" && "text-[14px]",
+      )}
+    >
       {toast ? (
         <div className="fixed right-4 top-4 z-[80] max-w-[calc(100vw-32px)] rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-700 shadow-lg">
           {toast}
@@ -698,7 +784,11 @@ export default function FetNextApp() {
         onClick={() => setMobileNavOpen((value) => !value)}
         type="button"
       >
-        {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        {mobileNavOpen ? (
+          <X className="h-5 w-5" />
+        ) : (
+          <Menu className="h-5 w-5" />
+        )}
       </button>
       {mobileNavOpen ? (
         <button
@@ -733,7 +823,10 @@ export default function FetNextApp() {
                 <p className="max-w-3xl text-sm leading-6 text-slate-500">
                   {page.subtitle}
                 </p>
-                <PeriodSelect value={overviewPeriod} onChange={setOverviewPeriod} />
+                <PeriodSelect
+                  value={overviewPeriod}
+                  onChange={setOverviewPeriod}
+                />
               </div>
             ) : (
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
@@ -749,13 +842,20 @@ export default function FetNextApp() {
                 className="w-fit justify-self-end self-end"
                 tone={operationsQuery.isFetching ? "amber" : "green"}
               >
-                {operationsQuery.isFetching ? "Đang đồng bộ" : "Dữ liệu mới nhất"}
+                {operationsQuery.isFetching
+                  ? "Đang đồng bộ"
+                  : "Dữ liệu mới nhất"}
               </Badge>
             )
           ) : null}
         </header>
 
-        <div className={cn("grid gap-4", settings.density === "compact" ? "gap-3" : "gap-4")}>
+        <div
+          className={cn(
+            "grid gap-4",
+            settings.density === "compact" ? "gap-3" : "gap-4",
+          )}
+        >
           {isPageLoading ? <LoadingSkeleton page={visiblePage} /> : null}
           {!isPageLoading && visiblePage === "tong-quan" ? (
             <OverviewPage
@@ -786,7 +886,11 @@ export default function FetNextApp() {
             />
           ) : null}
           {!isPageLoading && visiblePage === "bao-cao" ? (
-            <ReportsPage mutation={invoiceMutation} session={session} state={state} />
+            <ReportsPage
+              mutation={invoiceMutation}
+              session={session}
+              state={state}
+            />
           ) : null}
           {!isPageLoading && visiblePage === "quan-ly" ? (
             <ManagementPage mutation={masterMutation} state={state} />
@@ -814,7 +918,9 @@ function LoginScreen({ onLogin }) {
             </div>
             <div>
               <CardTitle>Quản lý vận tải</CardTitle>
-              <CardDescription>Đăng nhập thử nghiệm theo vai trò</CardDescription>
+              <CardDescription>
+                Đăng nhập thử nghiệm theo vai trò
+              </CardDescription>
             </div>
           </div>
           <h1 className="text-2xl font-black text-slate-950">
@@ -831,7 +937,10 @@ function LoginScreen({ onLogin }) {
           >
             <Field>
               Vai trò
-              <Select value={role} onChange={(event) => setRole(event.target.value)}>
+              <Select
+                value={role}
+                onChange={(event) => setRole(event.target.value)}
+              >
                 {Object.entries(roles).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -856,7 +965,14 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-function Sidebar({ activePage, activeRole, mobileNavOpen, navigate, onLogout, session }) {
+function Sidebar({
+  activePage,
+  activeRole,
+  mobileNavOpen,
+  navigate,
+  onLogout,
+  session,
+}) {
   return (
     <aside
       className={cn(
@@ -916,7 +1032,9 @@ const overviewPeriodOptions = {
 };
 
 function periodLabel(period) {
-  return overviewPeriodOptions[period]?.label || overviewPeriodOptions.week.label;
+  return (
+    overviewPeriodOptions[period]?.label || overviewPeriodOptions.week.label
+  );
 }
 
 function periodDescription(prefix, period) {
@@ -1013,9 +1131,20 @@ function OverviewPage({ onSelectCustomer, period, state }) {
   return (
     <>
       <div className="grid gap-3 md:grid-cols-3">
-        <Metric label={`Tổng hàng đã nhập trong ${stats.label}`} value={number(stats.received)} />
-        <Metric label={`Đã xuất lên xe trong ${stats.label}`} tone="amber" value={number(stats.dispatched)} />
-        <Metric label={`Còn trong kho trong ${stats.label}`} tone="green" value={number(stats.remaining)} />
+        <Metric
+          label={`Tổng hàng đã nhập trong ${stats.label}`}
+          value={number(stats.received)}
+        />
+        <Metric
+          label={`Đã xuất lên xe trong ${stats.label}`}
+          tone="amber"
+          value={number(stats.dispatched)}
+        />
+        <Metric
+          label={`Còn trong kho trong ${stats.label}`}
+          tone="green"
+          value={number(stats.remaining)}
+        />
       </div>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">
         <Card>
@@ -1035,7 +1164,9 @@ function OverviewPage({ onSelectCustomer, period, state }) {
                     onClick={() => onSelectCustomer(summary.customer)}
                     type="button"
                   >
-                    <span className="font-black text-slate-900">{summary.customer}</span>
+                    <span className="font-black text-slate-900">
+                      {summary.customer}
+                    </span>
                     <strong className="text-2xl font-black text-emerald-700">
                       {number(summary.totalQuantity)}
                     </strong>
@@ -1065,7 +1196,12 @@ function OverviewPage({ onSelectCustomer, period, state }) {
 
 function Metric({ label, tone = "default", value }) {
   return (
-    <Card className={cn(tone === "green" && "border-emerald-200", tone === "amber" && "border-amber-200")}>
+    <Card
+      className={cn(
+        tone === "green" && "border-emerald-200",
+        tone === "amber" && "border-amber-200",
+      )}
+    >
       <CardContent className="p-5">
         <span className="text-sm font-bold text-slate-500">{label}</span>
         <strong
@@ -1110,7 +1246,8 @@ function InventoryChart({ period, state }) {
       <CardHeader>
         <CardTitle>Xu hướng tồn kho</CardTitle>
         <CardDescription>
-          Tồn cuối {stats.label} <strong className="text-emerald-700">{number(last)}</strong>
+          Tồn cuối {stats.label}{" "}
+          <strong className="text-emerald-700">{number(last)}</strong>
         </CardDescription>
       </CardHeader>
       <CardContent className="h-[320px] min-w-0">
@@ -1119,7 +1256,7 @@ function InventoryChart({ period, state }) {
             <AreaChart
               data={data}
               height={chartSize.height}
-              margin={{ bottom: 6, left: -18, right: 10, top: 10 }}
+              margin={{ bottom: 6, left: 4, right: 16, top: 18 }}
               width={chartSize.width}
             >
               <defs>
@@ -1130,7 +1267,14 @@ function InventoryChart({ period, state }) {
               </defs>
               <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
               <XAxis dataKey="label" tickLine={false} />
-              <YAxis tickLine={false} />
+              <YAxis
+                allowDecimals={false}
+                axisLine={false}
+                tickFormatter={number}
+                tickLine={false}
+                tickMargin={8}
+                width={56}
+              />
               <Tooltip
                 contentStyle={{
                   border: "1px solid #e2e8f0",
@@ -1157,7 +1301,13 @@ function InventoryChart({ period, state }) {
   );
 }
 
-function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer, state }) {
+function ReceiptPage({
+  mutation,
+  selectedCustomer,
+  session,
+  setSelectedCustomer,
+  state,
+}) {
   const [form, setForm] = useState({
     customer: selectedCustomer,
     date: todayIso(),
@@ -1175,7 +1325,9 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
   const history = paginate(
     state.invoice
       .filter((item) => !customer || item.customer === customer)
-      .filter((item) => !historyWindow || dateInWindow(item.date, historyWindow))
+      .filter(
+        (item) => !historyWindow || dateInWindow(item.date, historyWindow),
+      )
       .sort(dateComparator("desc")),
     historyPage,
   );
@@ -1191,102 +1343,127 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
   return (
     <div className="grid gap-4">
       <div className="grid items-stretch gap-4 xl:grid-cols-2">
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Ghi nhận hàng nhập</CardTitle>
-          <CardDescription>Chọn khách hàng và thêm từng loại hàng vào kho.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="grid gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const customerName = form.customer.trim();
-              mutation.mutate({
-                customerName,
-                date: form.date,
-                items: [
-                  {
-                    quantity: Number(form.quantity),
-                    sku: normalizeSku(form.sku),
-                    unit: form.unit.trim(),
-                  },
-                ],
-                receivedByName: session?.name || "Thủ kho mẫu",
-              });
-              setSelectedCustomer(customerName);
-              setForm((current) => ({ ...current, quantity: 100, sku: "", unit: "tấn" }));
-            }}
-          >
-            <Field>
-              Ngày nhập kho
-              <Input
-                className="min-w-0"
-                required
-                type="date"
-                value={form.date}
-                onChange={(event) => setForm({ ...form, date: event.target.value })}
-              />
-            </Field>
-            <Field>
-              Khách hàng
-              <Select
-                required
-                value={form.customer}
-                onChange={(event) => {
-                  setForm({ ...form, customer: event.target.value });
-                  setSelectedCustomer(event.target.value);
-                }}
-              >
-                <option value="">Chọn khách hàng</option>
-                {customers.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field>
-              Loại hàng
-              <Input
-                placeholder="A"
-                required
-                value={form.sku}
-                onChange={(event) => setForm({ ...form, sku: event.target.value })}
-              />
-            </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Ghi nhận hàng nhập</CardTitle>
+            <CardDescription>
+              Chọn khách hàng và thêm từng loại hàng vào kho.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form
+              className="grid gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const customerName = form.customer.trim();
+                mutation.mutate({
+                  customerName,
+                  date: form.date,
+                  items: [
+                    {
+                      quantity: Number(form.quantity),
+                      sku: normalizeSku(form.sku),
+                      unit: form.unit.trim(),
+                    },
+                  ],
+                  receivedByName: session?.name || "Thủ kho mẫu",
+                });
+                setSelectedCustomer(customerName);
+                setForm((current) => ({
+                  ...current,
+                  quantity: 100,
+                  sku: "",
+                  unit: "tấn",
+                }));
+              }}
+            >
               <Field>
-                Số lượng nhập
+                Ngày nhập kho
                 <Input
-                  min="1"
+                  className="min-w-0"
                   required
-                  type="number"
-                  value={form.quantity}
-                  onChange={(event) => setForm({ ...form, quantity: event.target.value })}
+                  type="date"
+                  value={form.date}
+                  onChange={(event) =>
+                    setForm({ ...form, date: event.target.value })
+                  }
                 />
               </Field>
               <Field>
-                Đơn vị
-                <Input
+                Khách hàng
+                <Select
                   required
-                  value={form.unit}
-                  onChange={(event) => setForm({ ...form, unit: event.target.value })}
+                  value={form.customer}
+                  onChange={(event) => {
+                    setForm({ ...form, customer: event.target.value });
+                    setSelectedCustomer(event.target.value);
+                  }}
+                >
+                  <option value="">Chọn khách hàng</option>
+                  {customers.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field>
+                Loại hàng
+                <Input
+                  placeholder="A"
+                  required
+                  value={form.sku}
+                  onChange={(event) =>
+                    setForm({ ...form, sku: event.target.value })
+                  }
                 />
               </Field>
-            </div>
-            <div className={operationActionButtonShellClass}>
-              <Button className="w-full" disabled={mutation.isPending} type="submit">
-                Nhập hàng
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field>
+                  Số lượng nhập
+                  <Input
+                    min="1"
+                    required
+                    type="number"
+                    value={form.quantity}
+                    onChange={(event) =>
+                      setForm({ ...form, quantity: event.target.value })
+                    }
+                  />
+                </Field>
+                <Field>
+                  Đơn vị
+                  <Input
+                    required
+                    value={form.unit}
+                    onChange={(event) =>
+                      setForm({ ...form, unit: event.target.value })
+                    }
+                  />
+                </Field>
+              </div>
+              <div className={operationActionButtonShellClass}>
+                <Button
+                  className="w-full"
+                  disabled={mutation.isPending}
+                  type="submit"
+                >
+                  Nhập hàng
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
         <DataTableCard
           className="h-full"
-          description={customer ? `${summary.rows.length} dòng đang hiển thị` : "Chọn khách hàng để xem tổng hợp."}
-          title={customer ? `Tổng hợp hàng nhập - ${customer}` : "Tổng hợp hàng nhập"}
+          description={
+            customer
+              ? `${summary.rows.length} dòng đang hiển thị`
+              : "Chọn khách hàng để xem tổng hợp."
+          }
+          title={
+            customer ? `Tổng hợp hàng nhập - ${customer}` : "Tổng hợp hàng nhập"
+          }
         >
           <DataTable width="receiptSummary">
             <thead>
@@ -1300,55 +1477,82 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
               {summary.rows.length ? (
                 summary.rows.map((row) => (
                   <tr key={`${row.sku}-${row.unit}`}>
-                    <Td data-label="Loại hàng"><strong>{row.sku}</strong></Td>
+                    <Td data-label="Loại hàng">
+                      <strong>{row.sku}</strong>
+                    </Td>
                     <Td data-label="Tổng số lượng">{number(row.quantity)}</Td>
                     <Td data-label="Đơn vị">{row.unit}</Td>
                   </tr>
                 ))
               ) : (
-                <EmptyRow colSpan={3}>Khách hàng này chưa có dữ liệu nhập hàng.</EmptyRow>
+                <EmptyRow colSpan={3}>
+                  Khách hàng này chưa có dữ liệu nhập hàng.
+                </EmptyRow>
               )}
             </tbody>
           </DataTable>
-          <Pagination page={summary.page} pageCount={summary.pageCount} onPageChange={setSummaryPage} />
+          <Pagination
+            page={summary.page}
+            pageCount={summary.pageCount}
+            onPageChange={setSummaryPage}
+          />
         </DataTableCard>
       </div>
-        <DataTableCard
-          title="Lịch sử nhập hàng"
-          description={periodDescription("Theo dõi từng lần nhập hàng", historyPeriod)}
-          actions={<PeriodSelect value={historyPeriod} onChange={setHistoryPeriod} />}
-        >
-          <DataTable width="receiptHistory">
-            <thead>
-              <tr>
-                <Th>Ngày nhập</Th>
-                <Th>Loại hàng</Th>
-                <Th>Số lượng</Th>
-                <Th>Đơn vị</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.rows.length ? (
-                history.rows.map((row) => (
-                  <tr key={row.id}>
-                    <Td data-label="Ngày nhập">{formatDate(row.date)}</Td>
-                    <Td data-label="Loại hàng"><strong>{row.sku}</strong></Td>
-                    <Td data-label="Số lượng">{number(row.quantity)}</Td>
-                    <Td data-label="Đơn vị">{row.unit}</Td>
-                  </tr>
-                ))
-              ) : (
-                <EmptyRow colSpan={4}>Khách hàng này chưa có lịch sử nhập hàng.</EmptyRow>
-              )}
-            </tbody>
-          </DataTable>
-          <Pagination page={history.page} pageCount={history.pageCount} onPageChange={setHistoryPage} />
-        </DataTableCard>
+      <DataTableCard
+        title="Lịch sử nhập hàng"
+        description={periodDescription(
+          "Theo dõi từng lần nhập hàng",
+          historyPeriod,
+        )}
+        actions={
+          <PeriodSelect value={historyPeriod} onChange={setHistoryPeriod} />
+        }
+      >
+        <DataTable width="receiptHistory">
+          <thead>
+            <tr>
+              <Th>Ngày nhập</Th>
+              <Th>Loại hàng</Th>
+              <Th>Số lượng</Th>
+              <Th>Đơn vị</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.rows.length ? (
+              history.rows.map((row) => (
+                <tr key={row.id}>
+                  <Td data-label="Ngày nhập">{formatDate(row.date)}</Td>
+                  <Td data-label="Loại hàng">
+                    <strong>{row.sku}</strong>
+                  </Td>
+                  <Td data-label="Số lượng">{number(row.quantity)}</Td>
+                  <Td data-label="Đơn vị">{row.unit}</Td>
+                </tr>
+              ))
+            ) : (
+              <EmptyRow colSpan={4}>
+                Khách hàng này chưa có lịch sử nhập hàng.
+              </EmptyRow>
+            )}
+          </tbody>
+        </DataTable>
+        <Pagination
+          page={history.page}
+          pageCount={history.pageCount}
+          onPageChange={setHistoryPage}
+        />
+      </DataTableCard>
     </div>
   );
 }
 
-function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer, state }) {
+function DispatchPage({
+  mutation,
+  selectedCustomer,
+  session,
+  setSelectedCustomer,
+  state,
+}) {
   const availableRows = stockRows(state);
   const [form, setForm] = useState({
     customer: selectedCustomer,
@@ -1359,10 +1563,17 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
     truck: "",
     unit: "",
   });
-  const [filters, setFilters] = useState({ date: "", driver: "", period: "week", truck: "" });
+  const [filters, setFilters] = useState({
+    date: "",
+    driver: "",
+    period: "week",
+    truck: "",
+  });
   const [page, setPage] = useState(1);
 
-  const customerStock = availableRows.filter((row) => row.customer === form.customer);
+  const customerStock = availableRows.filter(
+    (row) => row.customer === form.customer,
+  );
   const selectedStock =
     customerStock.find((row) => row.sku === form.sku) || customerStock[0];
 
@@ -1374,14 +1585,21 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
     if (!selectedStock) return;
     setForm((current) => ({
       ...current,
-      quantity: current.sku === selectedStock.sku ? current.quantity : selectedStock.remainingQuantity,
+      quantity:
+        current.sku === selectedStock.sku
+          ? current.quantity
+          : selectedStock.remainingQuantity,
       sku: current.sku || selectedStock.sku,
-      unit: current.sku === selectedStock.sku ? current.unit : selectedStock.unit,
+      unit:
+        current.sku === selectedStock.sku ? current.unit : selectedStock.unit,
     }));
   }, [selectedStock?.sku]);
 
   const rows = state.dispatches
-    .filter((item) => filters.date || dateInWindow(item.date, periodWindow(filters.period)))
+    .filter(
+      (item) =>
+        filters.date || dateInWindow(item.date, periodWindow(filters.period)),
+    )
     .filter((item) => !filters.date || item.date === filters.date)
     .filter((item) => !form.customer || item.customer === form.customer)
     .filter((item) => !filters.truck || item.truck === filters.truck)
@@ -1394,7 +1612,9 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
       <Card>
         <CardHeader>
           <CardTitle>Tạo phiếu xuất hàng</CardTitle>
-          <CardDescription>Chọn khách hàng, xe, tài xế và lượng hàng cần xuất.</CardDescription>
+          <CardDescription>
+            Chọn khách hàng, xe, tài xế và lượng hàng cần xuất.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -1429,7 +1649,9 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
                 required
                 type="date"
                 value={form.date}
-                onChange={(event) => setForm({ ...form, date: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, date: event.target.value })
+                }
               />
             </Field>
             <Field>
@@ -1439,7 +1661,13 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
                 value={form.customer}
                 onChange={(event) => {
                   setSelectedCustomer(event.target.value);
-                  setForm({ ...form, customer: event.target.value, quantity: "", sku: "", unit: "" });
+                  setForm({
+                    ...form,
+                    customer: event.target.value,
+                    quantity: "",
+                    sku: "",
+                    unit: "",
+                  });
                 }}
               >
                 <option value="">Chọn khách hàng</option>
@@ -1455,7 +1683,9 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
               <Select
                 required
                 value={form.truck}
-                onChange={(event) => setForm({ ...form, truck: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, truck: event.target.value })
+                }
               >
                 <option value="">Chọn xe</option>
                 {state.vehicles.map((truck) => (
@@ -1470,7 +1700,9 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
               <Select
                 required
                 value={form.driver}
-                onChange={(event) => setForm({ ...form, driver: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, driver: event.target.value })
+                }
               >
                 <option value="">Chọn tài xế</option>
                 {state.drivers.map((driver) => (
@@ -1486,7 +1718,9 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
                 required
                 value={form.sku}
                 onChange={(event) => {
-                  const next = customerStock.find((row) => row.sku === event.target.value);
+                  const next = customerStock.find(
+                    (row) => row.sku === event.target.value,
+                  );
                   setForm({
                     ...form,
                     quantity: next?.remainingQuantity || "",
@@ -1511,7 +1745,9 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
                 required
                 type="number"
                 value={form.quantity}
-                onChange={(event) => setForm({ ...form, quantity: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, quantity: event.target.value })
+                }
               />
             </Field>
             <Field>
@@ -1519,11 +1755,19 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
               <Input
                 required
                 value={form.unit}
-                onChange={(event) => setForm({ ...form, unit: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, unit: event.target.value })
+                }
               />
             </Field>
-            <div className={cn(operationActionButtonShellClass, "lg:col-span-2")}>
-              <Button className="w-full" disabled={mutation.isPending} type="submit">
+            <div
+              className={cn(operationActionButtonShellClass, "lg:col-span-2")}
+            >
+              <Button
+                className="w-full"
+                disabled={mutation.isPending}
+                type="submit"
+              >
                 Xuất hàng
               </Button>
             </div>
@@ -1531,7 +1775,10 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
         </CardContent>
       </Card>
       <DataTableCard
-        description={periodDescription("Lọc nhanh các chuyến đã xuất", filters.period)}
+        description={periodDescription(
+          "Lọc nhanh các chuyến đã xuất",
+          filters.period,
+        )}
         actions={
           <PeriodSelect
             value={filters.period}
@@ -1591,7 +1838,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
             </Select>
           </Field>
           <Button
-            className="self-end"
+            className="w-full self-end lg:w-48"
             onClick={() => {
               setFilters({ date: "", driver: "", period: "week", truck: "" });
               setPage(1);
@@ -1602,7 +1849,11 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
           </Button>
         </div>
         <DispatchTable rows={dispatchPage.rows} />
-        <Pagination page={dispatchPage.page} pageCount={dispatchPage.pageCount} onPageChange={setPage} />
+        <Pagination
+          page={dispatchPage.page}
+          pageCount={dispatchPage.pageCount}
+          onPageChange={setPage}
+        />
       </DataTableCard>
     </div>
   );
@@ -1628,7 +1879,9 @@ function DispatchTable({ rows }) {
             <tr key={item.id}>
               <Td data-label="Ngày xuất">{formatDate(item.date)}</Td>
               <Td data-label="Khách hàng">{item.customer}</Td>
-              <Td data-label="Xe"><strong>{item.truck}</strong></Td>
+              <Td data-label="Xe">
+                <strong>{item.truck}</strong>
+              </Td>
               <Td data-label="Tài xế">{item.driver}</Td>
               <Td data-label="Loại hàng">{item.sku}</Td>
               <Td data-label="Số lượng">{number(item.quantity)}</Td>
@@ -1636,7 +1889,9 @@ function DispatchTable({ rows }) {
             </tr>
           ))
         ) : (
-          <EmptyRow colSpan={7}>Chưa có lịch sử xuất hàng phù hợp với bộ lọc hiện tại.</EmptyRow>
+          <EmptyRow colSpan={7}>
+            Chưa có lịch sử xuất hàng phù hợp với bộ lọc hiện tại.
+          </EmptyRow>
         )}
       </tbody>
     </DataTable>
@@ -1651,14 +1906,18 @@ function ReportsPage({ mutation, session, state }) {
   const history = state.dispatches
     .filter((item) => item.customer === current)
     .sort(dateComparator("desc"));
-  const invoiceHistory = [...state.invoiceApprovals].sort(dateComparator("desc"));
+  const invoiceHistory = [...state.invoiceApprovals].sort(
+    dateComparator("desc"),
+  );
 
   return (
     <div className="grid gap-4">
       <Card>
         <CardHeader>
           <CardTitle>Khách hàng đủ điều kiện xuất hóa đơn</CardTitle>
-          <CardDescription>Chỉ hiển thị khách hàng đã xuất hết hàng.</CardDescription>
+          <CardDescription>
+            Chỉ hiển thị khách hàng đã xuất hết hàng.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1667,7 +1926,8 @@ function ReportsPage({ mutation, session, state }) {
                 <article
                   className={cn(
                     "grid min-h-32 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left hover:border-emerald-300 hover:bg-emerald-50",
-                    current === row.customer && "border-emerald-400 bg-emerald-50",
+                    current === row.customer &&
+                      "border-emerald-400 bg-emerald-50",
                   )}
                   key={row.customer}
                 >
@@ -1702,10 +1962,16 @@ function ReportsPage({ mutation, session, state }) {
           </div>
         </CardContent>
       </Card>
-      <DataTableCard title="Lịch sử xuất hàng" description="Dữ liệu phục vụ đối soát hóa đơn.">
+      <DataTableCard
+        title="Lịch sử xuất hàng"
+        description="Dữ liệu phục vụ đối soát hóa đơn."
+      >
         <DispatchTable rows={history} />
       </DataTableCard>
-      <DataTableCard title="Lịch sử xuất hóa đơn" description="Các khách hàng đã được ghi nhận.">
+      <DataTableCard
+        title="Lịch sử xuất hóa đơn"
+        description="Các khách hàng đã được ghi nhận."
+      >
         <DataTable width="invoice">
           <thead>
             <tr>
@@ -1731,17 +1997,23 @@ function ReportsPage({ mutation, session, state }) {
           </tbody>
         </DataTable>
       </DataTableCard>
-      <Dialog open={Boolean(confirmCustomer)} onOpenChange={(open) => !open && setConfirmCustomer(null)}>
+      <Dialog
+        open={Boolean(confirmCustomer)}
+        onOpenChange={(open) => !open && setConfirmCustomer(null)}
+      >
         <DialogContent>
           <DialogTitle className="text-lg font-black text-slate-950">
             Xuất hóa đơn cho {confirmCustomer?.customer}?
           </DialogTitle>
           <DialogDescription className="text-sm leading-6 text-slate-500">
-            Sau khi đồng ý, khách hàng sẽ được ghi nhận vào lịch sử xuất hóa đơn.
+            Sau khi đồng ý, khách hàng sẽ được ghi nhận vào lịch sử xuất hóa
+            đơn.
           </DialogDescription>
           <div className="flex justify-end gap-2">
             <DialogClose asChild>
-              <Button type="button" variant="secondary">Hủy</Button>
+              <Button type="button" variant="secondary">
+                Hủy
+              </Button>
             </DialogClose>
             <Button
               disabled={mutation.isPending}
@@ -1810,9 +2082,7 @@ function ManagementPage({ mutation, state }) {
                 "flex min-h-16 w-full items-center justify-between gap-3 px-4 text-left transition hover:bg-slate-50 sm:px-5",
                 isActive && "border-b border-slate-100 bg-slate-50",
               )}
-              onClick={() =>
-                setActiveList(isActive ? "" : section.listName)
-              }
+              onClick={() => setActiveList(isActive ? "" : section.listName)}
               type="button"
             >
               <strong className="text-base font-bold leading-tight text-slate-950">
@@ -1852,7 +2122,9 @@ function MasterSection({ config, mutation, records }) {
     vehicles: "/vehicles",
   }[listName];
   const payload = (nextValue) =>
-    listName === "vehicles" ? { plate: nextValue.toUpperCase() } : { name: nextValue.trim() };
+    listName === "vehicles"
+      ? { plate: nextValue.toUpperCase() }
+      : { name: nextValue.trim() };
   const filteredRecords = records.filter((item) =>
     item.label.toLowerCase().includes(search.trim().toLowerCase()),
   );
@@ -1880,7 +2152,9 @@ function MasterSection({ config, mutation, records }) {
               <CardDescription>{config.description}</CardDescription>
             </div>
           </div>
-          <Badge tone="green">{filteredRecords.length} / {records.length} mục</Badge>
+          <Badge tone="green">
+            {filteredRecords.length} / {records.length} mục
+          </Badge>
         </div>
       </div>
       <div className="grid gap-4 p-4 lg:p-5">
@@ -1902,7 +2176,11 @@ function MasterSection({ config, mutation, records }) {
             />
           </Field>
           <div className={cn(primaryActionButtonShellClass, "self-end")}>
-            <Button className="w-full" disabled={mutation.isPending} type="submit">
+            <Button
+              className="w-full"
+              disabled={mutation.isPending}
+              type="submit"
+            >
               <Plus className="h-4 w-4" />
               Thêm
             </Button>
@@ -1940,7 +2218,9 @@ function MasterSection({ config, mutation, records }) {
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-slate-100 text-slate-600">
                         <Icon className="h-4 w-4" />
                       </span>
-                      <strong className="min-w-0 truncate text-slate-900">{item.label}</strong>
+                      <strong className="min-w-0 truncate text-slate-900">
+                        {item.label}
+                      </strong>
                     </div>
                   </Td>
                   <Td className="whitespace-nowrap">
@@ -1988,37 +2268,59 @@ function MasterSection({ config, mutation, records }) {
           onPageChange={setPage}
         />
       </div>
-      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
+      <Dialog
+        open={Boolean(editing)}
+        onOpenChange={(open) => !open && setEditing(null)}
+      >
         <DialogContent>
-          <DialogTitle className="text-lg font-black text-slate-950">Sửa {label}</DialogTitle>
+          <DialogTitle className="text-lg font-black text-slate-950">
+            Sửa {label}
+          </DialogTitle>
           <EditMasterForm
             initialValue={editing?.label || ""}
             isPending={mutation.isPending}
             onCancel={() => setEditing(null)}
             onSubmit={(nextValue) => {
-              mutation.mutate({
-                body: payload(nextValue),
-                method: "PATCH",
-                path: `${path}/${editing.id}`,
-              });
-              setEditing(null);
+              mutation.mutate(
+                {
+                  body: payload(nextValue),
+                  method: "PATCH",
+                  path: `${path}/${editing.id}`,
+                },
+                {
+                  onSuccess: () => setEditing(null),
+                },
+              );
             }}
           />
         </DialogContent>
       </Dialog>
-      <Dialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
+      <Dialog
+        open={Boolean(deleting)}
+        onOpenChange={(open) => !open && setDeleting(null)}
+      >
         <DialogContent>
-          <DialogTitle className="text-lg font-black text-slate-950">Xóa {deleting?.label}?</DialogTitle>
+          <DialogTitle className="text-lg font-black text-slate-950">
+            Xóa {deleting?.label}?
+          </DialogTitle>
           <DialogDescription className="text-sm leading-6 text-slate-500">
-            Danh mục này sẽ không còn xuất hiện trong dropdown mới.
+            Danh mục này sẽ không còn xuất hiện.
           </DialogDescription>
           <div className="flex justify-end gap-2">
-            <Button onClick={() => setDeleting(null)} type="button" variant="secondary">Hủy</Button>
+            <Button
+              onClick={() => setDeleting(null)}
+              type="button"
+              variant="secondary"
+            >
+              Hủy
+            </Button>
             <Button
               disabled={mutation.isPending}
               onClick={() => {
-                mutation.mutate({ method: "DELETE", path: `${path}/${deleting.id}` });
-                setDeleting(null);
+                mutation.mutate(
+                  { method: "DELETE", path: `${path}/${deleting.id}` },
+                  { onSuccess: () => setDeleting(null) },
+                );
               }}
               type="button"
               variant="destructive"
@@ -2043,10 +2345,18 @@ function EditMasterForm({ initialValue, isPending, onCancel, onSubmit }) {
         if (value.trim()) onSubmit(value);
       }}
     >
-      <Input autoFocus value={value} onChange={(event) => setValue(event.target.value)} />
+      <Input
+        autoFocus
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+      />
       <div className="flex justify-end gap-2">
-        <Button onClick={onCancel} type="button" variant="secondary">Hủy</Button>
-        <Button disabled={isPending} type="submit">Lưu</Button>
+        <Button onClick={onCancel} type="button" variant="secondary">
+          Hủy
+        </Button>
+        <Button disabled={isPending} type="submit">
+          Lưu
+        </Button>
       </div>
     </form>
   );
@@ -2057,14 +2367,18 @@ function SettingsPage({ settings, setSettings }) {
     <Card>
       <CardHeader>
         <CardTitle>Tùy chỉnh giao diện</CardTitle>
-        <CardDescription>Giữ UI sạch, dày dữ liệu và dễ đọc trong kho.</CardDescription>
+        <CardDescription>
+          Giữ UI sạch, dày dữ liệu và dễ đọc trong kho.
+        </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2">
         <Field>
           Mật độ hiển thị
           <Select
             value={settings.density}
-            onChange={(event) => setSettings({ ...settings, density: event.target.value })}
+            onChange={(event) =>
+              setSettings({ ...settings, density: event.target.value })
+            }
           >
             <option value="comfortable">Vừa</option>
             <option value="compact">Gọn</option>
@@ -2074,7 +2388,9 @@ function SettingsPage({ settings, setSettings }) {
           Tông màu
           <Select
             value={settings.accent}
-            onChange={(event) => setSettings({ ...settings, accent: event.target.value })}
+            onChange={(event) =>
+              setSettings({ ...settings, accent: event.target.value })
+            }
           >
             <option value="emerald">Xanh ngọc</option>
             <option value="slate">Trung tính</option>
@@ -2088,7 +2404,12 @@ function SettingsPage({ settings, setSettings }) {
 function DataTableCard({ actions, children, className, description, title }) {
   return (
     <Card className={cn("min-w-0", className)}>
-      <CardHeader className={cn(actions && "sm:flex sm:flex-row sm:items-end sm:justify-between sm:gap-4")}>
+      <CardHeader
+        className={cn(
+          actions &&
+            "sm:flex sm:flex-row sm:items-end sm:justify-between sm:gap-4",
+        )}
+      >
         <div className="min-w-0 space-y-1.5">
           <CardTitle>{title}</CardTitle>
           <CardDescription>{description}</CardDescription>

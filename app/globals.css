@@ -73,6 +73,16 @@ button {
   scrollbar-width: thin;
 }
 
+.fixed-data-table th,
+.fixed-data-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fixed-data-table td > * {
+  min-width: 0;
+}
+
 .responsive-record-table {
   min-width: 720px;
 }
