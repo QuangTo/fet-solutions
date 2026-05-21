@@ -129,17 +129,38 @@ function Pagination({ onPageChange, page, pageCount }) {
   );
 }
 
-const dataTableWidths = {
-  dispatch: "min-w-[860px]",
-  invoice: "min-w-[520px]",
-  management: "min-w-[720px]",
-  receiptHistory: "min-w-[680px]",
-  receiptSummary: "min-w-[560px]",
+const dataTableConfigs = {
+  dispatch: {
+    columns: ["15%", "22%", "15%", "17%", "15%", "8%", "8%"],
+    width: "min-w-[960px]",
+  },
+  invoice: {
+    columns: ["30%", "45%", "25%"],
+    width: "min-w-[560px]",
+  },
+  management: {
+    columns: ["46%", "18%", "20%", "16%"],
+    width: "min-w-[760px]",
+  },
+  receiptHistory: {
+    columns: ["20%", "44%", "18%", "18%"],
+    width: "min-w-[720px]",
+  },
+  receiptSummary: {
+    columns: ["45%", "32%", "23%"],
+    width: "min-w-[620px]",
+  },
 };
 
 function DataTable({ children, className, width = "dispatch" }) {
+  const config = dataTableConfigs[width] || dataTableConfigs.dispatch;
   return (
-    <Table className={cn(dataTableWidths[width], "whitespace-nowrap", className)}>
+    <Table className={cn(config.width, "table-fixed whitespace-nowrap", className)}>
+      <colgroup>
+        {config.columns.map((columnWidth, index) => (
+          <col key={`${width}-${index}`} style={{ width: columnWidth }} />
+        ))}
+      </colgroup>
       {children}
     </Table>
   );
