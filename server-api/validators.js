@@ -75,6 +75,9 @@ const invoiceApprovalSchema = z.object({
   customerId: uuid,
   approvalDate: isoDate.optional(),
   approvedByName: z.string().trim().min(1).optional(),
+  periodClosedAt: z.string().trim().min(1).optional(),
+  periodEnd: isoDate.optional(),
+  periodStart: isoDate.optional(),
   status: z.string().trim().min(1).default("Hoàn thành"),
 });
 

@@ -238,24 +238,38 @@ async function reportData() {
   const row = await queryOne(`
     select
       coalesce((
-        with receipts_by_customer_sku as (
+        with last_invoice as (
+          select customer_id, max(period_closed_at) as period_closed_at
+          from invoice_approvals
+          group by customer_id
+        ),
+        receipts_by_customer_sku as (
           select
             c.id as customer_id,
             c.name as customer,
             ri.sku,
-            sum(ri.quantity) as received_quantity
+            sum(ri.quantity) as received_quantity,
+            min(r.received_date) as first_receipt_date,
+            max(r.received_date) as last_receipt_date,
+            max(r.created_at) as last_receipt_at
           from customers c
+          left join last_invoice li on li.customer_id = c.id
           join receipts r on r.customer_id = c.id
           join receipt_items ri on ri.receipt_id = r.id
+          where li.period_closed_at is null or r.created_at > li.period_closed_at
           group by c.id, c.name, ri.sku
         ),
         dispatches_by_customer_sku as (
           select
             d.customer_id,
             di.sku,
-            sum(di.quantity) as dispatched_quantity
+            sum(di.quantity) as dispatched_quantity,
+            max(d.dispatch_date) as last_dispatch_date,
+            max(d.created_at) as last_dispatch_at
           from dispatches d
+          left join last_invoice li on li.customer_id = d.customer_id
           join dispatch_items di on di.dispatch_id = d.id
+          where li.period_closed_at is null or d.created_at > li.period_closed_at
           group by d.customer_id, di.sku
         ),
         inventory as (
@@ -263,7 +277,10 @@ async function reportData() {
             r.customer_id,
             r.customer,
             sum(r.received_quantity - coalesce(d.dispatched_quantity, 0)) as remaining_quantity,
-            count(*) as item_count
+            count(*) as item_count,
+            min(r.first_receipt_date) as period_start,
+            max(greatest(r.last_receipt_date, coalesce(d.last_dispatch_date, r.last_receipt_date))) as period_end,
+            max(greatest(r.last_receipt_at, coalesce(d.last_dispatch_at, r.last_receipt_at))) as period_closed_at
           from receipts_by_customer_sku r
           left join dispatches_by_customer_sku d
             on d.customer_id = r.customer_id and d.sku = r.sku
@@ -274,9 +291,15 @@ async function reportData() {
           select
             i.customer_id as "customerId",
             i.customer,
-            i.item_count::int as "itemCount"
+            i.item_count::int as "itemCount",
+            i.period_start as "periodStart",
+            i.period_end as "periodEnd",
+            (select li.period_closed_at from last_invoice li where li.customer_id = i.customer_id) as "periodOpenAt",
+            i.period_closed_at as "periodClosedAt"
           from inventory i
-          left join invoice_approvals ia on ia.customer_id = i.customer_id
+          left join invoice_approvals ia
+            on ia.customer_id = i.customer_id
+            and ia.period_closed_at = i.period_closed_at
           where i.remaining_quantity = 0 and ia.id is null
           order by i.customer
         ) item
@@ -288,12 +311,18 @@ async function reportData() {
           'status', item.status,
           'customerId', item."customerId",
           'customer', item.customer,
-          'approvedByName', item."approvedByName"
+          'approvedByName', item."approvedByName",
+          'periodStart', item."periodStart",
+          'periodEnd', item."periodEnd",
+          'periodClosedAt', item."periodClosedAt"
         ) order by item.date desc, item."createdAt" desc)
         from (
           select
             ia.id,
             ia.approval_date as date,
+            ia.period_start as "periodStart",
+            ia.period_end as "periodEnd",
+            ia.period_closed_at as "periodClosedAt",
             ia.status,
             c.id as "customerId",
             c.name as customer,
@@ -684,24 +713,38 @@ async function inventoryRows(customerId = null) {
 
 async function billingReadyCustomers() {
   return query(`
-    with receipts_by_customer_sku as (
+    with last_invoice as (
+      select customer_id, max(period_closed_at) as period_closed_at
+      from invoice_approvals
+      group by customer_id
+    ),
+    receipts_by_customer_sku as (
       select
         c.id as customer_id,
         c.name as customer,
         ri.sku,
-        sum(ri.quantity) as received_quantity
+        sum(ri.quantity) as received_quantity,
+        min(r.received_date) as first_receipt_date,
+        max(r.received_date) as last_receipt_date,
+        max(r.created_at) as last_receipt_at
       from customers c
+      left join last_invoice li on li.customer_id = c.id
       join receipts r on r.customer_id = c.id
       join receipt_items ri on ri.receipt_id = r.id
+      where li.period_closed_at is null or r.created_at > li.period_closed_at
       group by c.id, c.name, ri.sku
     ),
     dispatches_by_customer_sku as (
       select
         d.customer_id,
         di.sku,
-        sum(di.quantity) as dispatched_quantity
+        sum(di.quantity) as dispatched_quantity,
+        max(d.dispatch_date) as last_dispatch_date,
+        max(d.created_at) as last_dispatch_at
       from dispatches d
+      left join last_invoice li on li.customer_id = d.customer_id
       join dispatch_items di on di.dispatch_id = d.id
+      where li.period_closed_at is null or d.created_at > li.period_closed_at
       group by d.customer_id, di.sku
     ),
     inventory as (
@@ -709,7 +752,10 @@ async function billingReadyCustomers() {
         r.customer_id,
         r.customer,
         sum(r.received_quantity - coalesce(d.dispatched_quantity, 0)) as remaining_quantity,
-        count(*) as item_count
+        count(*) as item_count,
+        min(r.first_receipt_date) as period_start,
+        max(greatest(r.last_receipt_date, coalesce(d.last_dispatch_date, r.last_receipt_date))) as period_end,
+        max(greatest(r.last_receipt_at, coalesce(d.last_dispatch_at, r.last_receipt_at))) as period_closed_at
       from receipts_by_customer_sku r
       left join dispatches_by_customer_sku d
         on d.customer_id = r.customer_id and d.sku = r.sku
@@ -718,9 +764,15 @@ async function billingReadyCustomers() {
     select
       i.customer_id as "customerId",
       i.customer,
-      i.item_count::int as "itemCount"
+      i.item_count::int as "itemCount",
+      i.period_start as "periodStart",
+      i.period_end as "periodEnd",
+      (select li.period_closed_at from last_invoice li where li.customer_id = i.customer_id) as "periodOpenAt",
+      i.period_closed_at as "periodClosedAt"
     from inventory i
-    left join invoice_approvals ia on ia.customer_id = i.customer_id
+    left join invoice_approvals ia
+      on ia.customer_id = i.customer_id
+      and ia.period_closed_at = i.period_closed_at
     where i.remaining_quantity = 0 and ia.id is null
     order by i.customer
   `);
@@ -728,16 +780,29 @@ async function billingReadyCustomers() {
 
 async function createInvoiceApproval(data, user) {
   return transaction(async (client) => {
+    const approvalDate = data.approvalDate || new Date().toISOString().slice(0, 10);
+    const periodStart = data.periodStart || approvalDate;
+    const periodEnd = data.periodEnd || approvalDate;
+    const periodClosedAt = data.periodClosedAt || new Date().toISOString();
     const approval = await client.query(
       `
         insert into invoice_approvals (
-          customer_id, approved_by_id, approved_by_name, approval_date, status
+          customer_id,
+          approved_by_id,
+          approved_by_name,
+          approval_date,
+          period_start,
+          period_end,
+          period_closed_at,
+          status
         )
-        values ($1, $2, $3, $4, $5)
-        on conflict (customer_id) do update
+        values ($1, $2, $3, $4, $5, $6, $7, $8)
+        on conflict (customer_id, period_closed_at) do update
         set approved_by_id = excluded.approved_by_id,
             approved_by_name = excluded.approved_by_name,
             approval_date = excluded.approval_date,
+            period_start = excluded.period_start,
+            period_end = excluded.period_end,
             status = excluded.status,
             updated_at = now()
         returning *
@@ -746,12 +811,18 @@ async function createInvoiceApproval(data, user) {
         data.customerId,
         user.id,
         data.approvedByName || user.name,
-        data.approvalDate || new Date().toISOString().slice(0, 10),
+        approvalDate,
+        periodStart,
+        periodEnd,
+        periodClosedAt,
         data.status,
       ],
     );
     await audit(client, user, "create", "invoice_approval", approval.rows[0].id, {
       customerId: data.customerId,
+      periodClosedAt,
+      periodEnd,
+      periodStart,
     });
     return approval.rows[0];
   });

@@ -36,6 +36,7 @@ import {
   customerSummaries,
   dateComparator,
   formatDate,
+  formatDateTime,
   normalizeRole,
   normalizeSku,
   pages,
@@ -144,8 +145,8 @@ const dataTableConfigs = {
     width: "min-w-[960px]",
   },
   invoice: {
-    columns: ["30%", "45%", "25%"],
-    width: "min-w-[560px]",
+    columns: ["18%", "30%", "32%", "20%"],
+    width: "min-w-[720px]",
   },
   management: {
     columns: ["46%", "18%", "20%", "16%"],
@@ -726,12 +727,20 @@ export default function FetNextApp() {
         customerId: payload.customerId,
         date: approval.approval_date || approval.date || todayIso(),
         id: approval.id,
+        periodClosedAt:
+          approval.period_closed_at || approval.periodClosedAt || payload.periodClosedAt,
+        periodEnd: approval.period_end || approval.periodEnd || payload.periodEnd,
+        periodStart:
+          approval.period_start || approval.periodStart || payload.periodStart,
         status: approval.status || payload.status,
       };
       updatePageData("report", (data) => ({
         ...data,
         billingReady: (data.billingReady || []).filter(
-          (item) => item.customerId !== payload.customerId,
+          (item) =>
+            item.customerId !== payload.customerId ||
+            new Date(item.periodClosedAt || "").getTime() !==
+              new Date(payload.periodClosedAt || "").getTime(),
         ),
         invoiceApprovals: prependById(
           data.invoiceApprovals || [],
@@ -1914,14 +1923,43 @@ function DispatchTable({ rows }) {
 function ReportsPage({ mutation, session, state }) {
   const [selected, setSelected] = useState("");
   const [confirmCustomer, setConfirmCustomer] = useState(null);
+  const [invoiceSearch, setInvoiceSearch] = useState("");
   const rows = reportRows(state);
-  const current = selected || rows[0]?.customer || "";
+  const current = selected || rows[0]?.reportKey || "";
+  const currentRow = rows.find((row) => row.reportKey === current) || rows[0];
+  const invoiceSearchTerm = invoiceSearch.trim().toLowerCase();
+  const currentPeriodOpenTime = new Date(currentRow?.periodOpenAt || "").getTime();
+  const currentPeriodClosedTime = new Date(currentRow?.periodClosedAt || "").getTime();
   const history = state.dispatches
-    .filter((item) => item.customer === current)
+    .filter(
+      (item) => {
+        if (item.customer !== currentRow?.customer) return false;
+        const dispatchTime = new Date(item.createdAt || "").getTime();
+        if (!Number.isNaN(currentPeriodOpenTime) && dispatchTime <= currentPeriodOpenTime) return false;
+        if (!Number.isNaN(currentPeriodClosedTime) && dispatchTime > currentPeriodClosedTime) return false;
+        if (!Number.isNaN(dispatchTime)) return true;
+        return (
+          (!currentRow?.periodStart || item.date >= currentRow.periodStart) &&
+          (!currentRow?.periodEnd || item.date <= currentRow.periodEnd)
+        );
+      },
+    )
     .sort(dateComparator("desc"));
-  const invoiceHistory = [...state.invoiceApprovals].sort(
-    dateComparator("desc"),
-  );
+  const invoiceHistory = [...state.invoiceApprovals]
+    .filter((item) => {
+      if (!invoiceSearchTerm) return true;
+      return [
+        formatDate(item.date),
+        item.customer,
+        formatDate(item.periodStart || item.date),
+        formatDate(item.periodEnd || item.date),
+        formatDateTime(item.periodClosedAt),
+        item.status,
+      ]
+        .filter(Boolean)
+        .some((value) => value.toString().toLowerCase().includes(invoiceSearchTerm));
+    })
+    .sort(dateComparator("desc"));
 
   return (
     <div className="grid gap-4">
@@ -1939,14 +1977,14 @@ function ReportsPage({ mutation, session, state }) {
                 <article
                   className={cn(
                     "grid min-h-32 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left hover:border-emerald-300 hover:bg-emerald-50",
-                    current === row.customer &&
+                    current === row.reportKey &&
                       "border-emerald-400 bg-emerald-50",
                   )}
-                  key={row.customer}
+                  key={row.reportKey}
                 >
                   <button
                     className="grid gap-2 text-left"
-                    onClick={() => setSelected(row.customer)}
+                    onClick={() => setSelected(row.reportKey)}
                     type="button"
                   >
                     <strong className="text-slate-950">{row.customer}</strong>
@@ -1956,6 +1994,12 @@ function ReportsPage({ mutation, session, state }) {
                   </button>
                   <span className="text-sm text-slate-500">
                     {row.itemTypeCount} loại hàng đã hoàn tất
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500">
+                    Kỳ hàng {formatDate(row.periodStart)} - {formatDate(row.periodEnd)}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500">
+                    Chốt lúc {formatDateTime(row.periodClosedAt)}
                   </span>
                   <Button
                     className="w-full"
@@ -1984,12 +2028,24 @@ function ReportsPage({ mutation, session, state }) {
       <DataTableCard
         title="Lịch sử xuất hóa đơn"
         description="Các khách hàng đã được ghi nhận."
+        descriptionPrefix={
+          <div className="relative w-full sm:max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              className="h-9 pl-9"
+              placeholder="Tìm lịch sử xuất hóa đơn"
+              value={invoiceSearch}
+              onChange={(event) => setInvoiceSearch(event.target.value)}
+            />
+          </div>
+        }
       >
         <DataTable width="invoice">
           <thead>
             <tr>
               <Th>Ngày</Th>
               <Th>Khách hàng</Th>
+              <Th>Kỳ hàng</Th>
               <Th>Trạng thái</Th>
             </tr>
           </thead>
@@ -1999,13 +2055,18 @@ function ReportsPage({ mutation, session, state }) {
                 <tr key={item.id}>
                   <Td>{formatDate(item.date)}</Td>
                   <Td>{item.customer}</Td>
+                  <Td>
+                    {formatDate(item.periodStart || item.date)} -{" "}
+                    {formatDate(item.periodEnd || item.date)}
+                    {item.periodClosedAt ? ` · ${formatDateTime(item.periodClosedAt)}` : ""}
+                  </Td>
                   <Td className="whitespace-nowrap">
                     <Badge tone="green">{item.status || "Hoàn thành"}</Badge>
                   </Td>
                 </tr>
               ))
             ) : (
-              <EmptyRow colSpan={3}>Chưa có lịch sử xuất hóa đơn.</EmptyRow>
+              <EmptyRow colSpan={4}>Chưa có lịch sử xuất hóa đơn.</EmptyRow>
             )}
           </tbody>
         </DataTable>
@@ -2036,6 +2097,9 @@ function ReportsPage({ mutation, session, state }) {
                   customerId:
                     confirmCustomer.customerId ||
                     state.customerIds[confirmCustomer.customer],
+                  periodEnd: confirmCustomer.periodEnd,
+                  periodStart: confirmCustomer.periodStart,
+                  periodClosedAt: confirmCustomer.periodClosedAt,
                   status: "Hoàn thành",
                 });
                 setConfirmCustomer(null);
@@ -2414,7 +2478,14 @@ function SettingsPage({ settings, setSettings }) {
   );
 }
 
-function DataTableCard({ actions, children, className, description, title }) {
+function DataTableCard({
+  actions,
+  children,
+  className,
+  description,
+  descriptionPrefix,
+  title,
+}) {
   return (
     <Card className={cn("min-w-0", className)}>
       <CardHeader
@@ -2425,7 +2496,14 @@ function DataTableCard({ actions, children, className, description, title }) {
       >
         <div className="min-w-0 space-y-1.5">
           <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+          {descriptionPrefix ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="w-full shrink-0 sm:w-72">{descriptionPrefix}</div>
+              <CardDescription>{description}</CardDescription>
+            </div>
+          ) : (
+            <CardDescription>{description}</CardDescription>
+          )}
         </div>
         {actions ? <div className="shrink-0">{actions}</div> : null}
       </CardHeader>

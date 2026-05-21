@@ -486,6 +486,9 @@ function invoiceApprovalRows() {
         select
           ia.id,
           ia.approval_date as date,
+          ia.period_start as "periodStart",
+          ia.period_end as "periodEnd",
+          ia.period_closed_at as "periodClosedAt",
           ia.status,
           c.id as "customerId",
           c.name as customer,
@@ -763,6 +766,9 @@ app.get("/api/invoice-approvals", requireRole("accountant"), async (_request, re
       select
         ia.id,
         ia.approval_date as date,
+        ia.period_start as "periodStart",
+        ia.period_end as "periodEnd",
+        ia.period_closed_at as "periodClosedAt",
         ia.status,
         c.id as "customerId",
         c.name as customer,

@@ -101,7 +101,7 @@ POST   /api/invoice-approvals
 - `POST /api/dispatches` checks available inventory inside a transaction before creating dispatch rows.
 - Management deletes are soft deletes through `is_active = false`.
 - Write actions create `audit_logs` rows.
-- Invoice approval is unique per customer and can be updated by reposting approval data.
+- Invoice approval is unique per customer inventory closing timestamp, so one customer can close multiple invoices on the same day across separate completed receipt/dispatch cycles.
 
 ## Example Requests
 

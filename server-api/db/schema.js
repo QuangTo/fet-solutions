@@ -97,6 +97,9 @@ const invoiceApprovals = pgTable("invoice_approvals", {
   approvedById: uuid("approved_by_id").references(() => users.id),
   approvedByName: text("approved_by_name").notNull().default("Kế toán mẫu"),
   approvalDate: date("approval_date").notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  periodClosedAt: timestamp("period_closed_at", { withTimezone: true }).notNull(),
   status: text("status").notNull().default("Hoàn thành"),
   ...timestamps,
 });
