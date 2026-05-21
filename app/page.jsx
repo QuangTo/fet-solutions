@@ -1251,7 +1251,7 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
           description={customer ? `${summary.rows.length} dòng đang hiển thị` : "Chọn khách hàng để xem tổng hợp."}
           title={customer ? `Tổng hợp hàng nhập - ${customer}` : "Tổng hợp hàng nhập"}
         >
-          <Table>
+          <Table className="responsive-record-table">
             <thead>
               <tr>
                 <Th>Loại hàng</Th>
@@ -1263,9 +1263,9 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
               {summary.rows.length ? (
                 summary.rows.map((row) => (
                   <tr key={`${row.sku}-${row.unit}`}>
-                    <Td><strong>{row.sku}</strong></Td>
-                    <Td>{number(row.quantity)}</Td>
-                    <Td>{row.unit}</Td>
+                    <Td data-label="Loại hàng"><strong>{row.sku}</strong></Td>
+                    <Td data-label="Tổng số lượng">{number(row.quantity)}</Td>
+                    <Td data-label="Đơn vị">{row.unit}</Td>
                   </tr>
                 ))
               ) : (
@@ -1281,7 +1281,7 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
           description={periodDescription("Theo dõi từng lần nhập hàng", historyPeriod)}
           actions={<PeriodSelect value={historyPeriod} onChange={setHistoryPeriod} />}
         >
-          <Table>
+          <Table className="responsive-record-table">
             <thead>
               <tr>
                 <Th>Ngày nhập</Th>
@@ -1294,10 +1294,10 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
               {history.rows.length ? (
                 history.rows.map((row) => (
                   <tr key={row.id}>
-                    <Td>{formatDate(row.date)}</Td>
-                    <Td><strong>{row.sku}</strong></Td>
-                    <Td>{number(row.quantity)}</Td>
-                    <Td>{row.unit}</Td>
+                    <Td data-label="Ngày nhập">{formatDate(row.date)}</Td>
+                    <Td data-label="Loại hàng"><strong>{row.sku}</strong></Td>
+                    <Td data-label="Số lượng">{number(row.quantity)}</Td>
+                    <Td data-label="Đơn vị">{row.unit}</Td>
                   </tr>
                 ))
               ) : (
