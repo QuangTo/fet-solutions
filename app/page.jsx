@@ -1251,7 +1251,7 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
           description={customer ? `${summary.rows.length} dòng đang hiển thị` : "Chọn khách hàng để xem tổng hợp."}
           title={customer ? `Tổng hợp hàng nhập - ${customer}` : "Tổng hợp hàng nhập"}
         >
-          <Table className="responsive-record-table">
+          <Table className="min-w-[760px] whitespace-nowrap">
             <thead>
               <tr>
                 <Th>Loại hàng</Th>
@@ -1281,7 +1281,7 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
           description={periodDescription("Theo dõi từng lần nhập hàng", historyPeriod)}
           actions={<PeriodSelect value={historyPeriod} onChange={setHistoryPeriod} />}
         >
-          <Table className="responsive-record-table">
+          <Table className="min-w-[860px] whitespace-nowrap">
             <thead>
               <tr>
                 <Th>Ngày nhập</Th>
@@ -1573,7 +1573,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
 
 function DispatchTable({ rows }) {
   return (
-    <Table className="responsive-record-table">
+    <Table className="min-w-[860px] whitespace-nowrap">
       <thead>
         <tr>
           <Th>Ngày xuất</Th>
