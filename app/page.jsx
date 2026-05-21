@@ -1976,33 +1976,35 @@ function ReportsPage({ mutation, session, state }) {
               rows.map((row) => (
                 <article
                   className={cn(
-                    "grid min-h-32 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left hover:border-emerald-300 hover:bg-emerald-50",
+                    "relative grid min-h-32 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left hover:border-emerald-300 hover:bg-emerald-50",
                     current === row.reportKey &&
                       "border-emerald-400 bg-emerald-50",
                   )}
                   key={row.reportKey}
                 >
                   <button
-                    className="grid gap-2 text-left"
+                    aria-label={`Chọn khách hàng ${row.customer} để xem lịch sử xuất hàng`}
+                    className="absolute inset-0 z-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
                     onClick={() => setSelected(row.reportKey)}
                     type="button"
-                  >
+                  />
+                  <div className="pointer-events-none relative z-10 grid gap-2">
                     <strong className="text-slate-950">{row.customer}</strong>
                     <span className="text-sm text-slate-500">
                       {row.historyCount} lần xuất hàng
                     </span>
-                  </button>
-                  <span className="text-sm text-slate-500">
+                  </div>
+                  <span className="pointer-events-none relative z-10 text-sm text-slate-500">
                     {row.itemTypeCount} loại hàng đã hoàn tất
                   </span>
-                  <span className="text-xs font-semibold text-slate-500">
+                  <span className="pointer-events-none relative z-10 text-xs font-semibold text-slate-500">
                     Kỳ hàng {formatDate(row.periodStart)} - {formatDate(row.periodEnd)}
                   </span>
-                  <span className="text-xs font-semibold text-slate-500">
+                  <span className="pointer-events-none relative z-10 text-xs font-semibold text-slate-500">
                     Chốt lúc {formatDateTime(row.periodClosedAt)}
                   </span>
                   <Button
-                    className="w-full"
+                    className="relative z-20 w-full"
                     onClick={(event) => {
                       event.stopPropagation();
                       setConfirmCustomer(row);
