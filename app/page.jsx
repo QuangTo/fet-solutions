@@ -1544,6 +1544,7 @@ function DispatchTable({ rows }) {
           <Th>Tài xế</Th>
           <Th>Loại hàng</Th>
           <Th>Số lượng</Th>
+          <Th>Đơn vị</Th>
         </tr>
       </thead>
       <tbody>
@@ -1556,10 +1557,11 @@ function DispatchTable({ rows }) {
               <Td data-label="Tài xế">{item.driver}</Td>
               <Td data-label="Loại hàng">{item.sku}</Td>
               <Td data-label="Số lượng">{number(item.quantity)}</Td>
+              <Td data-label="Đơn vị">{item.unit || "đơn vị"}</Td>
             </tr>
           ))
         ) : (
-          <EmptyRow colSpan={6}>Chưa có lịch sử xuất hàng phù hợp với bộ lọc hiện tại.</EmptyRow>
+          <EmptyRow colSpan={7}>Chưa có lịch sử xuất hàng phù hợp với bộ lọc hiện tại.</EmptyRow>
         )}
       </tbody>
     </Table>
