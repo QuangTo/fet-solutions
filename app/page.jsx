@@ -130,7 +130,7 @@ function Pagination({ onPageChange, page, pageCount }) {
   );
 }
 
-function PeriodSelect({ includeAll = false, value, onChange, className }) {
+function PeriodSelect({ value, onChange, className }) {
   return (
     <div className={cn("relative w-full shrink-0 sm:w-36", className)}>
       <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-700" />
@@ -142,7 +142,6 @@ function PeriodSelect({ includeAll = false, value, onChange, className }) {
         <option value="week">Tuần</option>
         <option value="month">Tháng</option>
         <option value="quarter">Quý</option>
-        {includeAll ? <option value="all">Tất cả</option> : null}
       </Select>
     </div>
   );
@@ -476,12 +475,18 @@ export default function FetNextApp() {
     : "tong-quan";
   const needsMaster = visiblePage !== "cai-dat";
   const needsOperations = ["tong-quan", "nhap-hang", "xuat-hang", "bao-cao"].includes(visiblePage);
+  const operationsPage =
+    visiblePage === "nhap-hang"
+      ? "receipt"
+      : visiblePage === "xuat-hang"
+        ? "dispatch"
+        : "operations";
   const masterQuery = useQuery({
     ...pageQueryOptions("master", session),
     enabled: Boolean(session) && needsMaster,
   });
   const operationsQuery = useQuery({
-    ...pageQueryOptions("operations", session),
+    ...pageQueryOptions(operationsPage, session),
     enabled: Boolean(session) && needsOperations,
   });
   const reportQuery = useQuery({
@@ -875,12 +880,11 @@ const overviewPeriodOptions = {
 };
 
 function periodLabel(period) {
-  if (period === "all") return "toàn bộ";
   return overviewPeriodOptions[period]?.label || overviewPeriodOptions.week.label;
 }
 
 function periodDescription(prefix, period) {
-  return period === "all" ? `${prefix} toàn bộ.` : `${prefix} trong ${periodLabel(period)}.`;
+  return `${prefix} trong ${periodLabel(period)}.`;
 }
 
 function periodWindow(period) {
@@ -1102,11 +1106,11 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
   const [historyPeriod, setHistoryPeriod] = useState("week");
   const customers = allCustomers(state);
   const customer = form.customer || selectedCustomer;
-  const historyWindow = historyPeriod === "all" ? null : periodWindow(historyPeriod);
+  const historyWindow = periodWindow(historyPeriod);
   const summary = paginate(receiptSummaryRows(state, customer), summaryPage);
   const history = paginate(
     state.invoice
-      .filter((item) => item.customer === customer)
+      .filter((item) => !customer || item.customer === customer)
       .filter((item) => !historyWindow || dateInWindow(item.date, historyWindow))
       .sort(dateComparator("desc")),
     historyPage,
@@ -1248,7 +1252,7 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
         <DataTableCard
           title="Lịch sử nhập hàng"
           description={periodDescription("Theo dõi từng lần nhập hàng", historyPeriod)}
-          actions={<PeriodSelect includeAll value={historyPeriod} onChange={setHistoryPeriod} />}
+          actions={<PeriodSelect value={historyPeriod} onChange={setHistoryPeriod} />}
         >
           <Table>
             <thead>
@@ -1311,8 +1315,9 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
   }, [selectedStock?.sku]);
 
   const rows = state.dispatches
-    .filter((item) => filters.date || filters.period === "all" || dateInWindow(item.date, periodWindow(filters.period)))
+    .filter((item) => filters.date || dateInWindow(item.date, periodWindow(filters.period)))
     .filter((item) => !filters.date || item.date === filters.date)
+    .filter((item) => !form.customer || item.customer === form.customer)
     .filter((item) => !filters.truck || item.truck === filters.truck)
     .filter((item) => !filters.driver || item.driver === filters.driver)
     .sort(dateComparator("desc"));
@@ -1454,7 +1459,6 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
         description={periodDescription("Lọc nhanh các chuyến đã xuất", filters.period)}
         actions={
           <PeriodSelect
-            includeAll
             value={filters.period}
             onChange={(period) => {
               setFilters({ ...filters, period });
@@ -1514,7 +1518,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
           <Button
             className="self-end"
             onClick={() => {
-              setFilters({ date: "", driver: "", period: "all", truck: "" });
+              setFilters({ date: "", driver: "", period: "week", truck: "" });
               setPage(1);
             }}
             type="button"
