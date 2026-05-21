@@ -241,7 +241,7 @@ function LoadingSkeleton({ page }) {
   if (page === "xuat-hang") {
     return (
       <div className="grid gap-4">
-        <FormSkeleton title="Tạo phiếu xuất hàng" fields={6} />
+        <FormSkeleton title="Tạo phiếu xuất hàng" fields={7} />
         <TableSkeleton columns={6} rows={5} title="Lịch sử xuất hàng" />
       </div>
     );
@@ -1293,6 +1293,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
     quantity: "",
     sku: "",
     truck: "",
+    unit: "",
   });
   const [filters, setFilters] = useState({ date: "", driver: "", period: "week", truck: "" });
   const [page, setPage] = useState(1);
@@ -1311,6 +1312,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
       ...current,
       quantity: current.sku === selectedStock.sku ? current.quantity : selectedStock.remainingQuantity,
       sku: current.sku || selectedStock.sku,
+      unit: current.sku === selectedStock.sku ? current.unit : selectedStock.unit,
     }));
   }, [selectedStock?.sku]);
 
@@ -1345,7 +1347,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
                   {
                     quantity: Number(form.quantity),
                     sku: normalizeSku(form.sku),
-                    unit: stock?.unit || "đơn vị",
+                    unit: form.unit.trim() || stock?.unit || "đơn vị",
                   },
                 ],
                 plate: form.truck,
@@ -1373,7 +1375,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
                 value={form.customer}
                 onChange={(event) => {
                   setSelectedCustomer(event.target.value);
-                  setForm({ ...form, customer: event.target.value, quantity: "", sku: "" });
+                  setForm({ ...form, customer: event.target.value, quantity: "", sku: "", unit: "" });
                 }}
               >
                 <option value="">Chọn khách hàng</option>
@@ -1425,6 +1427,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
                     ...form,
                     quantity: next?.remainingQuantity || "",
                     sku: event.target.value,
+                    unit: next?.unit || "đơn vị",
                   });
                 }}
               >
@@ -1445,6 +1448,14 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
                 type="number"
                 value={form.quantity}
                 onChange={(event) => setForm({ ...form, quantity: event.target.value })}
+              />
+            </Field>
+            <Field>
+              Đơn vị
+              <Input
+                required
+                value={form.unit}
+                onChange={(event) => setForm({ ...form, unit: event.target.value })}
               />
             </Field>
             <div className={cn(operationActionButtonShellClass, "lg:col-span-2")}>
