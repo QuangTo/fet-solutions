@@ -20,12 +20,11 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
   CartesianGrid,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -135,7 +134,7 @@ function PeriodSelect({ value, onChange, className }) {
     <div className={cn("relative w-full shrink-0 sm:w-36", className)}>
       <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-700" />
       <Select
-        className="h-9 rounded-md py-0 pl-9 pr-2 text-xs font-black"
+        className="h-9 rounded-md py-0 pl-9 pr-2"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       >
@@ -694,13 +693,13 @@ export default function FetNextApp() {
             </h1>
             {visiblePage === "tong-quan" ? (
               <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                <p className="max-w-3xl text-sm leading-6 text-slate-500">
                   {page.subtitle}
                 </p>
                 <PeriodSelect value={overviewPeriod} onChange={setOverviewPeriod} />
               </div>
             ) : (
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
                 {page.subtitle}
               </p>
             )}
@@ -1047,9 +1046,28 @@ function Metric({ label, tone = "default", value }) {
 }
 
 function InventoryChart({ period, state }) {
+  const chartRef = useRef(null);
+  const [chartSize, setChartSize] = useState({ height: 0, width: 0 });
   const data = overviewTrend(state, period);
   const stats = overviewStats(state, period);
   const last = data[data.length - 1]?.quantity || 0;
+
+  useEffect(() => {
+    const node = chartRef.current;
+    if (!node) return undefined;
+
+    const observer = new ResizeObserver(([entry]) => {
+      setChartSize({
+        height: Math.floor(entry.contentRect.height),
+        width: Math.floor(entry.contentRect.width),
+      });
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const canRenderChart = chartSize.height > 0 && chartSize.width > 0;
+
   return (
     <Card>
       <CardHeader>
@@ -1058,36 +1076,45 @@ function InventoryChart({ period, state }) {
           Tồn cuối {stats.label} <strong className="text-emerald-700">{number(last)}</strong>
         </CardDescription>
       </CardHeader>
-      <CardContent className="h-[320px]">
-        <ResponsiveContainer height="100%" width="100%">
-          <AreaChart data={data} margin={{ bottom: 6, left: -18, right: 10, top: 10 }}>
-            <defs>
-              <linearGradient id="stockGradient" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="5%" stopColor="#059669" stopOpacity={0.26} />
-                <stop offset="95%" stopColor="#059669" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
-            <XAxis dataKey="label" tickLine={false} />
-            <YAxis tickLine={false} />
-            <Tooltip
-              contentStyle={{
-                border: "1px solid #e2e8f0",
-                borderRadius: 8,
-                boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
-              }}
-              formatter={(value) => [number(value), "Tồn kho"]}
-              labelFormatter={(value) => `Ngày ${value}`}
-            />
-            <Area
-              dataKey="quantity"
-              fill="url(#stockGradient)"
-              stroke="#059669"
-              strokeWidth={3}
-              type="monotone"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+      <CardContent className="h-[320px] min-w-0">
+        <div className="h-full min-w-0" ref={chartRef}>
+          {canRenderChart ? (
+            <AreaChart
+              data={data}
+              height={chartSize.height}
+              margin={{ bottom: 6, left: -18, right: 10, top: 10 }}
+              width={chartSize.width}
+            >
+              <defs>
+                <linearGradient id="stockGradient" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="5%" stopColor="#059669" stopOpacity={0.26} />
+                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+              <XAxis dataKey="label" tickLine={false} />
+              <YAxis tickLine={false} />
+              <Tooltip
+                contentStyle={{
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 8,
+                  boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
+                }}
+                formatter={(value) => [number(value), "Tồn kho"]}
+                labelFormatter={(value) => `Ngày ${value}`}
+              />
+              <Area
+                dataKey="quantity"
+                fill="url(#stockGradient)"
+                stroke="#059669"
+                strokeWidth={3}
+                type="monotone"
+              />
+            </AreaChart>
+          ) : (
+            <Skeleton className="h-full w-full rounded-lg" />
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -1751,7 +1778,7 @@ function ManagementPage({ mutation, state }) {
               }
               type="button"
             >
-              <strong className="text-base font-black text-slate-950 sm:text-lg">
+              <strong className="text-base font-bold leading-tight text-slate-950">
                 Quản lý {section.label}
               </strong>
               <ChevronRight
