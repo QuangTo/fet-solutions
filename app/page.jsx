@@ -129,6 +129,22 @@ function Pagination({ onPageChange, page, pageCount }) {
   );
 }
 
+const dataTableWidths = {
+  dispatch: "min-w-[860px]",
+  invoice: "min-w-[520px]",
+  management: "min-w-[720px]",
+  receiptHistory: "min-w-[680px]",
+  receiptSummary: "min-w-[560px]",
+};
+
+function DataTable({ children, className, width = "dispatch" }) {
+  return (
+    <Table className={cn(dataTableWidths[width], "whitespace-nowrap", className)}>
+      {children}
+    </Table>
+  );
+}
+
 function PeriodSelect({ value, onChange, className }) {
   return (
     <div className={cn("relative w-full shrink-0 sm:w-36", className)}>
@@ -1251,7 +1267,7 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
           description={customer ? `${summary.rows.length} dòng đang hiển thị` : "Chọn khách hàng để xem tổng hợp."}
           title={customer ? `Tổng hợp hàng nhập - ${customer}` : "Tổng hợp hàng nhập"}
         >
-          <Table className="min-w-[760px] whitespace-nowrap">
+          <DataTable width="receiptSummary">
             <thead>
               <tr>
                 <Th>Loại hàng</Th>
@@ -1272,7 +1288,7 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
                 <EmptyRow colSpan={3}>Khách hàng này chưa có dữ liệu nhập hàng.</EmptyRow>
               )}
             </tbody>
-          </Table>
+          </DataTable>
           <Pagination page={summary.page} pageCount={summary.pageCount} onPageChange={setSummaryPage} />
         </DataTableCard>
       </div>
@@ -1281,7 +1297,7 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
           description={periodDescription("Theo dõi từng lần nhập hàng", historyPeriod)}
           actions={<PeriodSelect value={historyPeriod} onChange={setHistoryPeriod} />}
         >
-          <Table className="min-w-[860px] whitespace-nowrap">
+          <DataTable width="receiptHistory">
             <thead>
               <tr>
                 <Th>Ngày nhập</Th>
@@ -1304,7 +1320,7 @@ function ReceiptPage({ mutation, selectedCustomer, session, setSelectedCustomer,
                 <EmptyRow colSpan={4}>Khách hàng này chưa có lịch sử nhập hàng.</EmptyRow>
               )}
             </tbody>
-          </Table>
+          </DataTable>
           <Pagination page={history.page} pageCount={history.pageCount} onPageChange={setHistoryPage} />
         </DataTableCard>
     </div>
@@ -1573,7 +1589,7 @@ function DispatchPage({ mutation, selectedCustomer, session, setSelectedCustomer
 
 function DispatchTable({ rows }) {
   return (
-    <Table className="min-w-[860px] whitespace-nowrap">
+    <DataTable width="dispatch">
       <thead>
         <tr>
           <Th>Ngày xuất</Th>
@@ -1602,7 +1618,7 @@ function DispatchTable({ rows }) {
           <EmptyRow colSpan={7}>Chưa có lịch sử xuất hàng phù hợp với bộ lọc hiện tại.</EmptyRow>
         )}
       </tbody>
-    </Table>
+    </DataTable>
   );
 }
 
@@ -1669,7 +1685,7 @@ function ReportsPage({ mutation, session, state }) {
         <DispatchTable rows={history} />
       </DataTableCard>
       <DataTableCard title="Lịch sử xuất hóa đơn" description="Các khách hàng đã được ghi nhận.">
-        <Table className="min-w-[520px]">
+        <DataTable width="invoice">
           <thead>
             <tr>
               <Th>Ngày</Th>
@@ -1692,7 +1708,7 @@ function ReportsPage({ mutation, session, state }) {
               <EmptyRow colSpan={3}>Chưa có lịch sử xuất hóa đơn.</EmptyRow>
             )}
           </tbody>
-        </Table>
+        </DataTable>
       </DataTableCard>
       <Dialog open={Boolean(confirmCustomer)} onOpenChange={(open) => !open && setConfirmCustomer(null)}>
         <DialogContent>
@@ -1885,7 +1901,7 @@ function MasterSection({ config, mutation, records }) {
             Cập nhật danh mục sẽ đồng bộ vào dropdown nghiệp vụ.
           </span>
         </div>
-        <Table className="min-w-[720px]">
+        <DataTable width="management">
           <thead>
             <tr>
               <Th>{label}</Th>
@@ -1944,7 +1960,7 @@ function MasterSection({ config, mutation, records }) {
               </EmptyRow>
             )}
           </tbody>
-        </Table>
+        </DataTable>
         <Pagination
           page={recordView.page}
           pageCount={recordView.pageCount}
