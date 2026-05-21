@@ -1224,6 +1224,19 @@ function InventoryChart({ period, state }) {
   const data = overviewTrend(state, period);
   const stats = overviewStats(state, period);
   const last = data[data.length - 1]?.quantity || 0;
+  const maxQuantity = Math.max(0, ...data.map((item) => Number(item.quantity || 0)));
+  const longestYAxisLabel = [
+    0,
+    maxQuantity,
+    last,
+    stats.received,
+    stats.dispatched,
+    stats.remaining,
+  ].reduce((longest, value) => {
+    const label = number(value);
+    return label.length > longest.length ? label : longest;
+  }, "");
+  const yAxisWidth = Math.min(Math.max(longestYAxisLabel.length * 8 + 28, 56), 128);
 
   useEffect(() => {
     const node = chartRef.current;
@@ -1256,7 +1269,7 @@ function InventoryChart({ period, state }) {
             <AreaChart
               data={data}
               height={chartSize.height}
-              margin={{ bottom: 6, left: 4, right: 16, top: 18 }}
+              margin={{ bottom: 6, left: 8, right: 16, top: 18 }}
               width={chartSize.width}
             >
               <defs>
@@ -1272,8 +1285,8 @@ function InventoryChart({ period, state }) {
                 axisLine={false}
                 tickFormatter={number}
                 tickLine={false}
-                tickMargin={8}
-                width={56}
+                tickMargin={10}
+                width={yAxisWidth}
               />
               <Tooltip
                 contentStyle={{
