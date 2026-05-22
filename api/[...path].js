@@ -1,3 +1,3 @@
-const app = require("../server-api/app");
+const { withApiPrefix } = require("../server-api/vercel-adapter");
 
-module.exports = app;
+module.exports = withApiPrefix;
