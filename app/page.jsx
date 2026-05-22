@@ -1242,23 +1242,48 @@ function OverviewPage({ onSelectCustomer, period, state }) {
 
   return (
     <>
-      <div className="grid gap-3 md:grid-cols-3">
-        <Metric
-          label={`Tổng hàng đã nhập trong ${stats.label}`}
-          value={number(stats.received)}
-        />
-        <Metric
-          label={`Đã xuất lên xe trong ${stats.label}`}
-          tone="amber"
-          value={number(stats.dispatched)}
-        />
-        <Metric
-          label={`Còn trong kho trong ${stats.label}`}
-          tone="green"
-          value={number(stats.remaining)}
-        />
-      </div>
-      <div className="grid gap-4 xl:grid-cols-2">
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle>Tổng quan khách hàng</CardTitle>
+          <CardDescription>
+            Lượng hàng còn lại, số loại hàng và lần cập nhật gần nhất.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {summaries.length ? (
+              customerView.rows.map((summary) => (
+                <button
+                  className="grid min-h-32 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50"
+                  key={summary.customer}
+                  onClick={() => onSelectCustomer(summary.customer)}
+                  type="button"
+                >
+                  <span className="font-black text-slate-900">
+                    {summary.customer}
+                  </span>
+                  <strong className="text-2xl font-black text-emerald-700">
+                    {number(summary.totalQuantity)}
+                  </strong>
+                  <small className="text-sm leading-5 text-slate-500">
+                    {summary.latestDate
+                      ? `${summary.itemTypeCount} loại hàng - cập nhật ${formatDate(summary.latestDate)}`
+                      : "Chưa có hàng trong kho"}
+                  </small>
+                </button>
+              ))
+            ) : (
+              <EmptyPanel text="Chưa có khách hàng đang có hàng trong kho." />
+            )}
+          </div>
+          <Pagination
+            page={customerView.page}
+            pageCount={customerView.pageCount}
+            onPageChange={setCustomerPage}
+          />
+        </CardContent>
+      </Card>
+      <div className="grid gap-4 xl:grid-cols-3">
         <OverviewCountChart
           color="#d97706"
           data={shipmentData}
@@ -1275,50 +1300,23 @@ function OverviewPage({ onSelectCustomer, period, state }) {
           title="Hóa đơn đã xuất"
           unitLabel="Hóa đơn"
         />
-      </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Tổng quan khách hàng</CardTitle>
-            <CardDescription>
-              Lượng hàng còn lại, số loại hàng và lần cập nhật gần nhất.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {summaries.length ? (
-                customerView.rows.map((summary) => (
-                  <button
-                    className="grid min-h-32 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50"
-                    key={summary.customer}
-                    onClick={() => onSelectCustomer(summary.customer)}
-                    type="button"
-                  >
-                    <span className="font-black text-slate-900">
-                      {summary.customer}
-                    </span>
-                    <strong className="text-2xl font-black text-emerald-700">
-                      {number(summary.totalQuantity)}
-                    </strong>
-                    <small className="text-sm leading-5 text-slate-500">
-                      {summary.latestDate
-                        ? `${summary.itemTypeCount} loại hàng - cập nhật ${formatDate(summary.latestDate)}`
-                        : "Chưa có hàng trong kho"}
-                    </small>
-                  </button>
-                ))
-              ) : (
-                <EmptyPanel text="Chưa có khách hàng đang có hàng trong kho." />
-              )}
-            </div>
-            <Pagination
-              page={customerView.page}
-              pageCount={customerView.pageCount}
-              onPageChange={setCustomerPage}
-            />
-          </CardContent>
-        </Card>
         <InventoryChart period={period} state={state} />
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Metric
+          label={`Tổng hàng đã nhập trong ${stats.label}`}
+          value={number(stats.received)}
+        />
+        <Metric
+          label={`Đã xuất lên xe trong ${stats.label}`}
+          tone="amber"
+          value={number(stats.dispatched)}
+        />
+        <Metric
+          label={`Còn trong kho trong ${stats.label}`}
+          tone="green"
+          value={number(stats.remaining)}
+        />
       </div>
     </>
   );
@@ -1381,7 +1379,7 @@ function OverviewCountChart({
           </strong>
         </div>
       </CardHeader>
-      <CardContent className="h-[280px] min-w-0">
+      <CardContent className="h-[320px] min-w-0">
         <div className="h-full min-w-0" ref={chartRef}>
           {canRenderChart ? (
             <BarChart
@@ -1469,7 +1467,7 @@ function InventoryChart({ period, state }) {
   const canRenderChart = chartSize.height > 0 && chartSize.width > 0;
 
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>Xu hướng tồn kho</CardTitle>
         <CardDescription>
