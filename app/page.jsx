@@ -1179,6 +1179,10 @@ function chartDateLabel(date) {
   return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function chartDayLabel(date) {
+  return String(date.getDate()).padStart(2, "0");
+}
+
 function overviewBuckets(period) {
   const window = periodWindow(period);
   const bucketDays = period === "quarter" ? 7 : 1;
@@ -1195,7 +1199,7 @@ function overviewBuckets(period) {
     buckets.push({
       count: 0,
       end,
-      label: chartDateLabel(start),
+      label: period === "week" ? chartDayLabel(start) : chartDateLabel(start),
       rangeLabel:
         bucketDays === 1
           ? chartDateLabel(start)
