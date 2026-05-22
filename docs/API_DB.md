@@ -5,11 +5,17 @@
 - Database: Supabase Postgres
 - API: Express
 - Validation: Zod
+- API composition root: `server-api/app.js`
+- Feature routers: `server-api/routes/*.js`
+- Domain handlers: `server-api/domains/*.js`
+- Shared read-through cache: `server-api/cache.js`
 - Schema source: `server-api/db/schema.js`
 - SQL migrations: `server-api/db/migrations/*.sql`
 - Drizzle config: `drizzle.config.js`
 
 This setup is intentionally small for an MVP with fewer than 100 users, while keeping the schema clean enough to move into a larger production setup later.
+
+`server-api/app.js` should stay thin: middleware, route mounting, and the terminal error handler only. New API work should start in a feature router and a matching domain module, then use `server-api/repository.js` for shared database primitives or larger cross-domain queries.
 
 ## Supabase Setup
 
