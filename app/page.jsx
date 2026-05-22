@@ -97,6 +97,19 @@ function number(value) {
   return Number(value || 0).toLocaleString("vi-VN");
 }
 
+function compactAxisNumber(value) {
+  const numericValue = Number(value || 0);
+  const absoluteValue = Math.abs(numericValue);
+
+  if (absoluteValue >= 1_000_000) {
+    return `${number(Math.round(numericValue / 100_000) / 10)}tr`;
+  }
+  if (absoluteValue >= 1_000) {
+    return `${number(Math.round(numericValue / 100) / 10)}k`;
+  }
+  return number(numericValue);
+}
+
 function pageFromHash() {
   if (typeof window === "undefined") return "tong-quan";
   const value = window.location.hash.replace("#", "");
@@ -1555,18 +1568,7 @@ function InventoryChart({ period, state }) {
   const stats = overviewStats(state, period);
   const last = data[data.length - 1]?.quantity || 0;
   const maxQuantity = Math.max(0, ...data.map((item) => Number(item.quantity || 0)));
-  const longestYAxisLabel = [
-    0,
-    maxQuantity,
-    last,
-    stats.received,
-    stats.dispatched,
-    stats.remaining,
-  ].reduce((longest, value) => {
-    const label = number(value);
-    return label.length > longest.length ? label : longest;
-  }, "");
-  const yAxisWidth = Math.min(Math.max(longestYAxisLabel.length * 8 + 28, 56), 128);
+  const yAxisWidth = 48;
 
   useEffect(() => {
     const node = chartRef.current;
@@ -1613,7 +1615,7 @@ function InventoryChart({ period, state }) {
               <YAxis
                 allowDecimals={false}
                 axisLine={false}
-                tickFormatter={number}
+                tickFormatter={compactAxisNumber}
                 tickLine={false}
                 tickMargin={10}
                 width={yAxisWidth}
