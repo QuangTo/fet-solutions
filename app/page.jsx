@@ -1242,6 +1242,22 @@ function OverviewPage({ onSelectCustomer, period, state }) {
 
   return (
     <>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Metric
+          label={`Tổng hàng đã nhập trong ${stats.label}`}
+          value={number(stats.received)}
+        />
+        <Metric
+          label={`Đã xuất lên xe trong ${stats.label}`}
+          tone="amber"
+          value={number(stats.dispatched)}
+        />
+        <Metric
+          label={`Còn trong kho trong ${stats.label}`}
+          tone="green"
+          value={number(stats.remaining)}
+        />
+      </div>
       <Card className="min-w-0">
         <CardHeader>
           <CardTitle>Tổng quan khách hàng</CardTitle>
@@ -1301,22 +1317,6 @@ function OverviewPage({ onSelectCustomer, period, state }) {
           unitLabel="Hóa đơn"
         />
         <InventoryChart period={period} state={state} />
-      </div>
-      <div className="grid gap-3 md:grid-cols-3">
-        <Metric
-          label={`Tổng hàng đã nhập trong ${stats.label}`}
-          value={number(stats.received)}
-        />
-        <Metric
-          label={`Đã xuất lên xe trong ${stats.label}`}
-          tone="amber"
-          value={number(stats.dispatched)}
-        />
-        <Metric
-          label={`Còn trong kho trong ${stats.label}`}
-          tone="green"
-          value={number(stats.remaining)}
-        />
       </div>
     </>
   );
