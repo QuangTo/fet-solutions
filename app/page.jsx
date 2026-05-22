@@ -112,6 +112,21 @@ function paginate(rows, page, pageSize = 10) {
   };
 }
 
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const handleChange = () => setMatches(media.matches);
+
+    handleChange();
+    media.addEventListener("change", handleChange);
+    return () => media.removeEventListener("change", handleChange);
+  }, [query]);
+
+  return matches;
+}
+
 function Pagination({ onPageChange, page, pageCount }) {
   if (pageCount <= 1) return null;
   return (
@@ -1922,14 +1937,26 @@ function DispatchTable({ rows }) {
 
 function ReportsPage({ mutation, session, state }) {
   const [selected, setSelected] = useState("");
+  const [customerPage, setCustomerPage] = useState(1);
   const [confirmCustomer, setConfirmCustomer] = useState(null);
   const [invoiceSearch, setInvoiceSearch] = useState("");
+  const shouldPaginateCustomers = useMediaQuery("(max-width: 639px)");
   const rows = reportRows(state);
-  const current = selected || rows[0]?.reportKey || "";
+  const customerView = shouldPaginateCustomers
+    ? paginate(rows, customerPage, 3)
+    : { page: 1, pageCount: 1, rows };
+  const current = customerView.rows.some((row) => row.reportKey === selected)
+    ? selected
+    : customerView.rows[0]?.reportKey || rows[0]?.reportKey || "";
   const currentRow = rows.find((row) => row.reportKey === current) || rows[0];
   const invoiceSearchTerm = invoiceSearch.trim().toLowerCase();
   const currentPeriodOpenTime = new Date(currentRow?.periodOpenAt || "").getTime();
   const currentPeriodClosedTime = new Date(currentRow?.periodClosedAt || "").getTime();
+
+  useEffect(() => {
+    setCustomerPage(1);
+  }, [rows.length, shouldPaginateCustomers]);
+
   const history = state.dispatches
     .filter(
       (item) => {
@@ -1973,7 +2000,7 @@ function ReportsPage({ mutation, session, state }) {
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {rows.length ? (
-              rows.map((row) => (
+              customerView.rows.map((row) => (
                 <article
                   className={cn(
                     "relative grid min-h-32 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left hover:border-emerald-300 hover:bg-emerald-50",
@@ -2019,6 +2046,13 @@ function ReportsPage({ mutation, session, state }) {
               <EmptyPanel text="Chưa có khách hàng hoàn thành để xuất hóa đơn." />
             )}
           </div>
+          {shouldPaginateCustomers ? (
+            <Pagination
+              page={customerView.page}
+              pageCount={customerView.pageCount}
+              onPageChange={setCustomerPage}
+            />
+          ) : null}
         </CardContent>
       </Card>
       <DataTableCard
