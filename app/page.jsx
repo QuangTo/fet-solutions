@@ -24,6 +24,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   Tooltip,
   XAxis,
@@ -125,6 +127,27 @@ function useMediaQuery(query) {
   }, [query]);
 
   return matches;
+}
+
+function useElementSize() {
+  const ref = useRef(null);
+  const [size, setSize] = useState({ height: 0, width: 0 });
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return undefined;
+
+    const observer = new ResizeObserver(([entry]) => {
+      setSize({
+        height: Math.floor(entry.contentRect.height),
+        width: Math.floor(entry.contentRect.width),
+      });
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, size];
 }
 
 function Pagination({ onPageChange, page, pageCount }) {
@@ -571,6 +594,9 @@ export default function FetNextApp() {
     "xuat-hang",
     "bao-cao",
   ].includes(visiblePage);
+  const canReadReport = ["admin", "accountant"].includes(activeRole);
+  const needsReport =
+    canReadReport && ["tong-quan", "bao-cao"].includes(visiblePage);
   const operationsPage =
     visiblePage === "nhap-hang"
       ? "receipt"
@@ -587,20 +613,14 @@ export default function FetNextApp() {
   });
   const reportQuery = useQuery({
     ...pageQueryOptions("report", session),
-    enabled:
-      Boolean(session) &&
-      visiblePage === "bao-cao" &&
-      ["admin", "accountant"].includes(activeRole),
+    enabled: Boolean(session) && needsReport,
   });
   const isMasterLoading =
     needsMaster && !masterQuery.data && masterQuery.isPending;
   const isOperationsLoading =
     needsOperations && !operationsQuery.data && operationsQuery.isPending;
   const isReportLoading =
-    visiblePage === "bao-cao" &&
-    ["admin", "accountant"].includes(activeRole) &&
-    !reportQuery.data &&
-    reportQuery.isPending;
+    needsReport && !reportQuery.data && reportQuery.isPending;
   const isPageLoading =
     isMasterLoading || isOperationsLoading || isReportLoading;
 
@@ -1142,11 +1162,79 @@ function overviewTrend(state, period) {
   });
 }
 
+function chartDateLabel(date) {
+  return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function overviewBuckets(period) {
+  const window = periodWindow(period);
+  const bucketDays = period === "quarter" ? 7 : 1;
+  const buckets = [];
+  const cursor = new Date(window.start);
+
+  while (cursor <= window.end) {
+    const start = new Date(cursor);
+    const end = new Date(start);
+    end.setDate(start.getDate() + bucketDays - 1);
+    end.setHours(23, 59, 59, 999);
+    if (end > window.end) end.setTime(window.end.getTime());
+
+    buckets.push({
+      count: 0,
+      end,
+      label: chartDateLabel(start),
+      rangeLabel:
+        bucketDays === 1
+          ? chartDateLabel(start)
+          : `${chartDateLabel(start)} - ${chartDateLabel(end)}`,
+      start,
+    });
+    cursor.setDate(cursor.getDate() + bucketDays);
+  }
+
+  return buckets;
+}
+
+function addDateToBucket(buckets, value) {
+  const date = dateAtNoon(value);
+  if (!date) return;
+  const bucket = buckets.find((item) => date >= item.start && date <= item.end);
+  if (bucket) bucket.count += 1;
+}
+
+function completedShipmentChartData(state, period) {
+  const buckets = overviewBuckets(period);
+  const seenDispatches = new Set();
+
+  state.dispatches.forEach((item) => {
+    const key = item.dispatchId || item.id;
+    if (!key || seenDispatches.has(key)) return;
+    seenDispatches.add(key);
+    addDateToBucket(buckets, item.date || item.createdAt);
+  });
+
+  return buckets;
+}
+
+function issuedInvoiceChartData(state, period) {
+  const buckets = overviewBuckets(period);
+
+  state.invoiceApprovals.forEach((item) => {
+    addDateToBucket(buckets, item.date || item.createdAt || item.periodClosedAt);
+  });
+
+  return buckets;
+}
+
 function OverviewPage({ onSelectCustomer, period, state }) {
   const [customerPage, setCustomerPage] = useState(1);
   const summaries = customerSummaries(state);
   const stats = overviewStats(state, period);
   const customerView = paginate(summaries, customerPage, 6);
+  const shipmentData = completedShipmentChartData(state, period);
+  const invoiceData = issuedInvoiceChartData(state, period);
+  const shipmentTotal = shipmentData.reduce((sum, item) => sum + item.count, 0);
+  const invoiceTotal = invoiceData.reduce((sum, item) => sum + item.count, 0);
 
   useEffect(() => {
     setCustomerPage(1);
@@ -1168,6 +1256,24 @@ function OverviewPage({ onSelectCustomer, period, state }) {
           label={`Còn trong kho trong ${stats.label}`}
           tone="green"
           value={number(stats.remaining)}
+        />
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <OverviewCountChart
+          color="#d97706"
+          data={shipmentData}
+          period={period}
+          total={shipmentTotal}
+          title="Chuyến hàng hoàn thành"
+          unitLabel="Chuyến"
+        />
+        <OverviewCountChart
+          color="#2563eb"
+          data={invoiceData}
+          period={period}
+          total={invoiceTotal}
+          title="Hóa đơn đã xuất"
+          unitLabel="Hóa đơn"
         />
       </div>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">
@@ -1237,6 +1343,90 @@ function Metric({ label, tone = "default", value }) {
         >
           {value}
         </strong>
+      </CardContent>
+    </Card>
+  );
+}
+
+function OverviewCountChart({
+  color,
+  data,
+  period,
+  title,
+  total,
+  unitLabel,
+}) {
+  const [chartRef, chartSize] = useElementSize();
+  const maxCount = Math.max(0, ...data.map((item) => Number(item.count || 0)));
+  const longestYAxisLabel = [0, maxCount, total].reduce((longest, value) => {
+    const label = number(value);
+    return label.length > longest.length ? label : longest;
+  }, "");
+  const yAxisWidth = Math.min(Math.max(longestYAxisLabel.length * 8 + 28, 48), 96);
+  const canRenderChart = chartSize.height > 0 && chartSize.width > 0;
+  const normalizedUnitLabel = unitLabel.toLocaleLowerCase("vi-VN");
+
+  return (
+    <Card className="min-w-0">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>
+              {number(total)} {normalizedUnitLabel} trong {periodLabel(period)}.
+            </CardDescription>
+          </div>
+          <strong className="shrink-0 text-3xl font-black text-slate-950">
+            {number(total)}
+          </strong>
+        </div>
+      </CardHeader>
+      <CardContent className="h-[280px] min-w-0">
+        <div className="h-full min-w-0" ref={chartRef}>
+          {canRenderChart ? (
+            <BarChart
+              data={data}
+              height={chartSize.height}
+              margin={{ bottom: 6, left: 8, right: 16, top: 18 }}
+              width={chartSize.width}
+            >
+              <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+              <XAxis
+                dataKey="label"
+                interval={period === "week" ? 0 : "preserveStartEnd"}
+                tickLine={false}
+              />
+              <YAxis
+                allowDecimals={false}
+                axisLine={false}
+                tickFormatter={number}
+                tickLine={false}
+                tickMargin={10}
+                width={yAxisWidth}
+              />
+              <Tooltip
+                contentStyle={{
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 8,
+                  boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
+                }}
+                formatter={(value) => [number(value), unitLabel]}
+                labelFormatter={(value, payload) => {
+                  const range = payload?.[0]?.payload?.rangeLabel || value;
+                  return period === "quarter" ? `Kỳ ${range}` : `Ngày ${range}`;
+                }}
+              />
+              <Bar
+                dataKey="count"
+                fill={color}
+                maxBarSize={44}
+                radius={[6, 6, 0, 0]}
+              />
+            </BarChart>
+          ) : (
+            <Skeleton className="h-full w-full rounded-lg" />
+          )}
+        </div>
       </CardContent>
     </Card>
   );
