@@ -1226,10 +1226,56 @@ function issuedInvoiceChartData(state, period) {
   return buckets;
 }
 
+function resourceKey(item, idField, labelField) {
+  return item[idField] || item[labelField] || "";
+}
+
+function overviewOperationalStats(state, period) {
+  const window = periodWindow(period);
+  const periodDispatches = state.dispatches.filter((item) =>
+    dateInWindow(item.date || item.createdAt, window),
+  );
+  const activeVehicles = new Set(
+    periodDispatches
+      .map((item) => resourceKey(item, "vehicleId", "truck"))
+      .filter(Boolean),
+  );
+  const activeDrivers = new Set(
+    periodDispatches
+      .map((item) => resourceKey(item, "driverId", "driver"))
+      .filter(Boolean),
+  );
+  const pendingInvoices = reportRows(state);
+  const pendingInvoicesInPeriod = pendingInvoices.filter((item) =>
+    dateInWindow(item.periodClosedAt || item.periodEnd, window),
+  );
+  const totalVehicles = Math.max(state.vehicleRecords.length, activeVehicles.size);
+  const totalDrivers = Math.max(state.driverRecords.length, activeDrivers.size);
+
+  return {
+    drivers: {
+      active: activeDrivers.size,
+      idle: Math.max(totalDrivers - activeDrivers.size, 0),
+      total: totalDrivers,
+    },
+    invoices: {
+      active: pendingInvoicesInPeriod.length,
+      idle: Math.max(pendingInvoices.length - pendingInvoicesInPeriod.length, 0),
+      total: pendingInvoices.length,
+    },
+    vehicles: {
+      active: activeVehicles.size,
+      idle: Math.max(totalVehicles - activeVehicles.size, 0),
+      total: totalVehicles,
+    },
+  };
+}
+
 function OverviewPage({ onSelectCustomer, period, state }) {
   const [customerPage, setCustomerPage] = useState(1);
   const summaries = customerSummaries(state);
   const stats = overviewStats(state, period);
+  const operationalStats = overviewOperationalStats(state, period);
   const customerView = paginate(summaries, customerPage, 6);
   const shipmentData = completedShipmentChartData(state, period);
   const invoiceData = issuedInvoiceChartData(state, period);
@@ -1256,6 +1302,29 @@ function OverviewPage({ onSelectCustomer, period, state }) {
           label={`Còn trong kho trong ${stats.label}`}
           tone="green"
           value={number(stats.remaining)}
+        />
+      </div>
+      <div className="grid gap-3 lg:grid-cols-3">
+        <OperationalMetric
+          activeLabel="đang chạy"
+          idleLabel="xe rảnh"
+          label={`Xe trong ${stats.label}`}
+          stats={operationalStats.vehicles}
+          tone="amber"
+        />
+        <OperationalMetric
+          activeLabel="đang chạy"
+          idleLabel="tài xế rảnh"
+          label={`Tài xế trong ${stats.label}`}
+          stats={operationalStats.drivers}
+          tone="blue"
+        />
+        <OperationalMetric
+          activeLabel="chờ xuất"
+          idleLabel="ngoài kỳ"
+          label={`Hóa đơn chờ trong ${stats.label}`}
+          stats={operationalStats.invoices}
+          tone="green"
         />
       </div>
       <Card className="min-w-0">
@@ -1319,6 +1388,55 @@ function OverviewPage({ onSelectCustomer, period, state }) {
         <InventoryChart period={period} state={state} />
       </div>
     </>
+  );
+}
+
+function OperationalMetric({ activeLabel, idleLabel, label, stats, tone }) {
+  const activePercent = stats.total
+    ? Math.min(Math.round((stats.active / stats.total) * 100), 100)
+    : 0;
+  const toneClass = {
+    amber: "bg-amber-500",
+    blue: "bg-blue-600",
+    green: "bg-emerald-600",
+  }[tone];
+
+  return (
+    <Card className="min-w-0">
+      <CardContent className="grid gap-4 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <span className="text-sm font-bold text-slate-500">{label}</span>
+            <strong className="mt-2 block text-3xl font-black text-slate-950">
+              {number(stats.active)}
+            </strong>
+          </div>
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-600">
+            {number(stats.total)} tổng
+          </span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className={cn("h-full rounded-full", toneClass)}
+            style={{ width: `${activePercent}%` }}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <span className="font-bold text-slate-500">{activeLabel}</span>
+            <strong className="block text-lg font-black text-slate-950">
+              {number(stats.active)}
+            </strong>
+          </div>
+          <div>
+            <span className="font-bold text-slate-500">{idleLabel}</span>
+            <strong className="block text-lg font-black text-slate-950">
+              {number(stats.idle)}
+            </strong>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
