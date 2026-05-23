@@ -2,9 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BellRing,
   CalendarDays,
   Car,
   ChevronRight,
+  CreditCard,
   FileCheck2,
   KeyRound,
   LayoutDashboard,
@@ -14,6 +16,8 @@ import {
   Pencil,
   Phone,
   Plus,
+  QrCode,
+  ReceiptText,
   Search,
   Settings2,
   SlidersHorizontal,
@@ -119,6 +123,14 @@ function number(value) {
   return Number(value || 0).toLocaleString("vi-VN");
 }
 
+function money(value, currency = "VND") {
+  return new Intl.NumberFormat("vi-VN", {
+    currency: currency || "VND",
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(Number(value || 0));
+}
+
 function compactAxisNumber(value) {
   const numericValue = Number(value || 0);
   const absoluteValue = Math.abs(numericValue);
@@ -218,6 +230,10 @@ const dataTableConfigs = {
   management: {
     columns: ["46%", "18%", "20%", "16%"],
     width: "min-w-[760px]",
+  },
+  billingInvoices: {
+    columns: ["28%", "24%", "24%", "24%"],
+    width: "min-w-[680px]",
   },
   users: {
     columns: ["28%", "24%", "18%", "18%", "12%"],
@@ -662,6 +678,12 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
     queryFn: () => apiRequest("/users", {}, session),
     enabled: Boolean(session) && activeRole === "admin" && visiblePage === "quan-ly",
   });
+  const billingQuery = useQuery({
+    queryKey: ["billing", session?.id, session?.role, session?.siteId],
+    queryFn: () => apiRequest("/billing", {}, session),
+    enabled: Boolean(session) && visiblePage === "quan-ly",
+    staleTime: 60_000,
+  });
   const isMasterLoading =
     needsMaster && !masterQuery.data && masterQuery.isPending;
   const isOperationsLoading =
@@ -673,8 +695,14 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
     visiblePage === "quan-ly" &&
     !usersQuery.data &&
     usersQuery.isPending;
+  const isBillingLoading =
+    visiblePage === "quan-ly" && !billingQuery.data && billingQuery.isPending;
   const isPageLoading =
-    isMasterLoading || isOperationsLoading || isReportLoading || isUsersLoading;
+    isMasterLoading ||
+    isOperationsLoading ||
+    isReportLoading ||
+    isUsersLoading ||
+    isBillingLoading;
 
   const state = useMemo(
     () =>
@@ -1033,6 +1061,7 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
           {!isPageLoading && visiblePage === "quan-ly" ? (
             <ManagementPage
               activeRole={activeRole}
+              billing={billingQuery.data}
               mutation={masterMutation}
               state={state}
               userMutation={userMutation}
@@ -2713,7 +2742,14 @@ const masterSections = [
   },
 ];
 
-function ManagementPage({ activeRole, mutation, state, userMutation, users }) {
+function ManagementPage({
+  activeRole,
+  billing,
+  mutation,
+  state,
+  userMutation,
+  users,
+}) {
   const [activeList, setActiveList] = useState("");
   const recordsByList = {
     customers: state.customerRecords,
@@ -2722,6 +2758,7 @@ function ManagementPage({ activeRole, mutation, state, userMutation, users }) {
 
   return (
     <div className="grid gap-3">
+      <BillingSection billing={billing} />
       {activeRole === "admin" ? (
         <UserSection
           isActive={activeList === "users"}
@@ -2765,6 +2802,204 @@ function ManagementPage({ activeRole, mutation, state, userMutation, users }) {
           </Card>
         );
       })}
+    </div>
+  );
+}
+
+const billingStatusCopy = {
+  active: { label: "Đang trả phí", tone: "green" },
+  canceled: { label: "Đã hủy", tone: "red" },
+  expired: { label: "Hết hạn", tone: "red" },
+  paid: { label: "Đã thanh toán", tone: "green" },
+  past_due: { label: "Quá hạn thanh toán", tone: "red" },
+  suspended: { label: "Tạm khóa", tone: "red" },
+  trialing: { label: "Dùng thử miễn phí", tone: "amber" },
+};
+
+const invoiceStatusCopy = {
+  draft: { label: "Nháp", tone: "default" },
+  open: { label: "Chờ thanh toán", tone: "amber" },
+  paid: { label: "Đã thanh toán", tone: "green" },
+  uncollectible: { label: "Không thu được", tone: "red" },
+  void: { label: "Đã hủy", tone: "default" },
+};
+
+function billingCopy(status, fallback = "Chưa cấu hình") {
+  return billingStatusCopy[status] || { label: fallback, tone: "default" };
+}
+
+function invoiceCopy(status) {
+  return invoiceStatusCopy[status] || { label: status || "Chưa có", tone: "default" };
+}
+
+function BillingSection({ billing }) {
+  const [reminderEnabled, setReminderEnabled] = useState(true);
+  const subscription = billing?.subscription || {};
+  const invoices = billing?.invoices || [];
+  const latestInvoice = invoices[0];
+  const siteStatus = billingCopy(billing?.billingStatus);
+  const subscriptionStatus = billingCopy(subscription.status, "Chưa có gói");
+  const paymentStatus = invoiceCopy(latestInvoice?.status);
+  const nextPaymentDate =
+    subscription.currentPeriodEnd ||
+    latestInvoice?.dueDate ||
+    billing?.trialEndsAt;
+  const planName =
+    subscription.planName ||
+    (billing?.billingStatus === "trialing" ? "Free Trial" : "Chưa chọn gói");
+  const isPaid =
+    billing?.billingStatus === "active" ||
+    billing?.billingStatus === "paid" ||
+    latestInvoice?.status === "paid" ||
+    subscription.status === "active";
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-emerald-600 text-white shadow-sm">
+              <CreditCard className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <CardTitle>Billing & thanh toán</CardTitle>
+              <CardDescription>
+                Trạng thái gói, kỳ thanh toán và phương thức chi trả của site.
+              </CardDescription>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge tone={siteStatus.tone}>{siteStatus.label}</Badge>
+            <Badge tone={paymentStatus.tone}>{paymentStatus.label}</Badge>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 p-4 lg:p-5">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
+          <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
+            <BillingMetric
+              label="Tier hiện tại"
+              value={planName}
+              detail={subscriptionStatus.label}
+            />
+            <BillingMetric
+              label="Kỳ hiện tại"
+              value={
+                subscription.currentPeriodStart
+                  ? formatDate(subscription.currentPeriodStart)
+                  : "Chưa có"
+              }
+              detail={
+                subscription.currentPeriodEnd
+                  ? `Đến ${formatDate(subscription.currentPeriodEnd)}`
+                  : "Chưa chốt kỳ"
+              }
+            />
+            <BillingMetric
+              label="Thanh toán gần nhất"
+              value={latestInvoice ? money(latestInvoice.amount, latestInvoice.currency) : "Chưa có"}
+              detail={latestInvoice?.paidAt ? formatDate(latestInvoice.paidAt) : paymentStatus.label}
+            />
+            <BillingMetric
+              label="Lần payment tiếp theo"
+              value={nextPaymentDate ? formatDate(nextPaymentDate) : "Chưa có"}
+              detail={isPaid ? "Gia hạn tự động/manual" : "Cần kiểm tra công nợ"}
+            />
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                  Phương thức thanh toán
+                </p>
+                <h3 className="mt-1 text-sm font-black text-slate-950">
+                  QR chuyển khoản ngân hàng
+                </h3>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                  Mockup cho luồng SaaS Việt Nam, chờ nối provider hoặc webhook.
+                </p>
+              </div>
+              <Badge tone="default">Mock</Badge>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="grid h-24 w-24 shrink-0 place-items-center rounded-md border border-slate-300 bg-[linear-gradient(135deg,#0f172a_25%,transparent_25%),linear-gradient(225deg,#0f172a_25%,transparent_25%),linear-gradient(45deg,#0f172a_25%,transparent_25%),linear-gradient(315deg,#0f172a_25%,#ffffff_25%)] bg-[length:18px_18px] bg-[position:0_0,0_9px,9px_-9px,-9px_0] text-white">
+                <QrCode className="h-8 w-8 rounded bg-white p-1 text-slate-950" />
+              </div>
+              <div className="min-w-0 text-sm">
+                <p className="font-black text-slate-950">FET Logistics</p>
+                <p className="mt-1 truncate font-semibold text-slate-500">
+                  Nội dung: FET {billing?.siteName || "Default Site"}
+                </p>
+                <p className="mt-1 font-semibold text-slate-500">
+                  Số tiền kỳ này: {latestInvoice ? money(latestInvoice.amount, latestInvoice.currency) : "Chưa phát sinh"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <label className="flex w-fit max-w-full items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm">
+          <input
+            checked={reminderEnabled}
+            className="h-4 w-4 accent-emerald-600"
+            type="checkbox"
+            onChange={(event) => setReminderEnabled(event.target.checked)}
+          />
+          <BellRing className="h-4 w-4 text-emerald-700" />
+          Nhắc trước hạn thanh toán 3 ngày
+        </label>
+
+        <DataTable width="billingInvoices">
+          <thead>
+            <tr>
+              <Th>Ngày tạo</Th>
+              <Th>Số tiền</Th>
+              <Th>Hạn thanh toán</Th>
+              <Th>Trạng thái</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoices.length ? (
+              invoices.slice(0, 5).map((invoice) => {
+                const status = invoiceCopy(invoice.status);
+                return (
+                  <tr key={invoice.id}>
+                    <Td>
+                      <span className="inline-flex items-center gap-2">
+                        <ReceiptText className="h-4 w-4 text-slate-400" />
+                        {formatDate(invoice.createdAt)}
+                      </span>
+                    </Td>
+                    <Td>{money(invoice.amount, invoice.currency)}</Td>
+                    <Td>{formatDate(invoice.dueDate)}</Td>
+                    <Td>
+                      <Badge tone={status.tone}>{status.label}</Badge>
+                    </Td>
+                  </tr>
+                );
+              })
+            ) : (
+              <EmptyRow colSpan={4}>Chưa có hóa đơn billing.</EmptyRow>
+            )}
+          </tbody>
+        </DataTable>
+      </div>
+    </Card>
+  );
+}
+
+function BillingMetric({ detail, label, value }) {
+  return (
+    <div className="min-w-0 rounded-md border border-slate-100 bg-slate-50 px-3 py-3">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-base font-black text-slate-950">
+        {value}
+      </p>
+      <p className="mt-1 truncate text-xs font-bold text-slate-500">{detail}</p>
     </div>
   );
 }
