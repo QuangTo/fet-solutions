@@ -28,7 +28,7 @@ export function RouteSkeleton() {
           <div>
             <p className="mb-2 flex items-center gap-2 text-xs font-black uppercase text-emerald-700">
               <LayoutDashboard className="h-4 w-4" />
-              FET logistics
+              FES logistics
             </p>
             <Skeleton className="h-10 w-56" />
             <Skeleton className="mt-3 h-4 w-[min(42rem,80vw)]" />

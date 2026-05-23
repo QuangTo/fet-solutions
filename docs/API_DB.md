@@ -51,7 +51,7 @@ Default local API URL: `http://127.0.0.1:3000/api` or the port selected by Next.
 Roles:
 
 - `driver`: Tổng quan, Nhập hàng, Xuất hàng
-- `warehouse`: Tổng quan, Nhập hàng, Xuất hàng, Quản lý
+- `warehouse`: Tổng quan, Nhập hàng, Xuất hàng
 - `accountant`: Tổng quan, Báo cáo
 - `admin`: toàn bộ hệ thống
 
@@ -71,6 +71,9 @@ The API accepts old `accounting` values and normalizes them to `accountant`.
 ```txt
 GET    /api/health
 GET    /api/access
+GET    /api/settings
+PUT    /api/settings/ui
+PUT    /api/settings/pageAccess
 GET    /api/sites
 GET    /api/billing
 GET    /api/sites/:siteId/billing

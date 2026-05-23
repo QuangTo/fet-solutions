@@ -85,13 +85,13 @@ async function seed() {
         on conflict (organization_id, code) do update
         set name = excluded.name,
             status = 'active',
-            billing_status = 'trialing',
-            trial_started_at = now(),
-            trial_ends_at = now() + interval '30 days',
+            billing_status = 'active',
+            trial_started_at = now() - interval '45 days',
+            trial_ends_at = now() - interval '15 days',
             updated_at = now()
         returning id
       `,
-      [organization.rows[0].id, "Default Site", "default", "trialing"],
+      [organization.rows[0].id, "Default Site", "default", "active"],
     );
     const siteId = site.rows[0].id;
     const plan = await client.query(
@@ -100,17 +100,53 @@ async function seed() {
         values ($1, $2, $3, $4, $5, $6)
         on conflict (code) do update
         set name = excluded.name,
+            price_monthly = excluded.price_monthly,
+            currency = excluded.currency,
+            max_users = excluded.max_users,
+            max_vehicles = excluded.max_vehicles,
             updated_at = now()
         returning id
       `,
-      ["starter", "Starter", 0, "VND", 20, 20],
+      ["starter", "Starter", 990000, "VND", 20, 20],
+    );
+    const subscription = await client.query(
+      `
+        insert into subscriptions (
+          site_id, plan_id, status, current_period_start, current_period_end, trial_ends_at, provider
+        )
+        values ($1, $2, 'active', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', null, 'manual_qr')
+        returning id
+      `,
+      [siteId, plan.rows[0].id],
+    );
+    const invoice = await client.query(
+      `
+        insert into billing_invoices (
+          site_id, subscription_id, amount, currency, status, due_date, paid_at, provider, provider_invoice_id
+        )
+        values ($1, $2, 990000, 'VND', 'paid', current_date, now() - interval '2 days', 'manual_qr', 'MOCK-PAID-001')
+        returning id
+      `,
+      [siteId, subscription.rows[0].id],
     );
     await client.query(
       `
-        insert into subscriptions (site_id, plan_id, status, trial_ends_at)
-        values ($1, $2, 'trialing', now() + interval '30 days')
+        insert into payments (
+          site_id, invoice_id, provider, provider_payment_id, amount, currency, status, paid_at, meta
+        )
+        values (
+          $1,
+          $2,
+          'manual_qr',
+          'MOCK-QR-001',
+          990000,
+          'VND',
+          'succeeded',
+          now() - interval '2 days',
+          '{"method":"bank_qr","bank":"Mock Bank","note":"Seeded paid test site"}'::jsonb
+        )
       `,
-      [siteId, plan.rows[0].id],
+      [siteId, invoice.rows[0].id],
     );
 
     const userIds = {};
