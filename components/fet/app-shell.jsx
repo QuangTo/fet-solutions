@@ -1048,7 +1048,11 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
     if (!pageAccessDraft || !session) return;
     setPageAccessApplyPending(true);
     try {
-      const saved = await saveAppSetting("pageAccess", pageAccessDraft, session);
+      const saved = await saveAppSetting(
+        "pageAccess",
+        pageAccessDraft,
+        session,
+      );
       const nextAccess = normalizePageAccess(saved.value);
       await queryClient.invalidateQueries({ queryKey: ["access"] });
       setPageAccessDraft(nextAccess);
@@ -1761,9 +1765,9 @@ function OverviewPage({ onSelectCustomer, period, state }) {
       <Card className="min-w-0">
         <CardHeader>
           <CardTitle>Tổng quan khách hàng</CardTitle>
-          <CardDescription>
+          {/* <CardDescription>
             Lượng hàng còn lại, số loại hàng và lần cập nhật gần nhất.
-          </CardDescription>
+          </CardDescription> */}
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -1836,7 +1840,7 @@ function OverviewPage({ onSelectCustomer, period, state }) {
         <OperationalMetric
           activeLabel="chờ xuất"
           idleLabel="ngoài kỳ"
-          label={`Hóa đơn trong ${stats.label}`}
+          label={`Hóa đơn tồn trong ${stats.label}`}
           stats={operationalStats.invoices}
           tone="green"
         />
@@ -2999,7 +3003,7 @@ function ManagementPage({
               type="button"
             >
               <strong className="text-base font-bold leading-tight text-slate-950">
-                Quản lý {section.label}
+                {section.label}
               </strong>
               <ChevronRight
                 className={cn(
@@ -3095,7 +3099,7 @@ function BillingSection({ billing, isActive, onToggle }) {
         type="button"
       >
         <strong className="text-base font-bold leading-tight text-slate-950">
-          Billing & thanh toán
+          Thanh toán
         </strong>
         <ChevronRight
           className={cn(
@@ -3113,7 +3117,7 @@ function BillingSection({ billing, isActive, onToggle }) {
                   <CreditCard className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
-                  <CardTitle>Billing & thanh toán</CardTitle>
+                  <CardTitle>Thanh toán</CardTitle>
                   <CardDescription>
                     Gói, kỳ thanh toán và phương thức chi trả.
                   </CardDescription>
@@ -3264,7 +3268,7 @@ function UserSection({ isActive, mutation, onToggle, users }) {
         type="button"
       >
         <strong className="text-base font-bold leading-tight text-slate-950">
-          Quản lý Tài khoản
+          Tài khoản
         </strong>
         <ChevronRight
           className={cn(
@@ -3871,13 +3875,11 @@ function SettingsPage({
       <Card>
         <CardHeader>
           <CardTitle>Tùy chỉnh giao diện</CardTitle>
-          <CardDescription>
-            Giữ UI sạch, dày dữ liệu và dễ đọc trong kho.
-          </CardDescription>
+          <CardDescription>Tùy chọn cỡ chữ và màu sắc.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <Field>
-            Mật độ hiển thị
+            Cỡ chữ
             <Select
               value={settingsDraft.density}
               onChange={(event) =>
@@ -3922,10 +3924,7 @@ function SettingsPage({
       <Card>
         <CardHeader>
           <CardTitle>Quyền quản trị</CardTitle>
-          <CardDescription>
-            Chọn trang mà từng vai trò được phép truy cập. Admin luôn có toàn
-            quyền.
-          </CardDescription>
+          <CardDescription>Tùy chỉnh quyền truy cập</CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
