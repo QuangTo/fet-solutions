@@ -21,7 +21,7 @@
 
 - Mọi table nghiệp vụ phải có pagination khi dữ liệu dài.
 - Số dòng tối đa mỗi trang là 10, trừ riêng danh sách card khách hàng ở trang Tổng quan.
-- Logic phân trang dùng chung từ `src/ui/table.js`; không tự viết lại page slicing trong từng page.
+- Logic phân trang dùng helper chung trong `components/fet/app-shell.jsx` hoặc tách ra module dùng chung khi tái sử dụng nhiều nơi.
 - Empty state phải có câu rõ ràng để người dùng biết cần chọn khách hàng, đổi filter hoặc chưa có dữ liệu.
 
 ## Spacing và layout
@@ -34,12 +34,12 @@
 
 ## Cấu trúc frontend
 
-- `index.html` chỉ giữ shell, sidebar, topbar, dialog/toast toàn cục và placeholder partial.
-- Markup từng page nằm trong `public/pages/*.html` để Vite build vẫn copy partial vào `dist`.
-- CSS entry là `src/styles.css`, các phần nhỏ nằm trong `src/styles/`.
-- JS dùng component/helper chung trong `src/ui/` trước khi thêm helper mới vào `app.js`.
-- Khi thêm table mới, dùng `paginateRows()` và `paginationMarkup()` từ `src/ui/table.js`.
-- Dev/build dùng Vite. `server.js` chỉ là fallback static server qua script `serve:static`.
+- App dùng Next.js App Router trong `app/`; không thêm lại Vite, `index.html` tĩnh hoặc `public/pages/*.html`.
+- Các route như `/receipt`, `/dispatch`, `/management`, `/reports`, `/settings` nằm trong `app/<route>/page.jsx`.
+- Shared logistics shell và page UI nằm trong `components/fet/`; primitives nằm trong `components/ui/`.
+- CSS entry là `app/globals.css`.
+- Khi thêm page lớn, dùng lazy loading kèm skeleton.
+- Dev/build dùng `next dev` và `next build`.
 
 ## Logic nghiệp vụ
 
@@ -51,10 +51,10 @@
 - Khi một khách hàng không còn tồn kho, trạng thái chốt hóa đơn là hoàn tất.
 - Khi kế toán xác nhận xuất hóa đơn, cần có dialog xác nhận trước khi ghi nhận.
 
-## Backend tương lai
+## Backend
 
-- API REST là đủ cho MVP.
-- Endpoint ghi dữ liệu phải validate body bằng schema.
+- API REST chạy bằng Next.js Route Handlers trong `app/api/`.
+- Endpoint ghi dữ liệu phải validate body bằng schema trong `lib/server/validators.js`.
 - Backend phải kiểm tra quyền theo vai trò, không chỉ dựa vào giao diện.
 - Dùng PostgreSQL và migration cho production.
 - Dùng numeric/decimal cho số lượng nếu có đơn vị tấn, kg, cuộn, thùng.

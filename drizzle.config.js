@@ -1,8 +1,8 @@
 require("dotenv").config();
 
 module.exports = {
-  schema: "./server-api/db/schema.js",
-  out: "./server-api/db/migrations",
+  schema: "./lib/db.js",
+  out: "./drizzle/migrations",
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.DATABASE_URL || "",

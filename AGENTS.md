@@ -6,10 +6,10 @@ FET is a compact logistics SaaS for receiving customer goods, dispatching them b
 
 ## Frontend Principles
 
-- Prefer small modules in `src/ui/` for shared rendering, dialogs, tables, forms, and formatting before adding helpers to `src/app.js`.
-- Keep `index.html` as the shell plus global overlays. Page markup belongs in `public/pages/*.html`.
-- Render dynamic HTML through shared helpers such as `escapeHtml()`, `optionMarkup()`, `sampleTableRow()`, and pagination helpers.
-- Use design tokens from `src/styles/tokens.css`; primary actions use `--accent`, destructive actions use `--red`, and text on solid action buttons is white.
+- Use Next.js App Router pages under `app/` and shared UI under `components/`.
+- Keep route files thin; shared logistics screens live in `components/fet/` and common primitives in `components/ui/`.
+- Use TanStack Query for client data fetching and keep page transitions lazy-loaded with skeleton states.
+- Use Tailwind tokens/classes from `app/globals.css` and `components/ui/`; destructive actions stay red and primary actions stay high-contrast.
 - Preserve responsive behavior for warehouse and driver mobile use. Avoid nested cards and avoid layout shifts in repeated UI.
 
 ## Business Rules
@@ -23,7 +23,7 @@ FET is a compact logistics SaaS for receiving customer goods, dispatching them b
 ## Checks
 
 - Run `npm run check` after JavaScript changes.
-- API implementation changes live under `server-api/`; Vercel exposes only `api/[...path].js`; database setup and endpoint notes live in `docs/API_DB.md`.
+- API implementation changes live under `app/api/` and `lib/server/`; database setup and endpoint notes live in `docs/API_DB.md`.
 - Use role values `driver`, `warehouse`, `accountant`, and `admin`; normalize old `accounting` values when reading legacy UI/session data.
-- Dev server requires Node.js `20.19+` or `22.12+` because the installed Vite version depends on newer Node utilities.
+- Dev server uses Next.js and requires the Node.js version supported by the installed Next release.
 - Do not commit real customer data, secrets, database dumps, or generated build output unless explicitly requested.
