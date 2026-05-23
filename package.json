@@ -3,20 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 127.0.0.1",
+    "dev": "next dev --webpack -H 127.0.0.1",
     "start": "next start -H 127.0.0.1",
     "preview": "next start -H 127.0.0.1",
-    "serve:static": "node server.js",
-    "api": "node server-api/server.js",
-    "db:migrate": "node server-api/db/migrate.js",
-    "db:seed": "node server-api/db/seed.js",
+    "db:migrate": "node scripts/db/migrate.js",
+    "db:seed": "node scripts/db/seed.js",
     "db:generate": "drizzle-kit generate",
-    "build": "next build",
-    "check": "node --check next.config.mjs && node --check postcss.config.mjs && node --check server.js && node --check drizzle.config.js && find api pages server-api -name '*.js' -print0 | xargs -0 -n1 node --check && npm run build"
+    "build": "next build --webpack",
+    "check": "node --check next.config.mjs && node --check postcss.config.mjs && node --check drizzle.config.js && find lib/server scripts -name '*.js' -print0 | xargs -0 -n1 node --check && npm run build"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.10",
-    "vite": "^8.0.13"
+    "drizzle-kit": "^0.31.10"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -29,7 +26,6 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
-    "express": "^5.2.1",
     "lucide-react": "^1.16.0",
     "next": "^16.2.6",
     "pg": "^8.21.0",
