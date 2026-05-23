@@ -6,7 +6,8 @@ FET là SaaS nhỏ cho doanh nghiệp vận tải quản lý hàng nhận từ k
 
 ## Vai trò
 
-- Thủ kho: nhập hàng, lập chuyến xuất hàng, quản lý xe/tài xế/khách hàng.
+- Thủ kho: nhập hàng và lập chuyến xuất hàng.
+- Admin: quản lý khách hàng, xe, tài xế, tài khoản và cài đặt hệ thống.
 - Kế toán: xem tồn, lịch sử xuất hàng và trạng thái chốt hóa đơn theo khách hàng.
 - Lái xe: xem chuyến xe, tổng số lượng và danh sách hàng trên xe.
 

@@ -5,7 +5,10 @@ import {
   BellRing,
   CalendarDays,
   Car,
+  ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   CreditCard,
   FileCheck2,
   KeyRound,
@@ -39,19 +42,23 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { apiRequest, pageQueryOptions } from "@/lib/api";
+import { apiRequest, pageQueryOptions, saveAppSetting } from "@/lib/api";
 import {
   allCustomers,
   composeState,
+  configurableRoleOrder,
   customerSummaries,
   dateComparator,
+  defaultPageAccess,
   formatDate,
   formatDateTime,
+  normalizePageAccess,
   normalizeRole,
   normalizeSku,
   pages,
   receiptSummaryRows,
   reportRows,
+  roleCanAccessPage,
   roles,
   stockRows,
   todayIso,
@@ -78,6 +85,35 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyRow, Table, Td, Th } from "@/components/ui/table";
 
 const SESSION_KEY = "fet-logistics-session";
+const DISPATCH_PREFS_KEY = "fet-dispatch-prefs";
+
+function readDispatchPrefs() {
+  try {
+    const raw = window.sessionStorage.getItem(DISPATCH_PREFS_KEY);
+    if (!raw) return { driver: "", truck: "" };
+    const parsed = JSON.parse(raw);
+    return {
+      driver: typeof parsed.driver === "string" ? parsed.driver : "",
+      truck: typeof parsed.truck === "string" ? parsed.truck : "",
+    };
+  } catch {
+    return { driver: "", truck: "" };
+  }
+}
+
+function writeDispatchPrefs({ driver, truck }) {
+  window.sessionStorage.setItem(
+    DISPATCH_PREFS_KEY,
+    JSON.stringify({ driver: driver || "", truck: truck || "" }),
+  );
+}
+
+function resolveDispatchPrefs(prefs, state) {
+  return {
+    driver: state.drivers.includes(prefs.driver) ? prefs.driver : "",
+    truck: state.vehicles.includes(prefs.truck) ? prefs.truck : "",
+  };
+}
 const pageOrder = [
   "tong-quan",
   "nhap-hang",
@@ -99,7 +135,7 @@ const pagePaths = {
   "cai-dat": "/settings",
   "nhap-hang": "/receipt",
   "quan-ly": "/management",
-  "tong-quan": "/",
+  "tong-quan": "/overview",
   "xuat-hang": "/dispatch",
 };
 
@@ -197,11 +233,23 @@ function Pagination({ onPageChange, page, pageCount }) {
     <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm font-semibold text-slate-500">
       <Button
         disabled={page === 1}
-        onClick={() => onPageChange(page - 1)}
+        onClick={() => onPageChange(1)}
+        size="icon"
+        title="Trang đầu"
         type="button"
         variant="secondary"
       >
-        Trước
+        <ChevronsLeft className="h-4 w-4" />
+      </Button>
+      <Button
+        disabled={page === 1}
+        onClick={() => onPageChange(page - 1)}
+        size="icon"
+        title="Trang trước"
+        type="button"
+        variant="secondary"
+      >
+        <ChevronLeft className="h-4 w-4" />
       </Button>
       <span>
         Trang {page} / {pageCount}
@@ -209,10 +257,22 @@ function Pagination({ onPageChange, page, pageCount }) {
       <Button
         disabled={page === pageCount}
         onClick={() => onPageChange(page + 1)}
+        size="icon"
+        title="Trang sau"
         type="button"
         variant="secondary"
       >
-        Sau
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+      <Button
+        disabled={page === pageCount}
+        onClick={() => onPageChange(pageCount)}
+        size="icon"
+        title="Trang cuối"
+        type="button"
+        variant="secondary"
+      >
+        <ChevronsRight className="h-4 w-4" />
       </Button>
     </div>
   );
@@ -635,6 +695,49 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
     if (storedCustomer) setSelectedCustomer(storedCustomer);
   }, [initialPage]);
 
+  const accessQuery = useQuery({
+    queryKey: ["access", session?.id, session?.siteId],
+    queryFn: () => apiRequest("/access", {}, session),
+    enabled: Boolean(session),
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
+    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+  });
+  const pageAccess = useMemo(() => {
+    const raw = accessQuery.data?.pageAccess;
+    if (raw && typeof raw === "object") return normalizePageAccess(raw);
+    return defaultPageAccess();
+  }, [accessQuery.data?.pageAccess]);
+  const [pageAccessDraft, setPageAccessDraft] = useState(null);
+  const [settingsDraft, setSettingsDraft] = useState(null);
+  const [settingsApplyPending, setSettingsApplyPending] = useState(false);
+  const [pageAccessApplyPending, setPageAccessApplyPending] = useState(false);
+
+  useEffect(() => {
+    if (!session) return;
+    apiRequest("/settings", {}, session)
+      .then((rows) => {
+        const uiRow = Array.isArray(rows)
+          ? rows.find((row) => row.key === "ui")
+          : null;
+        if (!uiRow?.value) return;
+        setSettings({
+          accent: uiRow.value.accent === "slate" ? "slate" : "emerald",
+          density:
+            uiRow.value.density === "compact" ? "compact" : "comfortable",
+        });
+      })
+      .catch(() => {});
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    const role = normalizeRole(session.role);
+    if (roleCanAccessPage(pageAccess, role, activePage)) return;
+    router.replace(pagePaths["tong-quan"]);
+  }, [session, activePage, pageAccess, router]);
+
   useEffect(() => {
     if (!toast) return undefined;
     const timer = window.setTimeout(() => setToast(""), 3200);
@@ -642,7 +745,7 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
   }, [toast]);
 
   const activeRole = normalizeRole(session?.role || "warehouse");
-  const visiblePage = pages[activePage]?.roles.includes(activeRole)
+  const visiblePage = roleCanAccessPage(pageAccess, activeRole, activePage)
     ? activePage
     : "tong-quan";
   const needsMaster = visiblePage !== "cai-dat";
@@ -652,9 +755,7 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
     "xuat-hang",
     "bao-cao",
   ].includes(visiblePage);
-  const canReadReport = ["admin", "accountant"].includes(activeRole);
-  const needsReport =
-    canReadReport && ["tong-quan", "bao-cao"].includes(visiblePage);
+  const needsReport = ["tong-quan", "bao-cao"].includes(visiblePage);
   const operationsPage =
     visiblePage === "nhap-hang"
       ? "receipt"
@@ -676,7 +777,10 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
   const usersQuery = useQuery({
     queryKey: ["users", session?.id, session?.role, session?.siteId],
     queryFn: () => apiRequest("/users", {}, session),
-    enabled: Boolean(session) && activeRole === "admin" && visiblePage === "quan-ly",
+    enabled:
+      Boolean(session) &&
+      visiblePage === "quan-ly" &&
+      roleCanAccessPage(pageAccess, activeRole, "quan-ly"),
   });
   const billingQuery = useQuery({
     queryKey: ["billing", session?.id, session?.role, session?.siteId],
@@ -684,6 +788,13 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
     enabled: Boolean(session) && visiblePage === "quan-ly",
     staleTime: 60_000,
   });
+
+  useEffect(() => {
+    if (visiblePage !== "cai-dat") return;
+    setPageAccessDraft(pageAccess);
+    setSettingsDraft(settings);
+  }, [visiblePage, pageAccess, settings]);
+
   const isMasterLoading =
     needsMaster && !masterQuery.data && masterQuery.isPending;
   const isOperationsLoading =
@@ -691,7 +802,7 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
   const isReportLoading =
     needsReport && !reportQuery.data && reportQuery.isPending;
   const isUsersLoading =
-    activeRole === "admin" &&
+    roleCanAccessPage(pageAccess, activeRole, "quan-ly") &&
     visiblePage === "quan-ly" &&
     !usersQuery.data &&
     usersQuery.isPending;
@@ -876,8 +987,11 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
         date: approval.approval_date || approval.date || todayIso(),
         id: approval.id,
         periodClosedAt:
-          approval.period_closed_at || approval.periodClosedAt || payload.periodClosedAt,
-        periodEnd: approval.period_end || approval.periodEnd || payload.periodEnd,
+          approval.period_closed_at ||
+          approval.periodClosedAt ||
+          payload.periodClosedAt,
+        periodEnd:
+          approval.period_end || approval.periodEnd || payload.periodEnd,
         periodStart:
           approval.period_start || approval.periodStart || payload.periodStart,
         status: approval.status || payload.status,
@@ -911,9 +1025,39 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
 
   const navigate = (page) => {
     setMobileNavOpen(false);
-    if (!pages[page]?.roles.includes(activeRole)) return;
-    router.push(pagePaths[page] || "/");
+    if (!roleCanAccessPage(pageAccess, activeRole, page)) return;
+    router.push(pagePaths[page] || "/overview");
     setActivePage(page);
+  };
+
+  const applyUiSettings = async () => {
+    if (!settingsDraft || !session) return;
+    setSettingsApplyPending(true);
+    try {
+      await saveAppSetting("ui", settingsDraft, session);
+      setSettings(settingsDraft);
+      setToast("Đã áp dụng cài đặt thành công.");
+    } catch (error) {
+      setToast(error.message);
+    } finally {
+      setSettingsApplyPending(false);
+    }
+  };
+
+  const applyPageAccess = async () => {
+    if (!pageAccessDraft || !session) return;
+    setPageAccessApplyPending(true);
+    try {
+      const saved = await saveAppSetting("pageAccess", pageAccessDraft, session);
+      const nextAccess = normalizePageAccess(saved.value);
+      await queryClient.invalidateQueries({ queryKey: ["access"] });
+      setPageAccessDraft(nextAccess);
+      setToast("Đã áp dụng cài đặt thành công.");
+    } catch (error) {
+      setToast(error.message);
+    } finally {
+      setPageAccessApplyPending(false);
+    }
   };
 
   if (!session) return <LoginScreen onLogin={saveSession} />;
@@ -960,6 +1104,7 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
         activeRole={activeRole}
         mobileNavOpen={mobileNavOpen}
         navigate={navigate}
+        pageAccess={pageAccess}
         session={session}
         onLogout={() => {
           window.localStorage.removeItem(SESSION_KEY);
@@ -971,9 +1116,6 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
       <section className="min-w-0 px-4 pb-8 pt-20 sm:px-6 lg:px-8 lg:pt-8">
         <header className="mb-6 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0 flex-1">
-            <p className="mb-2 text-xs font-black uppercase tracking-wide text-emerald-700">
-              FET logistics
-            </p>
             <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
               {page.title}
             </h1>
@@ -1022,7 +1164,10 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
               state={state}
               onSelectCustomer={(customer) => {
                 setSelectedCustomer(customer);
-                window.sessionStorage.setItem("fet-selected-customer", customer);
+                window.sessionStorage.setItem(
+                  "fet-selected-customer",
+                  customer,
+                );
                 navigate("nhap-hang");
               }}
             />
@@ -1034,7 +1179,10 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
               session={session}
               setSelectedCustomer={(customer) => {
                 setSelectedCustomer(customer);
-                window.sessionStorage.setItem("fet-selected-customer", customer);
+                window.sessionStorage.setItem(
+                  "fet-selected-customer",
+                  customer,
+                );
               }}
               state={state}
             />
@@ -1046,7 +1194,10 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
               session={session}
               setSelectedCustomer={(customer) => {
                 setSelectedCustomer(customer);
-                window.sessionStorage.setItem("fet-selected-customer", customer);
+                window.sessionStorage.setItem(
+                  "fet-selected-customer",
+                  customer,
+                );
               }}
               state={state}
             />
@@ -1069,7 +1220,16 @@ export default function FetAppShell({ initialPage = "tong-quan" }) {
             />
           ) : null}
           {!isPageLoading && visiblePage === "cai-dat" ? (
-            <SettingsPage settings={settings} setSettings={setSettings} />
+            <SettingsPage
+              isPageAccessPending={pageAccessApplyPending}
+              isUiPending={settingsApplyPending}
+              pageAccessDraft={pageAccessDraft || pageAccess}
+              setPageAccessDraft={setPageAccessDraft}
+              setSettingsDraft={setSettingsDraft}
+              settingsDraft={settingsDraft || settings}
+              onApplyPageAccess={applyPageAccess}
+              onApplyUi={applyUiSettings}
+            />
           ) : null}
         </div>
       </section>
@@ -1158,6 +1318,7 @@ function Sidebar({
   navigate,
   onLogout,
   onPasswordChange,
+  pageAccess,
   passwordPending,
   session,
 }) {
@@ -1170,29 +1331,29 @@ function Sidebar({
         mobileNavOpen && "translate-x-0",
       )}
     >
-      <div className="flex items-center gap-3">
+      <button
+        className="flex items-center gap-3 text-left transition hover:opacity-90"
+        onClick={() => navigate("tong-quan")}
+        type="button"
+      >
         <div className="grid h-12 w-12 place-items-center rounded-lg bg-emerald-600 text-sm font-black shadow-lg shadow-emerald-600/30">
-          FET
+          FES
         </div>
         <div>
-          <strong className="block">Fast Effective</strong>
-          <span className="text-sm text-white/60">Logistics SaaS</span>
+          <strong className="block">Quản lý vận tải</strong>
         </div>
-      </div>
+      </button>
       <nav className="mt-8 grid gap-1">
         {pageOrder.map((pageName) => {
+          if (!roleCanAccessPage(pageAccess, activeRole, pageName)) return null;
           const item = pages[pageName];
           const Icon = iconMap[item.icon];
-          const canAccess = item.roles.includes(activeRole);
           return (
             <button
               className={cn(
-                "flex min-h-11 items-center gap-3 rounded-md px-3 text-left text-sm font-bold text-white/68 transition",
-                canAccess && "hover:bg-white/10 hover:text-white",
+                "flex min-h-11 items-center gap-3 rounded-md px-3 text-left text-sm font-bold text-white/68 transition hover:bg-white/10 hover:text-white",
                 activePage === pageName && "bg-white/15 text-white",
-                !canAccess && "cursor-not-allowed opacity-40",
               )}
-              disabled={!canAccess}
               key={pageName}
               onClick={() => navigate(pageName)}
               type="button"
@@ -1499,7 +1660,10 @@ function issuedInvoiceChartData(state, period) {
   const buckets = overviewBuckets(period);
 
   state.invoiceApprovals.forEach((item) => {
-    addDateToBucket(buckets, item.date || item.createdAt || item.periodClosedAt);
+    addDateToBucket(
+      buckets,
+      item.date || item.createdAt || item.periodClosedAt,
+    );
   });
 
   return buckets;
@@ -1528,7 +1692,10 @@ function overviewOperationalStats(state, period) {
   const pendingInvoicesInPeriod = pendingInvoices.filter((item) =>
     dateInWindow(item.periodClosedAt || item.periodEnd, window),
   );
-  const totalVehicles = Math.max(state.vehicleRecords.length, activeVehicles.size);
+  const totalVehicles = Math.max(
+    state.vehicleRecords.length,
+    activeVehicles.size,
+  );
   const totalDrivers = Math.max(state.driverRecords.length, activeDrivers.size);
 
   return {
@@ -1539,7 +1706,10 @@ function overviewOperationalStats(state, period) {
     },
     invoices: {
       active: pendingInvoicesInPeriod.length,
-      idle: Math.max(pendingInvoices.length - pendingInvoicesInPeriod.length, 0),
+      idle: Math.max(
+        pendingInvoices.length - pendingInvoicesInPeriod.length,
+        0,
+      ),
       total: pendingInvoices.length,
     },
     vehicles: {
@@ -1552,10 +1722,15 @@ function overviewOperationalStats(state, period) {
 
 function OverviewPage({ onSelectCustomer, period, state }) {
   const [customerPage, setCustomerPage] = useState(1);
+  const shouldPaginateCustomers = useMediaQuery("(max-width: 639px)");
   const summaries = customerSummaries(state);
   const stats = overviewStats(state, period);
   const operationalStats = overviewOperationalStats(state, period);
-  const customerView = paginate(summaries, customerPage, 6);
+  const customerView = paginate(
+    summaries,
+    customerPage,
+    shouldPaginateCustomers ? 3 : 6,
+  );
   const shipmentData = completedShipmentChartData(state, period);
   const invoiceData = issuedInvoiceChartData(state, period);
   const shipmentTotal = shipmentData.reduce((sum, item) => sum + item.count, 0);
@@ -1563,7 +1738,7 @@ function OverviewPage({ onSelectCustomer, period, state }) {
 
   useEffect(() => {
     setCustomerPage(1);
-  }, [summaries.length]);
+  }, [summaries.length, shouldPaginateCustomers]);
 
   return (
     <>
@@ -1661,7 +1836,7 @@ function OverviewPage({ onSelectCustomer, period, state }) {
         <OperationalMetric
           activeLabel="chờ xuất"
           idleLabel="ngoài kỳ"
-          label={`Hóa đơn chờ trong ${stats.label}`}
+          label={`Hóa đơn trong ${stats.label}`}
           stats={operationalStats.invoices}
           tone="green"
         />
@@ -1743,21 +1918,17 @@ function Metric({ label, tone = "default", value }) {
   );
 }
 
-function OverviewCountChart({
-  color,
-  data,
-  period,
-  title,
-  total,
-  unitLabel,
-}) {
+function OverviewCountChart({ color, data, period, title, total, unitLabel }) {
   const [chartRef, chartSize] = useElementSize();
   const maxCount = Math.max(0, ...data.map((item) => Number(item.count || 0)));
   const longestYAxisLabel = [0, maxCount, total].reduce((longest, value) => {
     const label = number(value);
     return label.length > longest.length ? label : longest;
   }, "");
-  const yAxisWidth = Math.min(Math.max(longestYAxisLabel.length * 8 + 28, 48), 96);
+  const yAxisWidth = Math.min(
+    Math.max(longestYAxisLabel.length * 8 + 28, 48),
+    96,
+  );
   const canRenderChart = chartSize.height > 0 && chartSize.width > 0;
   const normalizedUnitLabel = unitLabel.toLocaleLowerCase("vi-VN");
 
@@ -1833,7 +2004,10 @@ function InventoryChart({ period, state }) {
   const data = overviewTrend(state, period);
   const stats = overviewStats(state, period);
   const last = data[data.length - 1]?.quantity || 0;
-  const maxQuantity = Math.max(0, ...data.map((item) => Number(item.quantity || 0)));
+  const maxQuantity = Math.max(
+    0,
+    ...data.map((item) => Number(item.quantity || 0)),
+  );
   const yAxisWidth = 48;
 
   useEffect(() => {
@@ -2165,14 +2339,20 @@ function DispatchPage({
   state,
 }) {
   const availableRows = stockRows(state);
-  const [form, setForm] = useState({
-    customer: selectedCustomer,
-    date: todayIso(),
-    driver: "",
-    quantity: "",
-    sku: "",
-    truck: "",
-    unit: "",
+  const [form, setForm] = useState(() => {
+    const prefs =
+      typeof window !== "undefined"
+        ? readDispatchPrefs()
+        : { driver: "", truck: "" };
+    return {
+      customer: selectedCustomer,
+      date: todayIso(),
+      driver: prefs.driver,
+      quantity: "",
+      sku: "",
+      truck: prefs.truck,
+      unit: "",
+    };
   });
   const [filters, setFilters] = useState({
     date: "",
@@ -2191,6 +2371,25 @@ function DispatchPage({
   useEffect(() => {
     setForm((current) => ({ ...current, customer: selectedCustomer }));
   }, [selectedCustomer]);
+
+  const dispatchPrefsHydrated = useRef(false);
+  useEffect(() => {
+    if (dispatchPrefsHydrated.current) return;
+    if (!state.vehicles.length && !state.drivers.length) return;
+    dispatchPrefsHydrated.current = true;
+    const prefs = resolveDispatchPrefs(readDispatchPrefs(), state);
+    setForm((current) => ({
+      ...current,
+      driver:
+        current.driver && state.drivers.includes(current.driver)
+          ? current.driver
+          : prefs.driver,
+      truck:
+        current.truck && state.vehicles.includes(current.truck)
+          ? current.truck
+          : prefs.truck,
+    }));
+  }, [state.drivers, state.vehicles]);
 
   useEffect(() => {
     if (!selectedStock) return;
@@ -2234,6 +2433,7 @@ function DispatchPage({
               event.preventDefault();
               const customerName = form.customer.trim();
               const stock = customerStock.find((row) => row.sku === form.sku);
+              writeDispatchPrefs({ driver: form.driver, truck: form.truck });
               mutation.mutate({
                 customerName,
                 date: form.date,
@@ -2294,9 +2494,11 @@ function DispatchPage({
               <Select
                 required
                 value={form.truck}
-                onChange={(event) =>
-                  setForm({ ...form, truck: event.target.value })
-                }
+                onChange={(event) => {
+                  const truck = event.target.value;
+                  writeDispatchPrefs({ driver: form.driver, truck });
+                  setForm({ ...form, truck });
+                }}
               >
                 <option value="">Chọn xe</option>
                 {state.vehicles.map((truck) => (
@@ -2311,9 +2513,11 @@ function DispatchPage({
               <Select
                 required
                 value={form.driver}
-                onChange={(event) =>
-                  setForm({ ...form, driver: event.target.value })
-                }
+                onChange={(event) => {
+                  const driver = event.target.value;
+                  writeDispatchPrefs({ driver, truck: form.truck });
+                  setForm({ ...form, driver });
+                }}
               >
                 <option value="">Chọn tài xế</option>
                 {state.drivers.map((driver) => (
@@ -2524,27 +2728,37 @@ function ReportsPage({ mutation, session, state }) {
     : customerView.rows[0]?.reportKey || rows[0]?.reportKey || "";
   const currentRow = rows.find((row) => row.reportKey === current) || rows[0];
   const invoiceSearchTerm = invoiceSearch.trim().toLowerCase();
-  const currentPeriodOpenTime = new Date(currentRow?.periodOpenAt || "").getTime();
-  const currentPeriodClosedTime = new Date(currentRow?.periodClosedAt || "").getTime();
+  const currentPeriodOpenTime = new Date(
+    currentRow?.periodOpenAt || "",
+  ).getTime();
+  const currentPeriodClosedTime = new Date(
+    currentRow?.periodClosedAt || "",
+  ).getTime();
 
   useEffect(() => {
     setCustomerPage(1);
   }, [rows.length, shouldPaginateCustomers]);
 
   const history = state.dispatches
-    .filter(
-      (item) => {
-        if (item.customer !== currentRow?.customer) return false;
-        const dispatchTime = new Date(item.createdAt || "").getTime();
-        if (!Number.isNaN(currentPeriodOpenTime) && dispatchTime <= currentPeriodOpenTime) return false;
-        if (!Number.isNaN(currentPeriodClosedTime) && dispatchTime > currentPeriodClosedTime) return false;
-        if (!Number.isNaN(dispatchTime)) return true;
-        return (
-          (!currentRow?.periodStart || item.date >= currentRow.periodStart) &&
-          (!currentRow?.periodEnd || item.date <= currentRow.periodEnd)
-        );
-      },
-    )
+    .filter((item) => {
+      if (item.customer !== currentRow?.customer) return false;
+      const dispatchTime = new Date(item.createdAt || "").getTime();
+      if (
+        !Number.isNaN(currentPeriodOpenTime) &&
+        dispatchTime <= currentPeriodOpenTime
+      )
+        return false;
+      if (
+        !Number.isNaN(currentPeriodClosedTime) &&
+        dispatchTime > currentPeriodClosedTime
+      )
+        return false;
+      if (!Number.isNaN(dispatchTime)) return true;
+      return (
+        (!currentRow?.periodStart || item.date >= currentRow.periodStart) &&
+        (!currentRow?.periodEnd || item.date <= currentRow.periodEnd)
+      );
+    })
     .sort(dateComparator("desc"));
   const invoiceHistory = [...state.invoiceApprovals]
     .filter((item) => {
@@ -2558,7 +2772,9 @@ function ReportsPage({ mutation, session, state }) {
         item.status,
       ]
         .filter(Boolean)
-        .some((value) => value.toString().toLowerCase().includes(invoiceSearchTerm));
+        .some((value) =>
+          value.toString().toLowerCase().includes(invoiceSearchTerm),
+        );
     })
     .sort(dateComparator("desc"));
 
@@ -2599,10 +2815,11 @@ function ReportsPage({ mutation, session, state }) {
                     {row.itemTypeCount} loại hàng đã hoàn tất
                   </span>
                   <span className="pointer-events-none relative z-10 text-xs font-semibold text-slate-500">
-                    Kỳ hàng {formatDate(row.periodStart)} - {formatDate(row.periodEnd)}
+                    Kỳ hàng {formatDate(row.periodStart)} -{" "}
+                    {formatDate(row.periodEnd)}
                   </span>
                   <span className="pointer-events-none relative z-10 text-xs font-semibold text-slate-500">
-                    Chốt lúc {formatDateTime(row.periodClosedAt)}
+                    Hoàn thành {formatDateTime(row.periodClosedAt)}
                   </span>
                   <Button
                     className="relative z-20 w-full"
@@ -2668,7 +2885,9 @@ function ReportsPage({ mutation, session, state }) {
                   <Td>
                     {formatDate(item.periodStart || item.date)} -{" "}
                     {formatDate(item.periodEnd || item.date)}
-                    {item.periodClosedAt ? ` · ${formatDateTime(item.periodClosedAt)}` : ""}
+                    {item.periodClosedAt
+                      ? ` · ${formatDateTime(item.periodClosedAt)}`
+                      : ""}
                   </Td>
                   <Td className="whitespace-nowrap">
                     <Badge tone="green">{item.status || "Hoàn thành"}</Badge>
@@ -2758,14 +2977,11 @@ function ManagementPage({
 
   return (
     <div className="grid gap-3">
-      <BillingSection billing={billing} />
       {activeRole === "admin" ? (
         <UserSection
           isActive={activeList === "users"}
           mutation={userMutation}
-          onToggle={() =>
-            setActiveList(activeList === "users" ? "" : "users")
-          }
+          onToggle={() => setActiveList(activeList === "users" ? "" : "users")}
           users={users}
         />
       ) : null}
@@ -2802,6 +3018,13 @@ function ManagementPage({
           </Card>
         );
       })}
+      <BillingSection
+        billing={billing}
+        isActive={activeList === "billing"}
+        onToggle={() =>
+          setActiveList(activeList === "billing" ? "" : "billing")
+        }
+      />
     </div>
   );
 }
@@ -2829,10 +3052,12 @@ function billingCopy(status, fallback = "Chưa cấu hình") {
 }
 
 function invoiceCopy(status) {
-  return invoiceStatusCopy[status] || { label: status || "Chưa có", tone: "default" };
+  return (
+    invoiceStatusCopy[status] || { label: status || "Chưa có", tone: "default" }
+  );
 }
 
-function BillingSection({ billing }) {
+function BillingSection({ billing, isActive, onToggle }) {
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const subscription = billing?.subscription || {};
   const invoices = billing?.invoices || [];
@@ -2847,145 +3072,152 @@ function BillingSection({ billing }) {
   const planName =
     subscription.planName ||
     (billing?.billingStatus === "trialing" ? "Free Trial" : "Chưa chọn gói");
-  const isPaid =
-    billing?.billingStatus === "active" ||
-    billing?.billingStatus === "paid" ||
-    latestInvoice?.status === "paid" ||
-    subscription.status === "active";
+  const periodLabel =
+    subscription.currentPeriodStart && subscription.currentPeriodEnd
+      ? `${formatDate(subscription.currentPeriodStart)} - ${formatDate(subscription.currentPeriodEnd)}`
+      : "Chưa có kỳ";
+  const amountLabel = latestInvoice
+    ? money(latestInvoice.amount, latestInvoice.currency)
+    : "Chưa phát sinh";
+  const paidAtLabel = latestInvoice?.paidAt
+    ? formatDate(latestInvoice.paidAt)
+    : paymentStatus.label;
 
   return (
     <Card className="overflow-hidden">
-      <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-emerald-600 text-white shadow-sm">
-              <CreditCard className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <CardTitle>Billing & thanh toán</CardTitle>
-              <CardDescription>
-                Trạng thái gói, kỳ thanh toán và phương thức chi trả của site.
-              </CardDescription>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge tone={siteStatus.tone}>{siteStatus.label}</Badge>
-            <Badge tone={paymentStatus.tone}>{paymentStatus.label}</Badge>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-4 p-4 lg:p-5">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
-          <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
-            <BillingMetric
-              label="Tier hiện tại"
-              value={planName}
-              detail={subscriptionStatus.label}
-            />
-            <BillingMetric
-              label="Kỳ hiện tại"
-              value={
-                subscription.currentPeriodStart
-                  ? formatDate(subscription.currentPeriodStart)
-                  : "Chưa có"
-              }
-              detail={
-                subscription.currentPeriodEnd
-                  ? `Đến ${formatDate(subscription.currentPeriodEnd)}`
-                  : "Chưa chốt kỳ"
-              }
-            />
-            <BillingMetric
-              label="Thanh toán gần nhất"
-              value={latestInvoice ? money(latestInvoice.amount, latestInvoice.currency) : "Chưa có"}
-              detail={latestInvoice?.paidAt ? formatDate(latestInvoice.paidAt) : paymentStatus.label}
-            />
-            <BillingMetric
-              label="Lần payment tiếp theo"
-              value={nextPaymentDate ? formatDate(nextPaymentDate) : "Chưa có"}
-              detail={isPaid ? "Gia hạn tự động/manual" : "Cần kiểm tra công nợ"}
-            />
-          </div>
-
-          <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                  Phương thức thanh toán
-                </p>
-                <h3 className="mt-1 text-sm font-black text-slate-950">
-                  QR chuyển khoản ngân hàng
-                </h3>
-                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-                  Mockup cho luồng SaaS Việt Nam, chờ nối provider hoặc webhook.
-                </p>
+      <button
+        aria-expanded={isActive}
+        className={cn(
+          "flex min-h-16 w-full items-center justify-between gap-3 px-4 text-left transition hover:bg-slate-50 sm:px-5",
+          isActive && "border-b border-slate-100 bg-slate-50",
+        )}
+        onClick={onToggle}
+        type="button"
+      >
+        <strong className="text-base font-bold leading-tight text-slate-950">
+          Billing & thanh toán
+        </strong>
+        <ChevronRight
+          className={cn(
+            "h-6 w-6 shrink-0 text-slate-500 transition",
+            isActive && "rotate-90 text-emerald-700",
+          )}
+        />
+      </button>
+      {isActive ? (
+        <>
+          <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-emerald-600 text-white shadow-sm">
+                  <CreditCard className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <CardTitle>Billing & thanh toán</CardTitle>
+                  <CardDescription>
+                    Gói, kỳ thanh toán và phương thức chi trả.
+                  </CardDescription>
+                </div>
               </div>
-              <Badge tone="default">Mock</Badge>
-            </div>
-            <div className="mt-3 flex items-center gap-3">
-              <div className="grid h-24 w-24 shrink-0 place-items-center rounded-md border border-slate-300 bg-[linear-gradient(135deg,#0f172a_25%,transparent_25%),linear-gradient(225deg,#0f172a_25%,transparent_25%),linear-gradient(45deg,#0f172a_25%,transparent_25%),linear-gradient(315deg,#0f172a_25%,#ffffff_25%)] bg-[length:18px_18px] bg-[position:0_0,0_9px,9px_-9px,-9px_0] text-white">
-                <QrCode className="h-8 w-8 rounded bg-white p-1 text-slate-950" />
-              </div>
-              <div className="min-w-0 text-sm">
-                <p className="font-black text-slate-950">FET Logistics</p>
-                <p className="mt-1 truncate font-semibold text-slate-500">
-                  Nội dung: FET {billing?.siteName || "Default Site"}
-                </p>
-                <p className="mt-1 font-semibold text-slate-500">
-                  Số tiền kỳ này: {latestInvoice ? money(latestInvoice.amount, latestInvoice.currency) : "Chưa phát sinh"}
-                </p>
+              <div className="flex flex-wrap gap-2">
+                <Badge tone={siteStatus.tone}>{siteStatus.label}</Badge>
+                <Badge tone={paymentStatus.tone}>{paymentStatus.label}</Badge>
               </div>
             </div>
           </div>
-        </div>
 
-        <label className="flex w-fit max-w-full items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm">
-          <input
-            checked={reminderEnabled}
-            className="h-4 w-4 accent-emerald-600"
-            type="checkbox"
-            onChange={(event) => setReminderEnabled(event.target.checked)}
-          />
-          <BellRing className="h-4 w-4 text-emerald-700" />
-          Nhắc trước hạn thanh toán 3 ngày
-        </label>
+          <div className="grid gap-4 p-4 lg:p-5">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <BillingMetric
+                detail={subscriptionStatus.label}
+                label="Gói"
+                value={planName}
+              />
+              <BillingMetric
+                detail={periodLabel}
+                label="Kỳ"
+                value="Tháng này"
+              />
+              <BillingMetric
+                detail={paidAtLabel}
+                label="Đã trả"
+                value={amountLabel}
+              />
+              <BillingMetric
+                detail={reminderEnabled ? "Nhắc trước 3 ngày" : "Tắt nhắc hạn"}
+                label="Hạn tới"
+                value={
+                  nextPaymentDate ? formatDate(nextPaymentDate) : "Chưa có"
+                }
+              />
+            </div>
 
-        <DataTable width="billingInvoices">
-          <thead>
-            <tr>
-              <Th>Ngày tạo</Th>
-              <Th>Số tiền</Th>
-              <Th>Hạn thanh toán</Th>
-              <Th>Trạng thái</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.length ? (
-              invoices.slice(0, 5).map((invoice) => {
-                const status = invoiceCopy(invoice.status);
-                return (
-                  <tr key={invoice.id}>
-                    <Td>
-                      <span className="inline-flex items-center gap-2">
-                        <ReceiptText className="h-4 w-4 text-slate-400" />
-                        {formatDate(invoice.createdAt)}
-                      </span>
-                    </Td>
-                    <Td>{money(invoice.amount, invoice.currency)}</Td>
-                    <Td>{formatDate(invoice.dueDate)}</Td>
-                    <Td>
-                      <Badge tone={status.tone}>{status.label}</Badge>
-                    </Td>
-                  </tr>
-                );
-              })
-            ) : (
-              <EmptyRow colSpan={4}>Chưa có hóa đơn billing.</EmptyRow>
-            )}
-          </tbody>
-        </DataTable>
-      </div>
+            <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="grid h-20 w-20 shrink-0 place-items-center rounded-md border border-slate-300 bg-[linear-gradient(135deg,#0f172a_25%,transparent_25%),linear-gradient(225deg,#0f172a_25%,transparent_25%),linear-gradient(45deg,#0f172a_25%,transparent_25%),linear-gradient(315deg,#0f172a_25%,#ffffff_25%)] bg-[length:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0] text-white">
+                  <QrCode className="h-7 w-7 rounded bg-white p-1 text-slate-950" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-black text-slate-950">
+                      QR ngân hàng
+                    </h3>
+                    <Badge tone="default">Mock</Badge>
+                  </div>
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-500">
+                    FET {billing?.siteName || "Default Site"} · {amountLabel}
+                  </p>
+                </div>
+              </div>
+              <label className="flex w-fit max-w-full items-center gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700">
+                <input
+                  checked={reminderEnabled}
+                  className="h-4 w-4 accent-emerald-600"
+                  type="checkbox"
+                  onChange={(event) => setReminderEnabled(event.target.checked)}
+                />
+                <BellRing className="h-4 w-4 text-emerald-700" />
+                Nhắc hạn
+              </label>
+            </div>
+
+            <DataTable width="billingInvoices">
+              <thead>
+                <tr>
+                  <Th>Hóa đơn</Th>
+                  <Th>Số tiền</Th>
+                  <Th>Hạn</Th>
+                  <Th>Trạng thái</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.length ? (
+                  invoices.slice(0, 5).map((invoice) => {
+                    const status = invoiceCopy(invoice.status);
+                    return (
+                      <tr key={invoice.id}>
+                        <Td>
+                          <span className="inline-flex items-center gap-2">
+                            <ReceiptText className="h-4 w-4 text-slate-400" />
+                            {formatDate(invoice.createdAt)}
+                          </span>
+                        </Td>
+                        <Td>{money(invoice.amount, invoice.currency)}</Td>
+                        <Td>{formatDate(invoice.dueDate)}</Td>
+                        <Td>
+                          <Badge tone={status.tone}>{status.label}</Badge>
+                        </Td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <EmptyRow colSpan={4}>Chưa có hóa đơn billing.</EmptyRow>
+                )}
+              </tbody>
+            </DataTable>
+          </div>
+        </>
+      ) : null}
     </Card>
   );
 }
@@ -3052,7 +3284,8 @@ function UserSection({ isActive, mutation, onToggle, users }) {
                 <div className="min-w-0">
                   <CardTitle>Quản lý tài khoản</CardTitle>
                   <CardDescription>
-                    Tạo tài khoản cho tài xế, thủ kho, kế toán và admin bằng số điện thoại.
+                    Tạo tài khoản cho tài xế, thủ kho, kế toán và admin bằng số
+                    điện thoại.
                   </CardDescription>
                 </div>
               </div>
@@ -3609,42 +3842,149 @@ function EditMasterForm({ initialValue, isPending, onCancel, onSubmit }) {
   );
 }
 
-function SettingsPage({ settings, setSettings }) {
+function SettingsPage({
+  isPageAccessPending,
+  isUiPending,
+  onApplyPageAccess,
+  onApplyUi,
+  pageAccessDraft,
+  setPageAccessDraft,
+  setSettingsDraft,
+  settingsDraft,
+}) {
+  const togglePageAccess = (pageId, role, checked) => {
+    if (role === "admin") return;
+    setPageAccessDraft((current) => {
+      const allowed = [...(current[pageId] || [])];
+      const nextAllowed = checked
+        ? [...new Set([...allowed, role])]
+        : allowed.filter((item) => item !== role);
+      return {
+        ...current,
+        [pageId]: [...new Set(["admin", ...nextAllowed])],
+      };
+    });
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tùy chỉnh giao diện</CardTitle>
-        <CardDescription>
-          Giữ UI sạch, dày dữ liệu và dễ đọc trong kho.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4 md:grid-cols-2">
-        <Field>
-          Mật độ hiển thị
-          <Select
-            value={settings.density}
-            onChange={(event) =>
-              setSettings({ ...settings, density: event.target.value })
-            }
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Tùy chỉnh giao diện</CardTitle>
+          <CardDescription>
+            Giữ UI sạch, dày dữ liệu và dễ đọc trong kho.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <Field>
+            Mật độ hiển thị
+            <Select
+              value={settingsDraft.density}
+              onChange={(event) =>
+                setSettingsDraft({
+                  ...settingsDraft,
+                  density: event.target.value,
+                })
+              }
+            >
+              <option value="comfortable">Vừa</option>
+              <option value="compact">Gọn</option>
+            </Select>
+          </Field>
+          <Field>
+            Tông màu
+            <Select
+              value={settingsDraft.accent}
+              onChange={(event) =>
+                setSettingsDraft({
+                  ...settingsDraft,
+                  accent: event.target.value,
+                })
+              }
+            >
+              <option value="emerald">Xanh ngọc</option>
+              <option value="slate">Trung tính</option>
+            </Select>
+          </Field>
+        </CardContent>
+        <div className="flex justify-center border-t border-slate-200 px-6 pb-6 pt-4">
+          <Button
+            className={primaryActionButtonShellClass}
+            disabled={isUiPending}
+            onClick={onApplyUi}
+            type="button"
           >
-            <option value="comfortable">Vừa</option>
-            <option value="compact">Gọn</option>
-          </Select>
-        </Field>
-        <Field>
-          Tông màu
-          <Select
-            value={settings.accent}
-            onChange={(event) =>
-              setSettings({ ...settings, accent: event.target.value })
-            }
+            Áp dụng
+          </Button>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Quyền quản trị</CardTitle>
+          <CardDescription>
+            Chọn trang mà từng vai trò được phép truy cập. Admin luôn có toàn
+            quyền.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <Table>
+            <thead>
+              <tr>
+                <Th className="min-w-28">Vai trò</Th>
+                {pageOrder.map((pageId) => (
+                  <Th className="min-w-24 text-center" key={pageId}>
+                    {pages[pageId].title}
+                  </Th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {configurableRoleOrder.map((role) => (
+                <tr key={role}>
+                  <Td className="font-bold text-slate-950">{roles[role]}</Td>
+                  {pageOrder.map((pageId) => {
+                    const checked = (pageAccessDraft[pageId] || []).includes(
+                      role,
+                    );
+                    const isAdminRole = role === "admin";
+                    return (
+                      <Td className="text-center" key={`${role}-${pageId}`}>
+                        <label className="inline-flex items-center justify-center">
+                          <input
+                            checked={checked}
+                            className="h-4 w-4 accent-emerald-600 disabled:opacity-60"
+                            disabled={isAdminRole}
+                            type="checkbox"
+                            onChange={(event) =>
+                              togglePageAccess(
+                                pageId,
+                                role,
+                                event.target.checked,
+                              )
+                            }
+                          />
+                        </label>
+                      </Td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </CardContent>
+        <div className="flex justify-center border-t border-slate-200 px-6 pb-6 pt-4">
+          <Button
+            className={primaryActionButtonShellClass}
+            disabled={isPageAccessPending}
+            onClick={onApplyPageAccess}
+            type="button"
           >
-            <option value="emerald">Xanh ngọc</option>
-            <option value="slate">Trung tính</option>
-          </Select>
-        </Field>
-      </CardContent>
-    </Card>
+            Áp dụng
+          </Button>
+        </div>
+      </Card>
+    </div>
   );
 }
 
