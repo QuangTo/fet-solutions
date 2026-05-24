@@ -88,9 +88,8 @@ export function ReportsPage({ mutation, session, state }) {
       return [
         formatDate(item.date),
         item.customer,
-        formatDate(item.periodStart || item.date),
-        formatDate(item.periodEnd || item.date),
-        formatDateTime(item.periodClosedAt),
+        formatDateTime(item.createdAt),
+        item.approvedByName,
         item.status,
       ]
         .filter(Boolean)
@@ -176,7 +175,7 @@ export function ReportsPage({ mutation, session, state }) {
       </DataTableCard>
       <DataTableCard
         title="Lịch sử xuất hóa đơn"
-        description="Các khách hàng đã được ghi nhận."
+        // description="Các khách hàng đã được ghi nhận."
         descriptionPrefix={
           <div className="relative w-full sm:max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -194,7 +193,7 @@ export function ReportsPage({ mutation, session, state }) {
             <tr>
               <Th>Ngày</Th>
               <Th>Khách hàng</Th>
-              <Th>Kỳ hàng</Th>
+              <Th>Thời gian xuất hóa đơn</Th>
               <Th>Trạng thái</Th>
             </tr>
           </thead>
@@ -205,11 +204,9 @@ export function ReportsPage({ mutation, session, state }) {
                   <Td>{formatDate(item.date)}</Td>
                   <Td>{item.customer}</Td>
                   <Td>
-                    {formatDate(item.periodStart || item.date)} -{" "}
-                    {formatDate(item.periodEnd || item.date)}
-                    {item.periodClosedAt
-                      ? ` · ${formatDateTime(item.periodClosedAt)}`
-                      : ""}
+                    {formatDateTime(item.createdAt) ||
+                      formatDate(item.date) ||
+                      "—"}
                   </Td>
                   <Td className="whitespace-nowrap">
                     <Badge tone="green">{item.status || "Hoàn thành"}</Badge>

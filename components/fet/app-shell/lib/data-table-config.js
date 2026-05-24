@@ -1,7 +1,7 @@
 export const dataTableConfigs = {
   dispatch: {
-    columns: ["13%", "19%", "15%", "16%", "23%", "7%", "7%"],
-    width: "min-w-[960px]",
+    columns: ["12%", "16%", "12%", "12%", "12%", "20%", "8%", "8%"],
+    width: "min-w-[1040px]",
   },
   invoice: {
     columns: ["18%", "30%", "32%", "20%"],

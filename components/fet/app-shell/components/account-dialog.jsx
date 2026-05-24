@@ -109,13 +109,13 @@ export function AccountDialog({
               Đăng xuất
             </Button>
             <div className="flex gap-2">
-              <Button
+              {/* <Button
                 onClick={() => onOpenChange(false)}
                 type="button"
                 variant="secondary"
               >
                 Đóng
-              </Button>
+              </Button> */}
               <Button disabled={isPending} type="submit">
                 <KeyRound className="h-4 w-4" />
                 Đổi mật khẩu

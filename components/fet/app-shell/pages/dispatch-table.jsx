@@ -14,6 +14,7 @@ export function DispatchTable({ rows }) {
           <Th>Khách hàng</Th>
           <Th>Xe</Th>
           <Th>Tài xế</Th>
+          <Th>Xuất hàng</Th>
           <Th>Loại hàng</Th>
           <Th>Số lượng</Th>
           <Th>Đơn vị</Th>
@@ -29,13 +30,14 @@ export function DispatchTable({ rows }) {
                 <strong>{item.truck}</strong>
               </Td>
               <Td data-label="Tài xế">{item.driver}</Td>
+              <Td data-label="Xuất hàng">{item.warehouse || "—"}</Td>
               <Td data-label="Loại hàng">{item.sku}</Td>
               <Td data-label="Số lượng">{number(item.quantity)}</Td>
               <Td data-label="Đơn vị">{item.unit || "đơn vị"}</Td>
             </tr>
           ))
         ) : (
-          <EmptyRow colSpan={7}>
+          <EmptyRow colSpan={8}>
             Chưa có lịch sử xuất hàng phù hợp với bộ lọc hiện tại.
           </EmptyRow>
         )}

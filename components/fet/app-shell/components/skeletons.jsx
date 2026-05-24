@@ -83,7 +83,7 @@ export function LoadingSkeleton({ page }) {
             </div>
           </CardContent>
         </Card>
-        <TableSkeleton columns={6} rows={4} title="Lịch sử xuất hàng" />
+        <TableSkeleton columns={8} rows={4} title="Lịch sử xuất hàng" />
         <TableSkeleton columns={3} rows={4} title="Lịch sử xuất hóa đơn" />
       </div>
     );
@@ -105,7 +105,7 @@ export function LoadingSkeleton({ page }) {
     return (
       <div className="grid gap-4">
         <FormSkeleton title="Tạo phiếu xuất hàng" fields={7} />
-        <TableSkeleton columns={6} rows={5} title="Lịch sử xuất hàng" />
+        <TableSkeleton columns={8} rows={5} title="Lịch sử xuất hàng" />
       </div>
     );
   }

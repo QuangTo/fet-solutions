@@ -348,19 +348,30 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         "";
       const invoiceApproval = {
         approvedByName:
-          payload.approvedByName || session?.name || "Kế toán mẫu",
-        customer,
+          approval.approvedByName ||
+          payload.approvedByName ||
+          session?.name ||
+          "Kế toán mẫu",
+        customer: approval.customer || customer,
         customerId: payload.customerId,
-        date: approval.approval_date || approval.date || todayIso(),
+        createdAt:
+          approval.createdAt ||
+          approval.created_at ||
+          new Date().toISOString(),
+        date: approval.date || approval.approval_date || todayIso(),
         id: approval.id,
         periodClosedAt:
-          approval.period_closed_at ||
           approval.periodClosedAt ||
+          approval.period_closed_at ||
           payload.periodClosedAt,
         periodEnd:
-          approval.period_end || approval.periodEnd || payload.periodEnd,
+          approval.periodEnd ||
+          approval.period_end ||
+          payload.periodEnd,
         periodStart:
-          approval.period_start || approval.periodStart || payload.periodStart,
+          approval.periodStart ||
+          approval.period_start ||
+          payload.periodStart,
         status: approval.status || payload.status,
       };
       updatePageData("report", (data) => ({
