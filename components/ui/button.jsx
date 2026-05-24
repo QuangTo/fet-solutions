@@ -3,7 +3,7 @@ import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 text-sm font-semibold transition disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
+  "inline-flex ui-control-h items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 text-ui-sm font-semibold transition disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
   {
     defaultVariants: {
       size: "default",
@@ -13,7 +13,7 @@ const buttonVariants = cva(
       size: {
         default: "h-10 px-4",
         icon: "h-10 w-10 px-0",
-        sm: "h-9 px-3 text-xs",
+        sm: "h-[calc(var(--ui-control-h)-0.25rem)] px-3 text-ui-xs",
       },
       variant: {
         default: "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700",

@@ -1,5 +1,5 @@
-import { LazyFetApp } from "@/components/fet/lazy-fet-app";
+import { redirect } from "next/navigation";
 
-export default function OverviewPage() {
-  return <LazyFetApp initialPage="tong-quan" />;
+export default function OverviewRedirectPage() {
+  redirect("/dashboard");
 }

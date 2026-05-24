@@ -16,7 +16,7 @@ function textFromChildren(children) {
 export function Table({ className, ...props }) {
   return (
     <div className="w-full max-w-full overflow-x-auto overscroll-x-contain">
-      <table className={cn("w-full border-collapse text-sm", className)} {...props} />
+      <table className={cn("w-full border-collapse text-ui-sm", className)} {...props} />
     </div>
   );
 }
@@ -26,7 +26,7 @@ export function Th({ children, className, title, ...props }) {
   return (
     <th
       className={cn(
-        "border-b border-slate-200 px-3 py-2 text-left text-xs font-black uppercase text-slate-500",
+        "border-b border-slate-200 px-3 py-2 text-left text-ui-xs font-black uppercase text-slate-500",
         className,
       )}
       title={tooltip || undefined}

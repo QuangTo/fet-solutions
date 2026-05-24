@@ -1,38 +1,29 @@
 "use client";
 
-import { LayoutDashboard } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function RouteSkeleton() {
   return (
     <main className="app-grid">
-      <aside className="hidden bg-slate-950 p-5 text-white lg:block">
-        <div className="flex items-center gap-3">
-          <div className="grid h-12 w-12 place-items-center rounded-lg bg-emerald-600 text-sm font-black">
-            FET
-          </div>
-          <div className="grid gap-2">
-            <Skeleton className="h-4 w-32 bg-white/20" />
-            <Skeleton className="h-3 w-24 bg-white/15" />
-          </div>
+      <aside className="hidden border-r border-zinc-200 bg-[var(--shell-sidebar)] lg:flex lg:flex-col">
+        <div className="flex h-12 items-center gap-2.5 border-b border-zinc-200/80 px-3">
+          <Skeleton className="h-7 w-7 rounded-md" />
+          <Skeleton className="h-3.5 w-28" />
         </div>
-        <div className="mt-8 grid gap-2">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Skeleton className="h-11 rounded-md bg-white/10" key={index} />
-          ))}
+        <div className="flex-1 px-2 py-3">
+          <Skeleton className="mb-2 h-3 w-10" />
+          <div className="grid gap-1">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton className="h-8 rounded-md" key={index} />
+            ))}
+          </div>
         </div>
       </aside>
-      <section className="min-w-0 px-4 pb-8 pt-20 sm:px-6 lg:px-8 lg:pt-8">
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div>
-            <p className="mb-2 flex items-center gap-2 text-xs font-black uppercase text-emerald-700">
-              <LayoutDashboard className="h-4 w-4" />
-              FES logistics
-            </p>
-            <Skeleton className="h-10 w-56" />
-            <Skeleton className="mt-3 h-4 w-[min(42rem,80vw)]" />
-          </div>
+      <section className="min-w-0 px-4 pb-8 pt-16 sm:px-6 lg:px-7 lg:pt-6">
+        <div className="mb-5">
+          <Skeleton className="h-7 w-40" />
+          <Skeleton className="mt-2 h-4 w-[min(36rem,80vw)]" />
         </div>
         <div className="grid gap-4">
           <div className="grid gap-3 md:grid-cols-3">

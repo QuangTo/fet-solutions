@@ -4,7 +4,7 @@ export function Card({ className, ...props }) {
   return (
     <section
       className={cn(
-        "min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm",
+        "min-w-0 rounded-lg border border-zinc-200 bg-white",
         className,
       )}
       {...props}
@@ -19,7 +19,7 @@ export function CardHeader({ className, ...props }) {
 export function CardTitle({ className, ...props }) {
   return (
     <h2
-      className={cn("text-base font-bold leading-tight text-slate-950", className)}
+      className={cn("text-ui-base font-bold leading-tight text-slate-950", className)}
       {...props}
     />
   );
@@ -27,7 +27,7 @@ export function CardTitle({ className, ...props }) {
 
 export function CardDescription({ className, ...props }) {
   return (
-    <p className={cn("text-sm leading-6 text-slate-500", className)} {...props} />
+    <p className={cn("text-ui-sm leading-6 text-slate-500", className)} {...props} />
   );
 }
 

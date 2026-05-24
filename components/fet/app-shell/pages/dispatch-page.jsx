@@ -1,0 +1,377 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  allCustomers,
+  dateComparator,
+  formatDate,
+  normalizeSku,
+  stockRows,
+  todayIso,
+} from "@/lib/fet-domain";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Field, Input, Select } from "@/components/ui/form";
+import { DataTableCard } from "../components/data-table-card";
+import { Pagination } from "../components/pagination";
+import { PeriodSelect } from "../components/period-select";
+import { operationActionButtonShellClass } from "../lib/constants";
+import {
+  readDispatchPrefs,
+  resolveDispatchPrefs,
+  writeDispatchPrefs,
+} from "../lib/dispatch-prefs";
+import { number } from "../lib/format";
+import { paginate } from "../lib/pagination";
+import { dateInWindow, periodDescription, periodWindow } from "../lib/period-utils";
+import { DispatchTable } from "./dispatch-table";
+
+export function DispatchPage({
+  mutation,
+  selectedCustomer,
+  session,
+  setSelectedCustomer,
+  state,
+}) {
+  const availableRows = stockRows(state);
+  const [form, setForm] = useState(() => {
+    const prefs =
+      typeof window !== "undefined"
+        ? readDispatchPrefs()
+        : { driver: "", truck: "" };
+    return {
+      customer: selectedCustomer,
+      date: todayIso(),
+      driver: prefs.driver,
+      quantity: "",
+      sku: "",
+      truck: prefs.truck,
+      unit: "",
+    };
+  });
+  const [filters, setFilters] = useState({
+    date: "",
+    driver: "",
+    period: "week",
+    truck: "",
+  });
+  const [page, setPage] = useState(1);
+
+  const customerStock = availableRows.filter(
+    (row) => row.customer === form.customer,
+  );
+  const selectedStock =
+    customerStock.find((row) => row.sku === form.sku) || customerStock[0];
+
+  useEffect(() => {
+    setForm((current) => ({ ...current, customer: selectedCustomer }));
+  }, [selectedCustomer]);
+
+  const dispatchPrefsHydrated = useRef(false);
+  useEffect(() => {
+    if (dispatchPrefsHydrated.current) return;
+    if (!state.vehicles.length && !state.drivers.length) return;
+    dispatchPrefsHydrated.current = true;
+    const prefs = resolveDispatchPrefs(readDispatchPrefs(), state);
+    setForm((current) => ({
+      ...current,
+      driver:
+        current.driver && state.drivers.includes(current.driver)
+          ? current.driver
+          : prefs.driver,
+      truck:
+        current.truck && state.vehicles.includes(current.truck)
+          ? current.truck
+          : prefs.truck,
+    }));
+  }, [state.drivers, state.vehicles]);
+
+  useEffect(() => {
+    if (!selectedStock) return;
+    setForm((current) => ({
+      ...current,
+      quantity:
+        current.sku === selectedStock.sku
+          ? current.quantity
+          : selectedStock.remainingQuantity,
+      sku: current.sku || selectedStock.sku,
+      unit:
+        current.sku === selectedStock.sku ? current.unit : selectedStock.unit,
+    }));
+  }, [selectedStock?.sku]);
+
+  const rows = state.dispatches
+    .filter(
+      (item) =>
+        filters.date || dateInWindow(item.date, periodWindow(filters.period)),
+    )
+    .filter((item) => !filters.date || item.date === filters.date)
+    .filter((item) => !form.customer || item.customer === form.customer)
+    .filter((item) => !filters.truck || item.truck === filters.truck)
+    .filter((item) => !filters.driver || item.driver === filters.driver)
+    .sort(dateComparator("desc"));
+  const dispatchPage = paginate(rows, page);
+
+  return (
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Tạo phiếu xuất hàng</CardTitle>
+          <CardDescription>
+            Chọn khách hàng, xe, tài xế và lượng hàng cần xuất.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="grid gap-3 lg:grid-cols-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const customerName = form.customer.trim();
+              const stock = customerStock.find((row) => row.sku === form.sku);
+              writeDispatchPrefs({ driver: form.driver, truck: form.truck });
+              mutation.mutate({
+                customerName,
+                date: form.date,
+                driverName: form.driver,
+                items: [
+                  {
+                    quantity: Number(form.quantity),
+                    sku: normalizeSku(form.sku),
+                    unit: form.unit.trim() || stock?.unit || "đơn vị",
+                  },
+                ],
+                plate: form.truck,
+                warehouseName: session?.name || "Thủ kho mẫu",
+              });
+              setSelectedCustomer(customerName);
+              setFilters({ date: "", driver: "", period: "week", truck: "" });
+              setPage(1);
+            }}
+          >
+            <Field>
+              Ngày xuất
+              <Input
+                className="min-w-0"
+                required
+                type="date"
+                value={form.date}
+                onChange={(event) =>
+                  setForm({ ...form, date: event.target.value })
+                }
+              />
+            </Field>
+            <Field>
+              Khách hàng
+              <Select
+                required
+                value={form.customer}
+                onChange={(event) => {
+                  setSelectedCustomer(event.target.value);
+                  setForm({
+                    ...form,
+                    customer: event.target.value,
+                    quantity: "",
+                    sku: "",
+                    unit: "",
+                  });
+                }}
+              >
+                <option value="">Chọn khách hàng</option>
+                {allCustomers(state).map((customer) => (
+                  <option key={customer} value={customer}>
+                    {customer}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field>
+              Xe
+              <Select
+                required
+                value={form.truck}
+                onChange={(event) => {
+                  const truck = event.target.value;
+                  writeDispatchPrefs({ driver: form.driver, truck });
+                  setForm({ ...form, truck });
+                }}
+              >
+                <option value="">Chọn xe</option>
+                {state.vehicles.map((truck) => (
+                  <option key={truck} value={truck}>
+                    {truck}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field>
+              Tài xế
+              <Select
+                required
+                value={form.driver}
+                onChange={(event) => {
+                  const driver = event.target.value;
+                  writeDispatchPrefs({ driver, truck: form.truck });
+                  setForm({ ...form, driver });
+                }}
+              >
+                <option value="">Chọn tài xế</option>
+                {state.drivers.map((driver) => (
+                  <option key={driver} value={driver}>
+                    {driver}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field>
+              Loại hàng
+              <Select
+                required
+                value={form.sku}
+                onChange={(event) => {
+                  const next = customerStock.find(
+                    (row) => row.sku === event.target.value,
+                  );
+                  setForm({
+                    ...form,
+                    quantity: next?.remainingQuantity || "",
+                    sku: event.target.value,
+                    unit: next?.unit || "đơn vị",
+                  });
+                }}
+              >
+                <option value="">Chọn loại hàng</option>
+                {customerStock.map((row) => (
+                  <option key={`${row.customer}-${row.sku}`} value={row.sku}>
+                    {row.sku} - còn {number(row.remainingQuantity)} {row.unit}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field>
+              Số lượng
+              <Input
+                max={selectedStock?.remainingQuantity || undefined}
+                min="1"
+                required
+                type="number"
+                value={form.quantity}
+                onChange={(event) =>
+                  setForm({ ...form, quantity: event.target.value })
+                }
+              />
+            </Field>
+            <Field>
+              Đơn vị
+              <Input
+                required
+                value={form.unit}
+                onChange={(event) =>
+                  setForm({ ...form, unit: event.target.value })
+                }
+              />
+            </Field>
+            <div
+              className={cn(operationActionButtonShellClass, "lg:col-span-2")}
+            >
+              <Button
+                className="w-full"
+                disabled={mutation.isPending}
+                type="submit"
+              >
+                Xuất hàng
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+      <DataTableCard
+        description={periodDescription(
+          "Lọc nhanh các chuyến đã xuất",
+          filters.period,
+        )}
+        actions={
+          <PeriodSelect
+            value={filters.period}
+            onChange={(period) => {
+              setFilters({ ...filters, period });
+              setPage(1);
+            }}
+          />
+        }
+        title="Lịch sử xuất hàng"
+      >
+        <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto]">
+          <Field>
+            Ngày xuất
+            <Input
+              className="min-w-0"
+              type="date"
+              value={filters.date}
+              onChange={(event) => {
+                setFilters({ ...filters, date: event.target.value });
+                setPage(1);
+              }}
+            />
+          </Field>
+          <Field>
+            Xe
+            <Select
+              value={filters.truck}
+              onChange={(event) => {
+                setFilters({ ...filters, truck: event.target.value });
+                setPage(1);
+              }}
+            >
+              <option value="">Tất cả xe</option>
+              {state.vehicles.map((truck) => (
+                <option key={truck} value={truck}>
+                  {truck}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field>
+            Tài xế
+            <Select
+              value={filters.driver}
+              onChange={(event) => {
+                setFilters({ ...filters, driver: event.target.value });
+                setPage(1);
+              }}
+            >
+              <option value="">Tất cả tài xế</option>
+              {state.drivers.map((driver) => (
+                <option key={driver} value={driver}>
+                  {driver}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Button
+            className="w-full self-end lg:w-48"
+            onClick={() => {
+              setFilters({ date: "", driver: "", period: "week", truck: "" });
+              setPage(1);
+            }}
+            type="button"
+          >
+            Xem tất cả
+          </Button>
+        </div>
+        <DispatchTable rows={dispatchPage.rows} />
+        <Pagination
+          page={dispatchPage.page}
+          pageCount={dispatchPage.pageCount}
+          onPageChange={setPage}
+        />
+      </DataTableCard>
+    </div>
+  );
+}
