@@ -37,6 +37,7 @@ import {
   prependById,
   receiptMasterRecord,
   removeMasterRecord,
+  resetCustomerInventory,
 } from "./lib/data-mutations";
 import { DispatchPage } from "./pages/dispatch-page";
 import { ManagementPage } from "./pages/management/management-page";
@@ -122,6 +123,9 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     "bao-cao",
   ].includes(visiblePage);
   const needsReport = ["dashboard", "bao-cao"].includes(visiblePage);
+  const usesBundledMaster =
+    visiblePage === "nhap-hang" || visiblePage === "xuat-hang";
+  const canLoadPageData = Boolean(session) && accessQuery.isSuccess;
   const operationsPage =
     visiblePage === "nhap-hang"
       ? "receipt"
@@ -130,15 +134,15 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         : "operations";
   const masterQuery = useQuery({
     ...pageQueryOptions("master", session),
-    enabled: Boolean(session) && needsMaster,
+    enabled: canLoadPageData && needsMaster && !usesBundledMaster,
   });
   const operationsQuery = useQuery({
     ...pageQueryOptions(operationsPage, session),
-    enabled: Boolean(session) && needsOperations,
+    enabled: canLoadPageData && needsOperations,
   });
   const reportQuery = useQuery({
     ...pageQueryOptions("report", session),
-    enabled: Boolean(session) && needsReport,
+    enabled: canLoadPageData && needsReport,
   });
   const usersQuery = useQuery({
     queryKey: ["users", session?.id, session?.role, session?.siteId],
@@ -161,8 +165,37 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     setSettingsDraft(settings);
   }, [visiblePage, pageAccess, settings]);
 
+  const bundledMaster = useMemo(() => {
+    if (!usesBundledMaster || !operationsQuery.data?.customers) return null;
+    return {
+      customers: operationsQuery.data.customers,
+      drivers: operationsQuery.data.drivers,
+      vehicles: operationsQuery.data.vehicles,
+    };
+  }, [operationsQuery.data, usesBundledMaster]);
+
+  const bundledOperations = useMemo(() => {
+    if (!operationsQuery.data) return null;
+    if (operationsPage === "receipt") {
+      return {
+        inventory: operationsQuery.data.inventory,
+        receipts: operationsQuery.data.receipts,
+      };
+    }
+    if (operationsPage === "dispatch") {
+      return {
+        dispatches: operationsQuery.data.dispatches,
+        inventory: operationsQuery.data.inventory,
+      };
+    }
+    return operationsQuery.data;
+  }, [operationsPage, operationsQuery.data]);
+
   const isMasterLoading =
-    needsMaster && !masterQuery.data && masterQuery.isPending;
+    needsMaster &&
+    !usesBundledMaster &&
+    !masterQuery.data &&
+    masterQuery.isPending;
   const isOperationsLoading =
     needsOperations && !operationsQuery.data && operationsQuery.isPending;
   const isReportLoading =
@@ -184,11 +217,16 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
   const state = useMemo(
     () =>
       composeState({
-        master: masterQuery.data,
-        operations: operationsQuery.data,
+        master: masterQuery.data || bundledMaster,
+        operations: bundledOperations,
         report: reportQuery.data,
       }),
-    [masterQuery.data, operationsQuery.data, reportQuery.data],
+    [
+      masterQuery.data,
+      bundledMaster,
+      bundledOperations,
+      reportQuery.data,
+    ],
   );
 
   const pageDataKey = (pageName) => [
@@ -231,11 +269,23 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         inventory: applyReceiptInventory(data.inventory || [], receipt),
         receipts: prependById(data.receipts || [], receipt),
       }));
-      updatePageData("receipt", (data) => ({
-        ...data,
-        inventory: applyReceiptInventory(data.inventory || [], receipt),
-        receipts: prependById(data.receipts || [], receipt),
-      }));
+      updatePageData("receipt", (data) => {
+        const master = addMasterRecord(
+          {
+            customers: data.customers,
+            drivers: data.drivers,
+            vehicles: data.vehicles,
+          },
+          "customers",
+          receiptMasterRecord(receipt),
+        );
+        return {
+          ...data,
+          ...master,
+          inventory: applyReceiptInventory(data.inventory || [], receipt),
+          receipts: prependById(data.receipts || [], receipt),
+        };
+      });
       updatePageData("master", (data) =>
         addMasterRecord(data, "customers", receiptMasterRecord(receipt)),
       );
@@ -258,11 +308,31 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         dispatches: prependById(data.dispatches || [], dispatch),
         inventory: applyDispatchInventory(data.inventory || [], dispatch),
       }));
-      updatePageData("dispatch", (data) => ({
-        ...data,
-        dispatches: prependById(data.dispatches || [], dispatch),
-        inventory: applyDispatchInventory(data.inventory || [], dispatch),
-      }));
+      updatePageData("dispatch", (data) => {
+        const master = addMasterRecord(
+          addMasterRecord(
+            addMasterRecord(
+              {
+                customers: data.customers,
+                drivers: data.drivers,
+                vehicles: data.vehicles,
+              },
+              "customers",
+              records.customer,
+            ),
+            "vehicles",
+            records.vehicle,
+          ),
+          "drivers",
+          records.driver,
+        );
+        return {
+          ...data,
+          ...master,
+          dispatches: prependById(data.dispatches || [], dispatch),
+          inventory: applyDispatchInventory(data.inventory || [], dispatch),
+        };
+      });
       updatePageData("master", (data) =>
         addMasterRecord(
           addMasterRecord(
@@ -387,7 +457,12 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
           invoiceApproval,
         ),
       }));
-      markPagesStale(["report"]);
+      ["receipt", "dispatch", "operations"].forEach((pageName) => {
+        updatePageData(pageName, (data) =>
+          resetCustomerInventory(data, payload.customerId, customer),
+        );
+      });
+      markPagesStale(["report", "receipt", "dispatch", "operations"]);
       showToast("Đã ghi nhận hóa đơn");
     },
   });

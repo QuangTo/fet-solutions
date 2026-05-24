@@ -40,6 +40,8 @@ export function ReportsPage({ mutation, session, state }) {
   const [customerPage, setCustomerPage] = useState(1);
   const [confirmCustomer, setConfirmCustomer] = useState(null);
   const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [invoicePage, setInvoicePage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
   const shouldPaginateCustomers = useMediaQuery("(max-width: 639px)");
   const rows = reportRows(state);
   const customerView = shouldPaginateCustomers
@@ -60,6 +62,14 @@ export function ReportsPage({ mutation, session, state }) {
   useEffect(() => {
     setCustomerPage(1);
   }, [rows.length, shouldPaginateCustomers]);
+
+  useEffect(() => {
+    setInvoicePage(1);
+  }, [invoiceSearch]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [current]);
 
   const history = state.dispatches
     .filter((item) => {
@@ -82,22 +92,26 @@ export function ReportsPage({ mutation, session, state }) {
       );
     })
     .sort(dateComparator("desc"));
-  const invoiceHistory = [...state.invoiceApprovals]
-    .filter((item) => {
-      if (!invoiceSearchTerm) return true;
-      return [
-        formatDate(item.date),
-        item.customer,
-        formatDateTime(item.createdAt),
-        item.approvedByName,
-        item.status,
-      ]
-        .filter(Boolean)
-        .some((value) =>
-          value.toString().toLowerCase().includes(invoiceSearchTerm),
-        );
-    })
-    .sort(dateComparator("desc"));
+  const dispatchHistory = paginate(history, historyPage);
+  const invoiceHistory = paginate(
+    [...state.invoiceApprovals]
+      .filter((item) => {
+        if (!invoiceSearchTerm) return true;
+        return [
+          formatDate(item.date),
+          item.customer,
+          formatDateTime(item.createdAt),
+          item.approvedByName,
+          item.status,
+        ]
+          .filter(Boolean)
+          .some((value) =>
+            value.toString().toLowerCase().includes(invoiceSearchTerm),
+          );
+      })
+      .sort(dateComparator("desc")),
+    invoicePage,
+  );
 
   return (
     <div className="grid gap-4">
@@ -171,7 +185,12 @@ export function ReportsPage({ mutation, session, state }) {
         title="Lịch sử xuất hàng"
         description="Dữ liệu phục vụ đối soát hóa đơn."
       >
-        <DispatchTable rows={history} />
+        <DispatchTable rows={dispatchHistory.rows} />
+        <Pagination
+          page={dispatchHistory.page}
+          pageCount={dispatchHistory.pageCount}
+          onPageChange={setHistoryPage}
+        />
       </DataTableCard>
       <DataTableCard
         title="Lịch sử xuất hóa đơn"
@@ -198,8 +217,8 @@ export function ReportsPage({ mutation, session, state }) {
             </tr>
           </thead>
           <tbody>
-            {invoiceHistory.length ? (
-              invoiceHistory.map((item) => (
+            {invoiceHistory.rows.length ? (
+              invoiceHistory.rows.map((item) => (
                 <tr key={item.id}>
                   <Td>{formatDate(item.date)}</Td>
                   <Td>{item.customer}</Td>
@@ -218,6 +237,11 @@ export function ReportsPage({ mutation, session, state }) {
             )}
           </tbody>
         </DataTable>
+        <Pagination
+          page={invoiceHistory.page}
+          pageCount={invoiceHistory.pageCount}
+          onPageChange={setInvoicePage}
+        />
       </DataTableCard>
       <Dialog
         open={Boolean(confirmCustomer)}

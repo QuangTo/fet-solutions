@@ -67,6 +67,10 @@ export function ReceiptPage({
     setHistoryPage(1);
   }, [customer, historyPeriod]);
 
+  useEffect(() => {
+    setSummaryPage(1);
+  }, [customer]);
+
   return (
     <div className="grid gap-4">
       <div className="grid items-stretch gap-4 xl:grid-cols-2">
@@ -185,35 +189,53 @@ export function ReceiptPage({
           className="h-full"
           description={
             customer
-              ? `${summary.rows.length} dòng đang hiển thị`
-              : "Chọn khách hàng để xem tổng hợp."
+              ? "Tồn kho kỳ hiện tại — reset sau khi xuất hóa đơn."
+              : "Chọn khách hàng để xem tồn kho kỳ hiện tại."
           }
           title={
             customer ? `Tổng hợp hàng nhập - ${customer}` : "Tổng hợp hàng nhập"
           }
         >
-          <DataTable width="receiptSummary">
+          <DataTable className="text-ui-sm" width="receiptSummary">
             <thead>
               <tr>
-                <Th>Loại hàng</Th>
-                <Th>Tổng số lượng</Th>
-                <Th>Đơn vị</Th>
+                <Th className="px-2">Loại hàng</Th>
+                <Th className="px-2 text-right">Tồn kho</Th>
+                <Th className="px-2">Đơn vị</Th>
               </tr>
             </thead>
             <tbody>
               {summary.rows.length ? (
                 summary.rows.map((row) => (
                   <tr key={`${row.sku}-${row.unit}`}>
-                    <Td data-label="Loại hàng">
+                    <Td className="px-2" data-label="Loại hàng">
                       <strong>{row.sku}</strong>
                     </Td>
-                    <Td data-label="Tổng số lượng">{number(row.quantity)}</Td>
-                    <Td data-label="Đơn vị">{row.unit}</Td>
+                    <Td
+                      className="px-2 text-right tabular-nums"
+                      data-label="Tồn kho"
+                      title={`Đã nhập ${number(row.receivedQuantity)} · Đã xuất ${number(row.dispatchedQuantity)}`}
+                    >
+                      <strong
+                        className={
+                          row.remainingQuantity > 0
+                            ? "text-emerald-700"
+                            : "text-slate-500"
+                        }
+                      >
+                        {number(row.remainingQuantity)}
+                      </strong>
+                    </Td>
+                    <Td className="px-2" data-label="Đơn vị">
+                      {row.unit}
+                    </Td>
                   </tr>
                 ))
               ) : (
                 <EmptyRow colSpan={3}>
-                  Khách hàng này chưa có dữ liệu nhập hàng.
+                  {customer
+                    ? "Khách hàng này chưa có hàng tồn kho."
+                    : "Chọn khách hàng để xem tồn kho."}
                 </EmptyRow>
               )}
             </tbody>
@@ -228,7 +250,7 @@ export function ReceiptPage({
       <DataTableCard
         title="Lịch sử nhập hàng"
         description={periodDescription(
-          "Theo dõi từng lần nhập hàng",
+          "Ghi nhận đầy đủ mọi lần nhập — không xóa sau xuất hóa đơn",
           historyPeriod,
         )}
         actions={

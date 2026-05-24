@@ -60,6 +60,7 @@ export function applyReceiptInventory(inventory = [], receipt) {
       touched = true;
       return {
         ...row,
+        currentPeriodOnly: true,
         receivedQuantity: Number(row.receivedQuantity || 0) + quantity,
         remainingQuantity: Number(row.remainingQuantity || 0) + quantity,
         unit: item.unit || row.unit,
@@ -69,6 +70,7 @@ export function applyReceiptInventory(inventory = [], receipt) {
       nextInventory = [
         ...nextInventory,
         {
+          currentPeriodOnly: true,
           customer: receipt.customer,
           customerId: receipt.customerId,
           dispatchedQuantity: 0,
@@ -94,6 +96,7 @@ export function applyDispatchInventory(inventory = [], dispatch) {
       if (!sameCustomer || row.sku !== item.sku) return row;
       return {
         ...row,
+        currentPeriodOnly: true,
         dispatchedQuantity: Number(row.dispatchedQuantity || 0) + quantity,
         remainingQuantity: Math.max(
           Number(row.remainingQuantity || 0) - quantity,
@@ -134,5 +137,18 @@ export function dispatchMasterRecords(dispatch) {
       label: dispatch.plate,
       updatedAt: dispatch.createdAt,
     },
+  };
+}
+
+export function resetCustomerInventory(data, customerId, customerName = "") {
+  if (!data) return data;
+  return {
+    ...data,
+    inventory: (data.inventory || []).filter(
+      (row) =>
+        row.customerId !== customerId &&
+        (!customerName || row.customer !== customerName),
+    ),
+    inventoryCurrentPeriodOnly: true,
   };
 }
