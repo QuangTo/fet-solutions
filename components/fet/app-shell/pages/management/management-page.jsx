@@ -1,7 +1,8 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { canManageBilling } from "@/lib/billing-utils";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { BillingSection } from "./billing-section";
@@ -11,16 +12,51 @@ import { UserSection } from "./user-section";
 
 export function ManagementPage({
   activeRole,
+  approvePending,
   billing,
+  billingOpenRequest = 0,
+  checkout,
+  checkoutPending,
+  confirmPending,
   mutation,
+  onApprovePayment,
+  onBillingCheckout,
+  onCloseCheckout,
+  onConfirmPayment,
   state,
   userMutation,
   users,
 }) {
   const [activeList, setActiveList] = useState("");
+  const billingSectionRef = useRef(null);
+  const lastBillingOpenRequest = useRef(0);
   const recordsByList = {
     customers: state.customerRecords,
     vehicles: state.vehicleRecords,
+  };
+  const showBilling = canManageBilling(activeRole);
+
+  useEffect(() => {
+    if (!billingOpenRequest || billingOpenRequest === lastBillingOpenRequest.current) {
+      return;
+    }
+    lastBillingOpenRequest.current = billingOpenRequest;
+    setActiveList("billing");
+
+    const scrollToBilling = () => {
+      billingSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    };
+
+    window.requestAnimationFrame(() => {
+      window.setTimeout(scrollToBilling, 120);
+    });
+  }, [billingOpenRequest]);
+
+  const toggleList = (listName) => {
+    setActiveList(activeList === listName ? "" : listName);
   };
 
   return (
@@ -29,7 +65,7 @@ export function ManagementPage({
         <UserSection
           isActive={activeList === "users"}
           mutation={userMutation}
-          onToggle={() => setActiveList(activeList === "users" ? "" : "users")}
+          onToggle={() => toggleList("users")}
           users={users}
         />
       ) : null}
@@ -43,7 +79,7 @@ export function ManagementPage({
                 "flex min-h-16 w-full items-center justify-between gap-3 px-4 text-left transition hover:bg-slate-50 sm:px-5",
                 isActive && "border-b border-slate-100 bg-slate-50",
               )}
-              onClick={() => setActiveList(isActive ? "" : section.listName)}
+              onClick={() => toggleList(section.listName)}
               type="button"
             >
               <strong className="text-base font-bold leading-tight text-slate-950">
@@ -66,13 +102,25 @@ export function ManagementPage({
           </Card>
         );
       })}
-      <BillingSection
-        billing={billing}
-        isActive={activeList === "billing"}
-        onToggle={() =>
-          setActiveList(activeList === "billing" ? "" : "billing")
-        }
-      />
+      {showBilling ? (
+        <div className="scroll-mt-24" ref={billingSectionRef}>
+          <BillingSection
+            activeRole={activeRole}
+            approvePending={approvePending}
+            billing={billing}
+            checkout={checkout}
+            checkoutPending={checkoutPending}
+            confirmPending={confirmPending}
+            isActive={activeList === "billing"}
+            payDialogOpen={Boolean(checkout)}
+            onApprove={onApprovePayment}
+            onCheckout={onBillingCheckout}
+            onCloseCheckout={onCloseCheckout}
+            onConfirmPayment={onConfirmPayment}
+            onToggle={() => toggleList("billing")}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

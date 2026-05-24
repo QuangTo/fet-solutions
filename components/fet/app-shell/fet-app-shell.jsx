@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Menu, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { accessQueryOptions, apiRequest, pageQueryOptions, saveAppSetting } from "@/lib/api";
+import { accessQueryOptions, apiRequest, billingQueryOptions, billingStatusQueryOptions, pageQueryOptions, saveAppSetting } from "@/lib/api";
+import { canManageBilling } from "@/lib/billing-utils";
 import {
   composeState,
   defaultPageAccess,
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoginScreen } from "./components/login-screen";
+import { BillingBanner } from "./components/billing-banner";
 import { PeriodSelect } from "./components/period-select";
 import { LoadingSkeleton } from "./components/skeletons";
 import { Sidebar } from "./components/sidebar";
@@ -59,6 +61,8 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     accent: "emerald",
   });
   const [dashboardPeriod, setDashboardPeriod] = useState("week");
+  const [billingCheckout, setBillingCheckout] = useState(null);
+  const [billingOpenRequest, setBillingOpenRequest] = useState(0);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(SESSION_KEY);
@@ -112,6 +116,13 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
   };
 
   const activeRole = normalizeRole(session?.role || "warehouse");
+  const navigate = (page) => {
+    setMobileNavOpen(false);
+    if (!roleCanAccessPage(pageAccess, activeRole, page)) return;
+    router.push(pagePaths[page] || "/dashboard");
+    setActivePage(page);
+  };
+
   const visiblePage = roleCanAccessPage(pageAccess, activeRole, activePage)
     ? activePage
     : "dashboard";
@@ -152,11 +163,13 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
       visiblePage === "quan-ly" &&
       roleCanAccessPage(pageAccess, activeRole, "quan-ly"),
   });
+  const billingStatusQuery = useQuery(billingStatusQueryOptions(session));
+  const canManageBillingSection =
+    canManageBilling(activeRole) &&
+    roleCanAccessPage(pageAccess, activeRole, "quan-ly");
   const billingQuery = useQuery({
-    queryKey: ["billing", session?.id, session?.role, session?.siteId],
-    queryFn: () => apiRequest("/billing", {}, session),
-    enabled: Boolean(session) && visiblePage === "quan-ly",
-    staleTime: 60_000,
+    ...billingQueryOptions(session, { enabled: canManageBillingSection }),
+    enabled: Boolean(session) && visiblePage === "quan-ly" && canManageBillingSection,
   });
 
   useEffect(() => {
@@ -251,9 +264,22 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     });
   };
 
+  const invalidateBilling = () => {
+    queryClient.invalidateQueries({ queryKey: ["billing"] });
+    queryClient.invalidateQueries({ queryKey: ["billing-status"] });
+  };
+
   const mutationOptions = {
-    onError: (error) =>
-      showToast(parseApiError(error), "error"),
+    onError: (error) => {
+      if (error?.code === "BILLING_REQUIRED" || error?.status === 402) {
+        invalidateBilling();
+        if (canManageBillingSection) {
+          setBillingOpenRequest((count) => count + 1);
+          navigate("quan-ly");
+        }
+      }
+      showToast(parseApiError(error), "error");
+    },
   };
   const receiptMutation = useMutation({
     ...mutationOptions,
@@ -466,6 +492,62 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
       showToast("Đã ghi nhận hóa đơn");
     },
   });
+  const billingCheckoutMutation = useMutation({
+    ...mutationOptions,
+    mutationFn: (payload = {}) =>
+      apiRequest(
+        "/billing/checkout",
+        { body: JSON.stringify(payload), method: "POST" },
+        session,
+      ),
+    onSuccess: (checkout) => {
+      setBillingCheckout(checkout);
+      invalidateBilling();
+      showToast("Đã tạo mã thanh toán");
+    },
+  });
+  const billingConfirmMutation = useMutation({
+    ...mutationOptions,
+    mutationFn: (paymentId) =>
+      apiRequest(
+        `/billing/payments/${paymentId}/confirm`,
+        { method: "POST" },
+        session,
+      ),
+    onSuccess: () => {
+      setBillingCheckout(null);
+      invalidateBilling();
+      showToast("Đã ghi nhận chuyển khoản. Admin sẽ xác nhận sớm.");
+    },
+  });
+  const billingApproveMutation = useMutation({
+    ...mutationOptions,
+    mutationFn: (paymentId) =>
+      apiRequest(
+        `/billing/payments/${paymentId}/approve`,
+        { method: "PATCH" },
+        session,
+      ),
+    onSuccess: () => {
+      setBillingCheckout(null);
+      invalidateBilling();
+      showToast("Đã xác nhận thanh toán");
+    },
+  });
+
+  const openBillingManagement = () => {
+    setBillingOpenRequest((count) => count + 1);
+    navigate("quan-ly");
+  };
+  const handleBillingCheckout = (payload) => {
+    billingCheckoutMutation.mutate(payload || {});
+  };
+  const handleConfirmPayment = (paymentId) => {
+    billingConfirmMutation.mutate(paymentId);
+  };
+  const handleApprovePayment = (paymentId) => {
+    billingApproveMutation.mutate(paymentId);
+  };
 
   const saveSession = (nextSession) => {
     const normalized = {
@@ -474,13 +556,6 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     };
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(normalized));
     setSession(normalized);
-  };
-
-  const navigate = (page) => {
-    setMobileNavOpen(false);
-    if (!roleCanAccessPage(pageAccess, activeRole, page)) return;
-    router.push(pagePaths[page] || "/dashboard");
-    setActivePage(page);
   };
 
   const applyUiSettings = async () => {
@@ -619,6 +694,15 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
             settings.density === "compact" ? "gap-3" : "gap-4",
           )}
         >
+          {billingStatusQuery.data ? (
+            <BillingBanner
+              activeRole={activeRole}
+              billing={billingStatusQuery.data}
+              onManageBilling={
+                canManageBillingSection ? openBillingManagement : undefined
+              }
+            />
+          ) : null}
           {isPageLoading ? <LoadingSkeleton page={visiblePage} /> : null}
           {!isPageLoading && visiblePage === "dashboard" ? (
             <DashboardPage
@@ -674,11 +758,20 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
           {!isPageLoading && visiblePage === "quan-ly" ? (
             <ManagementPage
               activeRole={activeRole}
+              approvePending={billingApproveMutation.isPending}
               billing={billingQuery.data}
+              billingOpenRequest={billingOpenRequest}
+              checkout={billingCheckout}
+              checkoutPending={billingCheckoutMutation.isPending}
+              confirmPending={billingConfirmMutation.isPending}
               mutation={masterMutation}
               state={state}
               userMutation={userMutation}
               users={usersQuery.data || []}
+              onApprovePayment={handleApprovePayment}
+              onBillingCheckout={handleBillingCheckout}
+              onCloseCheckout={() => setBillingCheckout(null)}
+              onConfirmPayment={handleConfirmPayment}
             />
           ) : null}
           {!isPageLoading && visiblePage === "cai-dat" ? (

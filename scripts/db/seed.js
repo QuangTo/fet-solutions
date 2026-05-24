@@ -107,7 +107,7 @@ async function seed() {
             updated_at = now()
         returning id
       `,
-      ["starter", "Starter", 990000, "VND", 20, 20],
+      ["plus", "Plus", 299000, "VND", 10, 10],
     );
     const subscription = await client.query(
       `
@@ -124,7 +124,7 @@ async function seed() {
         insert into billing_invoices (
           site_id, subscription_id, amount, currency, status, due_date, paid_at, provider, provider_invoice_id
         )
-        values ($1, $2, 990000, 'VND', 'paid', current_date, now() - interval '2 days', 'manual_qr', 'MOCK-PAID-001')
+        values ($1, $2, 299000, 'VND', 'paid', current_date, now() - interval '2 days', 'manual_qr', 'MOCK-PAID-001')
         returning id
       `,
       [siteId, subscription.rows[0].id],
@@ -139,7 +139,7 @@ async function seed() {
           $2,
           'manual_qr',
           'MOCK-QR-001',
-          990000,
+          299000,
           'VND',
           'succeeded',
           now() - interval '2 days',
