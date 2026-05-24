@@ -199,36 +199,30 @@ export function ReceiptPage({
           <DataTable className="text-ui-sm" width="receiptSummary">
             <thead>
               <tr>
-                <Th className="px-2">Loại hàng</Th>
-                <Th className="px-2 text-right">Tồn kho</Th>
-                <Th className="px-2">Đơn vị</Th>
+                <Th>Loại hàng</Th>
+                <Th>Số lượng</Th>
+                <Th>Đơn vị</Th>
               </tr>
             </thead>
             <tbody>
               {summary.rows.length ? (
                 summary.rows.map((row) => (
                   <tr key={`${row.sku}-${row.unit}`}>
-                    <Td className="px-2" data-label="Loại hàng">
+                    <Td data-label="Loại hàng">
                       <strong>{row.sku}</strong>
                     </Td>
                     <Td
-                      className="px-2 text-right tabular-nums"
-                      data-label="Tồn kho"
+                      className={
+                        row.remainingQuantity > 0
+                          ? "font-semibold text-emerald-700"
+                          : "font-semibold text-slate-500"
+                      }
+                      data-label="Số lượng"
                       title={`Đã nhập ${number(row.receivedQuantity)} · Đã xuất ${number(row.dispatchedQuantity)}`}
                     >
-                      <strong
-                        className={
-                          row.remainingQuantity > 0
-                            ? "text-emerald-700"
-                            : "text-slate-500"
-                        }
-                      >
-                        {number(row.remainingQuantity)}
-                      </strong>
+                      {number(row.remainingQuantity)}
                     </Td>
-                    <Td className="px-2" data-label="Đơn vị">
-                      {row.unit}
-                    </Td>
+                    <Td data-label="Đơn vị">{row.unit}</Td>
                   </tr>
                 ))
               ) : (

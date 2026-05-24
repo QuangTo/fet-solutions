@@ -517,7 +517,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     onSuccess: () => {
       setBillingCheckout(null);
       invalidateBilling();
-      showToast("Đã ghi nhận chuyển khoản. Admin sẽ xác nhận sớm.");
+      showToast("Đã ghi nhận chuyển khoản. Hóa đơn đang chờ duyệt.");
     },
   });
   const billingApproveMutation = useMutation({

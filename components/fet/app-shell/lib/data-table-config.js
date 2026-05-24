@@ -24,7 +24,7 @@ export const dataTableConfigs = {
     width: "min-w-[720px]",
   },
   receiptSummary: {
-    columns: ["40%", "35%", "25%"],
-    width: "w-full",
+    columns: ["60%", "25%", "15%"],
+    width: "w-full min-w-[520px]",
   },
 };

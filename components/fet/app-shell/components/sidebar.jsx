@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { pages, roleCanAccessPage, roles } from "@/lib/fet-domain";
+import { pages, roleCanAccessPage } from "@/lib/fet-domain";
 import { cn } from "@/lib/utils";
 import { iconMap, pageOrder } from "../lib/constants";
 import { AccountDialog } from "./account-dialog";
+import { AppFooter } from "./app-footer";
 
 function userInitial(name = "") {
   return name.trim().charAt(0).toUpperCase() || "?";
@@ -40,7 +41,7 @@ export function Sidebar({
           type="button"
         >
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-zinc-900 text-ui-xs font-bold tracking-wide text-white">
-            FES
+            FET
           </span>
           <span className="truncate text-ui-nav font-semibold text-zinc-900">
             Quản lý vận tải
@@ -92,14 +93,12 @@ export function Sidebar({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-ui-sm font-medium text-zinc-900">
-            {session.name}
-          </span>
-          <span className="block truncate text-ui-xs text-zinc-500">
-            {roles[activeRole]}
-            {session.siteName ? ` · ${session.siteName}` : ""}
+            Xin chào {session.name}
           </span>
         </span>
       </button>
+
+      <AppFooter className="border-t border-zinc-200/80" />
 
       <AccountDialog
         isPending={passwordPending}

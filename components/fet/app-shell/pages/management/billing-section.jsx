@@ -1,12 +1,15 @@
 "use client";
 
-import { ChevronRight, CreditCard, LoaderCircle, ReceiptText } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
 import {
-  billingIntervalLabel,
-  buildPaymentPreview,
-  resolveDueDates,
-} from "@/lib/billing-pricing";
+  ChevronRight,
+  CreditCard,
+  LoaderCircle,
+  ReceiptText,
+  Sparkles,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { buildBillingPaymentView } from "@/lib/billing-payment-view";
+import { planChargeAmount, resolveDueDates } from "@/lib/billing-pricing";
 import { trialDaysRemaining } from "@/lib/billing-utils";
 import { formatDate } from "@/lib/fet-domain";
 import { cn } from "@/lib/utils";
@@ -17,9 +20,17 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyRow, Td, Th } from "@/components/ui/table";
 import { DataTable } from "../../components/data-table";
+import { Pagination } from "../../components/pagination";
 import { money } from "../../lib/format";
+import { paginate } from "../../lib/pagination";
 import {
   billingCopy,
   invoiceCopy,
@@ -42,7 +53,6 @@ export function BillingSection({
   onConfirmPayment,
   onCloseCheckout,
   onToggle,
-  payDialogOpen,
 }) {
   const subscription = billing?.subscription || {};
   const bankTransfer = billing?.bankTransfer || {};
@@ -54,53 +64,47 @@ export function BillingSection({
   const currentPlanCode =
     bankTransfer.effectivePlanCode ||
     subscription.planCode ||
-    (billing?.billingStatus === "trialing" ? "plus" : "plus");
+    "plus";
 
   const [billingInterval, setBillingInterval] = useState("monthly");
   const [selectedPlanCode, setSelectedPlanCode] = useState(currentPlanCode);
+  const [invoicePage, setInvoicePage] = useState(1);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [planPickerOpen, setPlanPickerOpen] = useState(false);
+
+  const invoicePagination = useMemo(
+    () => paginate(invoices, invoicePage, 10),
+    [invoicePage, invoices],
+  );
+
+  const paymentView = useMemo(
+    () => buildBillingPaymentView(billing, checkout),
+    [billing, checkout],
+  );
 
   useEffect(() => {
     setSelectedPlanCode((current) => current || currentPlanCode || "plus");
   }, [currentPlanCode]);
+
+  useEffect(() => {
+    if (checkout) setPaymentDialogOpen(true);
+  }, [checkout]);
 
   const selectedPlan =
     plans.find((plan) => plan.code === selectedPlanCode) ||
     plans.find((plan) => plan.code === currentPlanCode) ||
     plans[0];
 
-  const previewTransfer = useMemo(
-    () =>
-      buildPaymentPreview({
-        bankTransfer,
-        billingInterval,
-        openInvoice,
-        pendingPayment,
-        plan: selectedPlan,
-        siteCode: billing?.siteCode,
-      }),
-    [
-      bankTransfer,
-      billing?.siteCode,
-      billingInterval,
-      openInvoice,
-      pendingPayment,
-      selectedPlan,
-    ],
-  );
-
   const siteStatus = billingCopy(billing?.billingStatus);
   const subscriptionStatus = billingCopy(subscription.status, "Chưa có gói");
-  const openInvoiceStatus = openInvoice
-    ? invoiceCopy(openInvoice.status)
-    : { label: "Preview", tone: "default" };
   const paymentStatus = pendingPayment
     ? paymentCopy(pendingPayment.status)
     : openInvoice
-      ? openInvoiceStatus
-      : { label: "QR preview", tone: "default" };
+      ? invoiceCopy(openInvoice.status)
+      : { label: "Chưa có", tone: "default" };
   const trialDays = trialDaysRemaining(billing?.trialEndsAt);
   const effectivePlanName =
-    previewTransfer.effectivePlanName ||
+    bankTransfer.effectivePlanName ||
     subscription.planName ||
     (billing?.billingStatus === "trialing" ? "Plus" : "Chưa chọn gói");
   const planName =
@@ -117,18 +121,20 @@ export function BillingSection({
       }),
     [billing?.billingStatus, billing?.trialEndsAt, openInvoice, subscription],
   );
-  const paymentDueLabel = dueDates.paymentDueDate
-    ? formatDate(dueDates.paymentDueDate)
-    : formatDate(dueDates.previewDueDate);
   const periodLabel =
     subscription.currentPeriodStart && subscription.currentPeriodEnd
       ? `${formatDate(subscription.currentPeriodStart)} - ${formatDate(subscription.currentPeriodEnd)}`
       : billing?.billingStatus === "trialing"
         ? "Gói Plus trong trial"
         : "Chưa có kỳ";
-  const amountLabel = previewTransfer.amount
-    ? money(previewTransfer.amount, previewTransfer.currency || "VND")
-    : "Chưa phát sinh";
+  const amountLabel = openInvoice
+    ? money(openInvoice.amount, openInvoice.currency)
+    : selectedPlan
+      ? money(
+          planChargeAmount(selectedPlan.priceMonthly, billingInterval),
+          selectedPlan.currency,
+        )
+      : "Chưa phát sinh";
   const paidLabel = latestPaidInvoice
     ? `${money(latestPaidInvoice.amount, latestPaidInvoice.currency)} · ${formatDate(latestPaidInvoice.paidAt)}`
     : "Chưa thanh toán";
@@ -138,8 +144,13 @@ export function BillingSection({
     maxUsers || maxVehicles
       ? `${billing?.userCount ?? 0}/${maxUsers ?? "∞"} users · ${billing?.vehicleCount ?? 0}/${maxVehicles ?? "∞"} xe`
       : `${billing?.userCount ?? 0} users · ${billing?.vehicleCount ?? 0} xe`;
-  const showCheckoutButton =
-    !pendingPayment || pendingPayment.status === "pending";
+  const invoiceAwaitingReview =
+    openInvoice?.status === "pending" ||
+    pendingPayment?.status === "awaiting_review";
+  const showCheckoutButton = !invoiceAwaitingReview;
+  const showPaymentInfoButton = Boolean(
+    paymentView && openInvoice && bankTransfer.accountNumber,
+  );
   const showApproveButton =
     activeRole === "admin" && pendingPayment?.status === "awaiting_review";
 
@@ -148,10 +159,28 @@ export function BillingSection({
     const nextInterval = payload.billingInterval || billingInterval;
     if (payload.planCode) setSelectedPlanCode(payload.planCode);
     if (payload.billingInterval) setBillingInterval(payload.billingInterval);
+    setPlanPickerOpen(false);
     onCheckout({
       billingInterval: nextInterval,
       planCode: nextPlanCode,
     });
+  };
+
+  const handlePayNow = () => {
+    if (
+      openInvoice?.status === "open" &&
+      pendingPayment &&
+      bankTransfer.accountNumber
+    ) {
+      setPaymentDialogOpen(true);
+      return;
+    }
+    handleCheckout();
+  };
+
+  const handleClosePayment = () => {
+    setPaymentDialogOpen(false);
+    onCloseCheckout?.();
   };
 
   return (
@@ -187,7 +216,7 @@ export function BillingSection({
                   <div className="min-w-0">
                     <CardTitle>Thanh toán</CardTitle>
                     <CardDescription>
-                      Chọn gói, chu kỳ trả phí và quét QR chuyển khoản.
+                      Chọn gói, tạo hóa đơn và chuyển khoản theo thông tin ngân hàng.
                     </CardDescription>
                   </div>
                 </div>
@@ -198,31 +227,60 @@ export function BillingSection({
               </div>
             </div>
 
-            <div className="grid gap-4 p-4 lg:p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm font-semibold text-slate-600">
-                  {billing?.billingStatus === "trialing" && trialDays != null
-                    ? `Trial gói Plus · còn ${trialDays} ngày`
-                    : billing?.billingStatus === "active"
-                      ? "Gói đang hoạt động"
-                      : "Cần xử lý thanh toán"}
+            <div className="grid gap-3 p-3 sm:gap-4 sm:p-4 lg:p-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <p className="text-xs font-semibold text-slate-600 sm:text-sm">
+                  {invoiceAwaitingReview
+                    ? "Đã ghi nhận chuyển khoản · chờ admin duyệt"
+                    : billing?.billingStatus === "trialing" && trialDays != null
+                      ? `Trial gói Plus · còn ${trialDays} ngày`
+                      : billing?.billingStatus === "active"
+                        ? "Gói đang hoạt động"
+                        : "Chọn gói và thanh toán để kích hoạt"}
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  {plans.length ? (
+                    <Button
+                      className="h-9 w-full text-xs sm:w-auto sm:text-sm"
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      onClick={() => setPlanPickerOpen(true)}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Nâng cấp / Thay đổi gói
+                    </Button>
+                  ) : null}
+                  {showPaymentInfoButton ? (
+                    <Button
+                      className="h-9 w-full text-xs sm:w-auto sm:text-sm"
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      onClick={() => setPaymentDialogOpen(true)}
+                    >
+                      Xem thông tin chuyển khoản
+                    </Button>
+                  ) : null}
                   {showCheckoutButton ? (
                     <Button
+                      className="h-9 w-full text-xs sm:w-auto sm:text-sm"
                       disabled={checkoutPending}
                       size="sm"
                       type="button"
-                      onClick={() => handleCheckout()}
+                      onClick={handlePayNow}
                     >
                       {checkoutPending ? (
                         <LoaderCircle className="h-4 w-4 animate-spin" />
                       ) : null}
-                      {openInvoice ? "Thanh toán ngay" : "Tạo mã thanh toán"}
+                      {openInvoice?.status === "open"
+                        ? "Thanh toán ngay"
+                        : "Mua / nâng cấp gói"}
                     </Button>
                   ) : null}
                   {showApproveButton ? (
                     <Button
+                      className="h-9 w-full text-xs sm:w-auto sm:text-sm"
                       disabled={approvePending}
                       size="sm"
                       type="button"
@@ -238,7 +296,7 @@ export function BillingSection({
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <BillingMetric
                   detail={subscriptionStatus.label}
                   label="Gói"
@@ -267,76 +325,6 @@ export function BillingSection({
                 />
               </div>
 
-              {plans.length ? (
-                <BillingPlanPricing
-                  billingInterval={billingInterval}
-                  checkoutPending={checkoutPending}
-                  currentPlanCode={currentPlanCode}
-                  plans={plans}
-                  selectedPlanCode={selectedPlanCode}
-                  onCheckout={handleCheckout}
-                  onIntervalChange={setBillingInterval}
-                  onSelectPlan={setSelectedPlanCode}
-                />
-              ) : null}
-
-              {previewTransfer.accountNumber ? (
-                <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-                  <div className="flex min-w-0 items-center gap-3">
-                    {previewTransfer.qrImageUrl ? (
-                      <img
-                        alt="QR chuyển khoản"
-                        className="h-24 w-24 shrink-0 rounded-md border border-slate-200 bg-white object-contain p-1"
-                        height={96}
-                        src={previewTransfer.qrImageUrl}
-                        width={96}
-                      />
-                    ) : (
-                      <div className="grid h-24 w-24 shrink-0 place-items-center rounded-md border border-slate-300 bg-slate-100 text-xs font-bold text-slate-500">
-                        QR
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-black text-slate-950">
-                          {previewTransfer.bankName}
-                        </h3>
-                        <Badge tone="default">Chuyển khoản</Badge>
-                        <Badge tone="default">
-                          {billingIntervalLabel(
-                            previewTransfer.billingInterval || billingInterval,
-                          )}
-                        </Badge>
-                        {previewTransfer.isPreview ? (
-                          <Badge tone="amber">Preview</Badge>
-                        ) : (
-                          <Badge tone="green">Hóa đơn mở</Badge>
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm font-semibold text-slate-700">
-                        {previewTransfer.accountNumber} · {previewTransfer.accountName}
-                      </p>
-                      <p className="mt-1 truncate text-sm font-semibold text-slate-500">
-                        {amountLabel} · {previewTransfer.transferContent || "Chưa có nội dung CK"}
-                      </p>
-                      <p className="mt-1 text-xs font-semibold text-slate-500">
-                        Hạn thanh toán: {paymentDueLabel}
-                      </p>
-                    </div>
-                  </div>
-                  {pendingPayment?.status === "pending" ? (
-                    <Button
-                      disabled={confirmPending}
-                      size="sm"
-                      type="button"
-                      onClick={() => onConfirmPayment(pendingPayment.id)}
-                    >
-                      Tôi đã chuyển
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
-
               <DataTable width="billingInvoices">
                 <thead>
                   <tr>
@@ -348,7 +336,7 @@ export function BillingSection({
                 </thead>
                 <tbody>
                   {invoices.length ? (
-                    invoices.slice(0, 8).map((invoice) => {
+                    invoicePagination.rows.map((invoice) => {
                       const status = invoiceCopy(invoice.status);
                       return (
                         <tr key={invoice.id}>
@@ -371,18 +359,57 @@ export function BillingSection({
                   )}
                 </tbody>
               </DataTable>
+              <Pagination
+                page={invoicePagination.page}
+                pageCount={invoicePagination.pageCount}
+                onPageChange={setInvoicePage}
+              />
             </div>
           </>
         ) : null}
       </Card>
 
       <BillingPayDialog
-        checkout={checkout}
         confirmPending={confirmPending}
-        open={payDialogOpen}
-        onClose={onCloseCheckout}
+        open={paymentDialogOpen && Boolean(paymentView)}
+        paymentView={paymentView}
+        onClose={handleClosePayment}
         onConfirm={onConfirmPayment}
       />
+
+      <Dialog open={planPickerOpen} onOpenChange={setPlanPickerOpen}>
+        <DialogContent className="max-h-[calc(100vh-32px)] w-[calc(100vw-32px)] max-w-5xl overflow-y-auto p-0">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <DialogTitle className="text-base font-black text-slate-950 sm:text-lg">
+              Chọn gói cho {billing?.siteName?.trim() || "khách hàng"}
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
+              So sánh các gói và chọn gói phù hợp. Sau khi chọn, hệ thống sẽ
+              tạo hóa đơn để thanh toán.
+            </DialogDescription>
+          </div>
+          {plans.length ? (
+            <div className="p-3 sm:p-4 lg:p-5">
+              <BillingPlanPricing
+                billingInterval={billingInterval}
+                checkoutPending={checkoutPending}
+                currentPlanCode={currentPlanCode}
+                currentPlanName={
+                  subscription.planName ||
+                  bankTransfer.effectivePlanName ||
+                  "Plus"
+                }
+                plans={plans}
+                selectedPlanCode={selectedPlanCode}
+                siteName={billing?.siteName}
+                onCheckout={handleCheckout}
+                onIntervalChange={setBillingInterval}
+                onSelectPlan={setSelectedPlanCode}
+              />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

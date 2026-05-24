@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, LogOut, UserRound } from "lucide-react";
+import { Eye, EyeOff, KeyRound, LogOut, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { normalizeRole, roles } from "@/lib/fet-domain";
 import { Button } from "@/components/ui/button";
@@ -23,12 +23,16 @@ export function AccountDialog({
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setCurrentPassword("");
       setNewPassword("");
       setMessage("");
+      setShowCurrent(false);
+      setShowNew(false);
     }
   }, [open]);
 
@@ -49,18 +53,6 @@ export function AccountDialog({
               </DialogDescription>
             </div>
           </div>
-          <div className="mt-4 grid gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm">
-            <span className="font-semibold text-slate-500">Số điện thoại</span>
-            <strong className="text-slate-950">
-              {session.phone || "Chưa có SĐT"}
-            </strong>
-            {session.siteName ? (
-              <>
-                <span className="mt-2 font-semibold text-slate-500">Site</span>
-                <strong className="text-slate-950">{session.siteName}</strong>
-              </>
-            ) : null}
-          </div>
         </div>
         <form
           className="grid gap-4 p-5"
@@ -79,24 +71,58 @@ export function AccountDialog({
         >
           <Field>
             Mật khẩu hiện tại
-            <Input
-              autoComplete="current-password"
-              required
-              type="password"
-              value={currentPassword}
-              onChange={(event) => setCurrentPassword(event.target.value)}
-            />
+            <div className="relative">
+              <Input
+                autoComplete="current-password"
+                className="pr-10"
+                required
+                type={showCurrent ? "text" : "password"}
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+              />
+              <button
+                aria-label={
+                  showCurrent ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+                }
+                className="absolute inset-y-0 right-0 grid w-10 place-items-center text-slate-500 transition-colors hover:text-slate-900"
+                onClick={() => setShowCurrent((value) => !value)}
+                tabIndex={-1}
+                type="button"
+              >
+                {showCurrent ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </Field>
           <Field>
             Mật khẩu mới
-            <Input
-              autoComplete="new-password"
-              minLength={6}
-              required
-              type="password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-            />
+            <div className="relative">
+              <Input
+                autoComplete="new-password"
+                className="pr-10"
+                minLength={6}
+                required
+                type={showNew ? "text" : "password"}
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
+              <button
+                aria-label={showNew ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                className="absolute inset-y-0 right-0 grid w-10 place-items-center text-slate-500 transition-colors hover:text-slate-900"
+                onClick={() => setShowNew((value) => !value)}
+                tabIndex={-1}
+                type="button"
+              >
+                {showNew ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </Field>
           {message ? (
             <p className="rounded-md bg-red-50 px-3 py-2 text-sm font-bold text-red-700">

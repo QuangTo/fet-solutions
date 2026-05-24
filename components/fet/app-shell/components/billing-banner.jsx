@@ -35,21 +35,21 @@ export function BillingBanner({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-lg border px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col gap-2 rounded-md border px-3 py-2 sm:flex-row sm:items-center sm:justify-between",
         toneClasses[tone] || toneClasses.amber,
       )}
     >
-      <div className="flex min-w-0 items-start gap-3">
+      <div className="flex min-w-0 items-start gap-2">
         {locked ? (
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
         ) : (
-          <CreditCard className="mt-0.5 h-5 w-5 shrink-0" />
+          <CreditCard className="mt-0.5 h-4 w-4 shrink-0" />
         )}
-        <p className="text-sm font-semibold leading-5">{message}</p>
+        <p className="text-xs font-semibold leading-5 sm:text-sm">{message}</p>
       </div>
       {showAction ? (
         <Button
-          className="w-full shrink-0 sm:w-auto"
+          className="h-8 w-full shrink-0 px-3 text-xs sm:w-auto"
           size="sm"
           type="button"
           variant={locked ? "destructive" : "default"}

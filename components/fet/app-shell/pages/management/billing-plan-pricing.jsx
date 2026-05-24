@@ -1,10 +1,11 @@
 "use client";
 
-import { Check, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import {
   billingIntervalLabel,
   planChargeAmount,
   planMonthlyEquivalent,
+  yearlyDiscountLabel,
   yearlySavingsAmount,
 } from "@/lib/billing-pricing";
 import { cn } from "@/lib/utils";
@@ -18,10 +19,10 @@ function planLimitLabel(plan) {
 
 function IntervalToggle({ billingInterval, onChange }) {
   return (
-    <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1">
+    <div className="inline-flex shrink-0 rounded-full border border-slate-200 bg-slate-100 p-0.5">
       <button
         className={cn(
-          "rounded-full px-4 py-1.5 text-sm font-bold transition",
+          "rounded-full px-3 py-1 text-xs font-bold transition",
           billingInterval === "monthly"
             ? "bg-white text-slate-950 shadow-sm"
             : "text-slate-500 hover:text-slate-800",
@@ -33,7 +34,7 @@ function IntervalToggle({ billingInterval, onChange }) {
       </button>
       <button
         className={cn(
-          "rounded-full px-4 py-1.5 text-sm font-bold transition",
+          "rounded-full px-3 py-1 text-xs font-bold transition",
           billingInterval === "yearly"
             ? "bg-white text-slate-950 shadow-sm"
             : "text-slate-500 hover:text-slate-800",
@@ -42,50 +43,61 @@ function IntervalToggle({ billingInterval, onChange }) {
         onClick={() => onChange("yearly")}
       >
         Hằng năm
-        <span className="ml-1.5 text-emerald-700">-30%</span>
+        <span className="ml-1 text-emerald-700">-15%</span>
       </button>
     </div>
   );
+}
+
+function usageSummary({ billingInterval, currentPlanName, siteName }) {
+  const interval = billingIntervalLabel(billingInterval).toLowerCase();
+  const customer = siteName?.trim() || "này";
+  const plan = currentPlanName?.trim() || "Plus";
+  return `Khách hàng ${customer} đang dùng gói ${plan} ${interval}.`;
 }
 
 export function BillingPlanPricing({
   billingInterval,
   checkoutPending = false,
   currentPlanCode,
+  currentPlanName,
   onCheckout,
   onIntervalChange,
   onSelectPlan,
   plans,
   selectedPlanCode,
+  siteName,
 }) {
   const yearly = billingInterval === "yearly";
 
   return (
-    <div className="grid gap-4 rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 sm:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+    <div className="grid gap-3 rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-3 sm:gap-4 sm:p-4 lg:p-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
             Bảng giá gói
           </p>
-          <h3 className="mt-1 text-lg font-black text-slate-950">
+          <h3 className="mt-1 text-base font-black text-slate-950 sm:text-lg">
             Chọn gói phù hợp kho của bạn
           </h3>
-          <p className="mt-1 text-sm font-medium text-slate-500">
-            Trial đang dùng gói Plus. Thanh toán theo{" "}
-            {billingIntervalLabel(billingInterval).toLowerCase()}.
+          <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
+            {usageSummary({ billingInterval, currentPlanName, siteName })}
           </p>
         </div>
-        <IntervalToggle
-          billingInterval={billingInterval}
-          onChange={onIntervalChange}
-        />
+        <div className="self-end sm:shrink-0">
+          <IntervalToggle
+            billingInterval={billingInterval}
+            onChange={onIntervalChange}
+          />
+        </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {plans.map((plan) => {
           const selected = plan.code === selectedPlanCode;
           const active = plan.code === currentPlanCode;
           const featured = plan.code === "plus";
+          const discountLabel = yearlyDiscountLabel();
           const chargeAmount = planChargeAmount(plan.priceMonthly, billingInterval);
           const monthlyEquivalent = planMonthlyEquivalent(
             plan.priceMonthly,
@@ -96,7 +108,7 @@ export function BillingPlanPricing({
           return (
             <div
               className={cn(
-                "group relative flex h-full flex-col rounded-xl border p-4 text-left transition",
+                "relative flex h-full flex-col rounded-xl border p-3 text-left transition sm:p-4",
                 selected
                   ? "border-emerald-500 bg-white shadow-[0_0_0_1px_rgba(16,185,129,0.35)]"
                   : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm",
@@ -105,61 +117,48 @@ export function BillingPlanPricing({
               key={plan.code}
             >
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-base font-black text-slate-950">{plan.name}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-slate-950 sm:text-base">
+                    {plan.name}
+                  </p>
                   <p className="mt-1 text-xs font-semibold text-slate-500">
                     {planLimitLabel(plan)}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex shrink-0 flex-col items-end gap-1">
                   {active ? <Badge tone="green">Đang dùng</Badge> : null}
                   {featured ? <Badge tone="amber">Trial</Badge> : null}
                 </div>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-3 sm:mt-4">
                 <div className="flex items-end gap-1">
-                  <span className="text-2xl font-black tracking-tight text-slate-950">
+                  <span className="text-xl font-black tracking-tight text-slate-950 sm:text-2xl">
                     {money(monthlyEquivalent, plan.currency)}
                   </span>
-                  <span className="pb-1 text-sm font-semibold text-slate-500">
+                  <span className="pb-0.5 text-xs font-semibold text-slate-500 sm:pb-1 sm:text-sm">
                     /tháng
                   </span>
                 </div>
-                <p className="mt-1 text-sm font-bold text-slate-600">
+                <p className="mt-1 text-xs font-bold text-slate-600 sm:text-sm">
                   {yearly
                     ? `${money(chargeAmount, plan.currency)} /năm`
                     : `${money(chargeAmount, plan.currency)} mỗi tháng`}
                 </p>
                 {yearly ? (
-                  <p className="mt-1 text-xs font-semibold text-emerald-700">
-                    Tiết kiệm {money(savings, plan.currency)} so với trả tháng
+                  <p className="mt-1 text-[11px] font-semibold text-emerald-700 sm:text-xs">
+                    Giảm {discountLabel} · tiết kiệm {money(savings, plan.currency)}
                   </p>
                 ) : (
-                  <p className="mt-1 text-xs font-semibold text-slate-400">
-                    Trả năm rẻ hơn 30%
+                  <p className="mt-1 text-[11px] font-semibold text-slate-400 sm:text-xs">
+                    Trả năm giảm {discountLabel}
                   </p>
                 )}
               </div>
 
-              <ul className="mt-4 grid gap-2 text-sm font-medium text-slate-600">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 shrink-0 text-emerald-600" />
-                  Quản lý nhập / xuất hàng
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 shrink-0 text-emerald-600" />
-                  Báo cáo tồn kho
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 shrink-0 text-emerald-600" />
-                  {plan.maxUsers} tài khoản · {plan.maxVehicles} xe
-                </li>
-              </ul>
-
-              <div className="mt-5">
+              <div className="mt-4 sm:mt-5">
                 <Button
-                  className="w-full"
+                  className="h-9 w-full text-xs sm:text-sm"
                   disabled={checkoutPending}
                   size="sm"
                   type="button"

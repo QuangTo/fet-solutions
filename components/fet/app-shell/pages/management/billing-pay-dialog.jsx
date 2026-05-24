@@ -1,138 +1,230 @@
 "use client";
 
-import { Copy, LoaderCircle } from "lucide-react";
+import { AlertCircle, Copy, Lightbulb, LoaderCircle } from "lucide-react";
 import { useState } from "react";
-import { billingIntervalLabel, resolveDueDates } from "@/lib/billing-pricing";
-import { formatDate } from "@/lib/fet-domain";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { money } from "../../lib/format";
-import { paymentCopy } from "./billing-copy";
+import { invoiceCopy, paymentCopy } from "./billing-copy";
 
 async function copyText(value) {
   if (!value) return;
   await navigator.clipboard.writeText(value);
 }
 
-function CopyRow({ label, value }) {
+function CopyButton({ label, value }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-      <div className="min-w-0">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+    <button
+      aria-label={`Sao chép ${label}`}
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+      type="button"
+      onClick={async () => {
+        await copyText(value);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      }}
+    >
+      <Copy className="h-4 w-4" />
+      <span className="sr-only">{copied ? "Đã sao chép" : "Sao chép"}</span>
+    </button>
+  );
+}
+
+function DetailRow({ label, value }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-center gap-2 border-b border-slate-100 py-2.5 last:border-b-0">
+      <span className="w-[7.5rem] shrink-0 text-sm text-slate-500">{label}</span>
+      <span className="min-w-0 flex-1 text-sm font-semibold text-slate-900">
+        {value}
+      </span>
+      <CopyButton label={label} value={value} />
+    </div>
+  );
+}
+
+function QrBlock({ alt, label, src }) {
+  return (
+    <div className="text-center">
+      {label ? (
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
           {label}
         </p>
-        <p className="truncate text-sm font-semibold text-slate-900">{value}</p>
+      ) : null}
+      <div className="inline-block rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <img
+          alt={alt}
+          className="h-36 w-36 object-contain sm:h-40 sm:w-40"
+          height={160}
+          src={src}
+          width={160}
+        />
       </div>
-      <Button
-        aria-label={`Sao chép ${label}`}
-        size="icon"
-        type="button"
-        variant="ghost"
-        onClick={async () => {
-          await copyText(value);
-          setCopied(true);
-          window.setTimeout(() => setCopied(false), 1500);
-        }}
-      >
-        <Copy className="h-4 w-4" />
-        <span className="sr-only">{copied ? "Đã sao chép" : "Sao chép"}</span>
-      </Button>
     </div>
   );
 }
 
 export function BillingPayDialog({
-  checkout,
   confirmPending,
   onClose,
   onConfirm,
   open,
+  paymentView,
 }) {
-  if (!checkout) return null;
+  if (!paymentView) return null;
 
-  const { bankTransfer, billingInterval, invoice, payment, plan } = checkout;
-  const paymentStatus = paymentCopy(payment?.status);
-  const dueDates = resolveDueDates({ openInvoice: invoice });
-  const paymentDueLabel = formatDate(
-    dueDates.paymentDueDate || dueDates.previewDueDate,
+  const { bankTransfer, invoice, payment } = paymentView;
+  const paymentStatus = payment ? paymentCopy(payment.status) : null;
+  const invoiceStatus = invoice ? invoiceCopy(invoice.status) : null;
+  const canConfirm = payment?.status === "pending";
+  const amount = money(
+    invoice?.amount || bankTransfer?.amount,
+    invoice?.currency,
+  );
+  const statusBadge =
+    payment?.status === "awaiting_review"
+      ? paymentStatus
+      : invoiceStatus || { label: "Chờ thanh toán", tone: "amber" };
+  const hasQr = Boolean(
+    bankTransfer?.qrImageUrl || bankTransfer?.momoQrImageUrl,
   );
 
   return (
     <Dialog onOpenChange={(next) => !next && onClose()} open={open}>
-      <DialogContent className="max-w-lg">
-        <DialogTitle>Thanh toán chuyển khoản</DialogTitle>
-        <DialogDescription>
-          Quét QR hoặc chuyển khoản theo thông tin bên dưới, sau đó bấm &quot;Tôi
-          đã chuyển&quot;.
-        </DialogDescription>
+      <DialogContent className="max-h-[90vh] max-w-lg gap-0 overflow-y-auto p-0">
+        <div className="border-b border-slate-100 px-5 py-4 pr-12">
+          <DialogTitle className="text-base font-bold text-slate-950 sm:text-lg">
+            Thanh toán chuyển khoản
+          </DialogTitle>
+        </div>
 
-        <div className="grid gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="default">{plan?.name || "Gói hiện tại"}</Badge>
-            <Badge tone="default">
-              {billingIntervalLabel(billingInterval || bankTransfer?.billingInterval)}
+        <div className="grid gap-0 px-5 py-4">
+          <div>
+            <p className="text-sm text-slate-500">Số tiền cần thanh toán</p>
+            <p className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+              {amount}
+            </p>
+            <Badge
+              className={cn(
+                "mt-2.5 h-auto px-2.5 py-1 text-xs font-semibold",
+                statusBadge.tone === "amber" &&
+                  "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
+                statusBadge.tone === "blue" &&
+                  "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
+                statusBadge.tone === "green" &&
+                  "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
+              )}
+              tone={statusBadge.tone}
+            >
+              {statusBadge.label}
             </Badge>
-            <Badge tone={paymentStatus.tone}>{paymentStatus.label}</Badge>
-            <span className="text-sm font-bold text-slate-700">
-              {money(invoice?.amount, invoice?.currency)}
-            </span>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-[160px_minmax(0,1fr)] sm:items-start">
-            {bankTransfer?.qrImageUrl ? (
-              <img
-                alt="Mã QR chuyển khoản"
-                className="mx-auto h-40 w-40 rounded-md border border-slate-200 bg-white object-contain p-2"
-                height={160}
-                src={bankTransfer.qrImageUrl}
-                width={160}
-              />
-            ) : null}
-            <div className="grid gap-2">
-              <CopyRow label="Ngân hàng" value={bankTransfer?.bankName || ""} />
-              <CopyRow
-                label="Số tài khoản"
-                value={bankTransfer?.accountNumber || ""}
-              />
-              <CopyRow
-                label="Chủ tài khoản"
-                value={bankTransfer?.accountName || ""}
-              />
-              <CopyRow
-                label="Nội dung CK"
-                value={bankTransfer?.transferContent || ""}
-              />
+          <hr className="my-4 border-slate-200" />
+
+          <div>
+            <DetailRow label="Ngân hàng" value={bankTransfer?.bankName || ""} />
+            <DetailRow
+              label="Số tài khoản"
+              value={bankTransfer?.accountNumber || ""}
+            />
+            <DetailRow
+              label="Chủ tài khoản"
+              value={bankTransfer?.accountName || ""}
+            />
+          </div>
+
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-3">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-amber-800">
+                  Nội dung chuyển khoản (Bắt buộc ghi đúng)
+                </p>
+                <p className="mt-1.5 break-all text-base font-black text-amber-950">
+                  {bankTransfer?.transferContent || "—"}
+                </p>
+              </div>
+              {bankTransfer?.transferContent ? (
+                <CopyButton
+                  label="Nội dung chuyển khoản"
+                  value={bankTransfer.transferContent}
+                />
+              ) : null}
             </div>
           </div>
 
-          <p className="text-xs font-semibold text-slate-500">
-            Hạn thanh toán: {paymentDueLabel || "Chưa có"}
-          </p>
-
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Đóng
-            </Button>
-            {payment?.status === "pending" ? (
-              <Button
-                disabled={confirmPending}
-                type="button"
-                onClick={() => onConfirm(payment.id)}
+          {hasQr ? (
+            <div className="mt-5">
+              <p className="flex items-start gap-2 text-xs leading-5 text-slate-500">
+                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                <span>
+                  Mẹo: Quét mã QR dưới đây để tự động điền thông tin chuyển
+                  khoản.
+                </span>
+              </p>
+              <div
+                className={cn(
+                  "mt-3 flex justify-center",
+                  bankTransfer?.qrImageUrl &&
+                    bankTransfer?.momoQrImageUrl &&
+                    "gap-6 sm:gap-8",
+                )}
               >
-                {confirmPending ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                {bankTransfer?.qrImageUrl ? (
+                  <QrBlock
+                    alt="QR chuyển khoản ngân hàng"
+                    label={
+                      bankTransfer?.momoQrImageUrl ? "Ngân hàng" : undefined
+                    }
+                    src={bankTransfer.qrImageUrl}
+                  />
                 ) : null}
-                Tôi đã chuyển
-              </Button>
-            ) : null}
-          </div>
+                {bankTransfer?.momoQrImageUrl ? (
+                  <QrBlock
+                    alt="QR MoMo"
+                    label={bankTransfer?.qrImageUrl ? "MoMo" : undefined}
+                    src={bankTransfer.momoQrImageUrl}
+                  />
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {paymentStatus && payment?.status === "awaiting_review" ? (
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs font-semibold text-sky-900">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                Đã ghi nhận chuyển khoản. Hóa đơn đang chờ admin duyệt.
+              </span>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:justify-end">
+          <Button
+            className="h-9 border-0 bg-transparent text-sm font-semibold text-slate-500 shadow-none hover:bg-slate-100 hover:text-slate-700"
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+          >
+            Đóng
+          </Button>
+          {canConfirm ? (
+            <Button
+              className="h-9 text-sm"
+              disabled={confirmPending}
+              type="button"
+              onClick={() => onConfirm(payment.id)}
+            >
+              {confirmPending ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : null}
+              Tôi đã chuyển khoản
+            </Button>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/form";
+import { AppFooter } from "./app-footer";
 
 export function LoginScreen({ onLogin }) {
   const [phone, setPhone] = useState("");
@@ -19,12 +20,15 @@ export function LoginScreen({ onLogin }) {
   const [isPending, setIsPending] = useState(false);
 
   return (
-    <main className="app-shell grid min-h-screen place-items-center p-4" data-density="comfortable">
+    <main
+      className="app-shell grid min-h-screen place-items-center gap-3 p-4"
+      data-density="comfortable"
+    >
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className="mb-4 flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-md bg-zinc-900 text-[10px] font-bold text-white">
-              FES
+            <div className="grid h-9 w-9 place-items-center rounded-md bg-emerald-600 text-[10px] font-bold text-white">
+              FET
             </div>
             <div>
               <CardTitle>Quản lý vận tải</CardTitle>
@@ -82,6 +86,7 @@ export function LoginScreen({ onLogin }) {
           </form>
         </CardContent>
       </Card>
+      <AppFooter className="w-full max-w-md" />
     </main>
   );
 }

@@ -10,13 +10,14 @@ export const billingStatusCopy = {
 export const invoiceStatusCopy = {
   draft: { label: "Nháp", tone: "default" },
   open: { label: "Chờ thanh toán", tone: "amber" },
+  pending: { label: "Chờ duyệt", tone: "blue" },
   paid: { label: "Đã thanh toán", tone: "green" },
   uncollectible: { label: "Không thu được", tone: "red" },
   void: { label: "Đã hủy", tone: "default" },
 };
 
 export const paymentStatusCopy = {
-  awaiting_review: { label: "Chờ xác nhận", tone: "amber" },
+  awaiting_review: { label: "Chờ duyệt", tone: "blue" },
   canceled: { label: "Đã hủy", tone: "default" },
   failed: { label: "Thất bại", tone: "red" },
   pending: { label: "Chưa chuyển", tone: "amber" },

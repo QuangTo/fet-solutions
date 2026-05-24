@@ -112,7 +112,6 @@ export function ManagementPage({
             checkoutPending={checkoutPending}
             confirmPending={confirmPending}
             isActive={activeList === "billing"}
-            payDialogOpen={Boolean(checkout)}
             onApprove={onApprovePayment}
             onCheckout={onBillingCheckout}
             onCloseCheckout={onCloseCheckout}

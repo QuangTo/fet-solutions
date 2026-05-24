@@ -2,7 +2,7 @@
 
 ## Product Shape
 
-FES is a compact logistics SaaS for receiving customer goods, dispatching them by truck, and helping accounting close invoices when customer inventory reaches zero. Keep the app operational and data-dense, not marketing-like.
+FET is a compact logistics SaaS for receiving customer goods, dispatching them by truck, and helping accounting close invoices when customer inventory reaches zero. Keep the app operational and data-dense, not marketing-like.
 
 ## Frontend Principles
 
