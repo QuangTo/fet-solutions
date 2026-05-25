@@ -13,7 +13,7 @@ import { DataTableCard } from "./data-table-card";
 export function LoadingSkeleton({ page }) {
   if (page === "dashboard") {
     return (
-      <>
+      <div className="grid gap-4">
         <div className="grid gap-3 md:grid-cols-3">
           {[0, 1, 2].map((item) => (
             <Card key={item}>
@@ -48,7 +48,7 @@ export function LoadingSkeleton({ page }) {
             </CardContent>
           </Card>
         </div>
-      </>
+      </div>
     );
   }
 

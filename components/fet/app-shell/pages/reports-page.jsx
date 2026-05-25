@@ -1,9 +1,14 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  dateComparator,
+  accountingClosuresQueryOptions,
+  dispatchesListQueryOptions,
+} from "@/lib/api";
+import {
+  flattenDispatches,
   formatDate,
   formatDateTime,
   reportRows,
@@ -35,14 +40,19 @@ import { useMediaQuery } from "../hooks/use-media-query";
 import { paginate } from "../lib/pagination";
 import { DispatchTable } from "./dispatch-table";
 
-export function ReportsPage({ mutation, session, state }) {
+function canApproveInvoiceClosure(role) {
+  return role === "admin" || role === "accountant";
+}
+
+export function ReportsPage({ activeRole, mutation, session, state }) {
+  const canApprove = canApproveInvoiceClosure(activeRole);
   const [selected, setSelected] = useState("");
   const [customerPage, setCustomerPage] = useState(1);
   const [confirmCustomer, setConfirmCustomer] = useState(null);
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoicePage, setInvoicePage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
-  const shouldPaginateCustomers = useMediaQuery("(max-width: 639px)");
+  const shouldPaginateCustomers = useMediaQuery("(max-width: 639px)", false);
   const rows = reportRows(state);
   const customerView = shouldPaginateCustomers
     ? paginate(rows, customerPage, 3)
@@ -52,12 +62,42 @@ export function ReportsPage({ mutation, session, state }) {
     : customerView.rows[0]?.reportKey || rows[0]?.reportKey || "";
   const currentRow = rows.find((row) => row.reportKey === current) || rows[0];
   const invoiceSearchTerm = invoiceSearch.trim().toLowerCase();
-  const currentPeriodOpenTime = new Date(
-    currentRow?.periodOpenAt || "",
-  ).getTime();
-  const currentPeriodClosedTime = new Date(
-    currentRow?.periodClosedAt || "",
-  ).getTime();
+  const dispatchFilters = useMemo(
+    () =>
+      currentRow?.customerId
+        ? {
+            customerId: currentRow.customerId,
+            periodClosedAt: currentRow.periodClosedAt || undefined,
+            periodOpenAt: currentRow.periodOpenAt || undefined,
+          }
+        : {},
+    [currentRow],
+  );
+  const dispatchHistoryQuery = useQuery({
+    ...dispatchesListQueryOptions(session, dispatchFilters, historyPage),
+    enabled: Boolean(session?.id && currentRow?.customerId),
+  });
+  const dispatchHistoryRows = flattenDispatches(
+    dispatchHistoryQuery.data?.items || [],
+  );
+  const closuresQuery = useQuery({
+    ...accountingClosuresQueryOptions(session, invoicePage),
+    enabled: Boolean(session?.id),
+  });
+  const invoiceItems = (closuresQuery.data?.items || []).filter((item) => {
+    if (!invoiceSearchTerm) return true;
+    return [
+      formatDate(item.date),
+      item.customer,
+      formatDateTime(item.createdAt),
+      item.approvedByName,
+      item.status,
+    ]
+      .filter(Boolean)
+      .some((value) =>
+        value.toString().toLowerCase().includes(invoiceSearchTerm),
+      );
+  });
 
   useEffect(() => {
     setCustomerPage(1);
@@ -70,48 +110,6 @@ export function ReportsPage({ mutation, session, state }) {
   useEffect(() => {
     setHistoryPage(1);
   }, [current]);
-
-  const history = state.dispatches
-    .filter((item) => {
-      if (item.customer !== currentRow?.customer) return false;
-      const dispatchTime = new Date(item.createdAt || "").getTime();
-      if (
-        !Number.isNaN(currentPeriodOpenTime) &&
-        dispatchTime <= currentPeriodOpenTime
-      )
-        return false;
-      if (
-        !Number.isNaN(currentPeriodClosedTime) &&
-        dispatchTime > currentPeriodClosedTime
-      )
-        return false;
-      if (!Number.isNaN(dispatchTime)) return true;
-      return (
-        (!currentRow?.periodStart || item.date >= currentRow.periodStart) &&
-        (!currentRow?.periodEnd || item.date <= currentRow.periodEnd)
-      );
-    })
-    .sort(dateComparator("desc"));
-  const dispatchHistory = paginate(history, historyPage);
-  const invoiceHistory = paginate(
-    [...state.invoiceApprovals]
-      .filter((item) => {
-        if (!invoiceSearchTerm) return true;
-        return [
-          formatDate(item.date),
-          item.customer,
-          formatDateTime(item.createdAt),
-          item.approvedByName,
-          item.status,
-        ]
-          .filter(Boolean)
-          .some((value) =>
-            value.toString().toLowerCase().includes(invoiceSearchTerm),
-          );
-      })
-      .sort(dateComparator("desc")),
-    invoicePage,
-  );
 
   return (
     <div className="grid gap-4">
@@ -156,16 +154,18 @@ export function ReportsPage({ mutation, session, state }) {
                   <span className="pointer-events-none relative z-10 text-xs font-semibold text-slate-500">
                     Hoàn thành {formatDateTime(row.periodClosedAt)}
                   </span>
-                  <Button
-                    className="relative z-20 w-full"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setConfirmCustomer(row);
-                    }}
-                    type="button"
-                  >
-                    Xuất hóa đơn
-                  </Button>
+                  {canApprove ? (
+                    <Button
+                      className="relative z-20 w-full"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setConfirmCustomer(row);
+                      }}
+                      type="button"
+                    >
+                      Xuất hóa đơn
+                    </Button>
+                  ) : null}
                 </article>
               ))
             ) : (
@@ -185,16 +185,15 @@ export function ReportsPage({ mutation, session, state }) {
         title="Lịch sử xuất hàng"
         description="Dữ liệu phục vụ đối soát hóa đơn."
       >
-        <DispatchTable rows={dispatchHistory.rows} />
+        <DispatchTable rows={dispatchHistoryRows} />
         <Pagination
-          page={dispatchHistory.page}
-          pageCount={dispatchHistory.pageCount}
+          page={dispatchHistoryQuery.data?.page || historyPage}
+          pageCount={dispatchHistoryQuery.data?.pageCount || 1}
           onPageChange={setHistoryPage}
         />
       </DataTableCard>
       <DataTableCard
         title="Lịch sử xuất hóa đơn"
-        // description="Các khách hàng đã được ghi nhận."
         descriptionPrefix={
           <div className="relative w-full sm:max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -217,8 +216,8 @@ export function ReportsPage({ mutation, session, state }) {
             </tr>
           </thead>
           <tbody>
-            {invoiceHistory.rows.length ? (
-              invoiceHistory.rows.map((item) => (
+            {invoiceItems.length ? (
+              invoiceItems.map((item) => (
                 <tr key={item.id}>
                   <Td>{formatDate(item.date)}</Td>
                   <Td>{item.customer}</Td>
@@ -238,8 +237,8 @@ export function ReportsPage({ mutation, session, state }) {
           </tbody>
         </DataTable>
         <Pagination
-          page={invoiceHistory.page}
-          pageCount={invoiceHistory.pageCount}
+          page={closuresQuery.data?.page || invoicePage}
+          pageCount={closuresQuery.data?.pageCount || 1}
           onPageChange={setInvoicePage}
         />
       </DataTableCard>

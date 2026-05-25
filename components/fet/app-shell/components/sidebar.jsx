@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { iconMap, pageOrder } from "../lib/constants";
 import { AccountDialog } from "./account-dialog";
 import { AppFooter } from "./app-footer";
+import { FetBrandMark } from "./fet-brand-mark";
 
 function userInitial(name = "") {
   return name.trim().charAt(0).toUpperCase() || "?";
@@ -14,6 +15,7 @@ function userInitial(name = "") {
 export function Sidebar({
   activePage,
   activeRole,
+  billingLockPage = "dashboard",
   mobileNavOpen,
   navigate,
   onLogout,
@@ -21,6 +23,7 @@ export function Sidebar({
   pageAccess,
   passwordPending,
   session,
+  siteBillingLocked = false,
 }) {
   const [accountOpen, setAccountOpen] = useState(false);
   const visiblePages = pageOrder.filter((pageName) =>
@@ -40,10 +43,8 @@ export function Sidebar({
           onClick={() => navigate("dashboard")}
           type="button"
         >
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-zinc-900 text-ui-xs font-bold tracking-wide text-white">
-            FET
-          </span>
-          <span className="truncate text-ui-nav font-semibold text-zinc-900">
+          <FetBrandMark size="nav" />
+          <span className="truncate text-ui-nav font-normal text-zinc-600">
             Quản lý vận tải
           </span>
         </button>
@@ -58,13 +59,17 @@ export function Sidebar({
             const item = pages[pageName];
             const Icon = iconMap[item.icon];
             const isActive = activePage === pageName;
+            const menuLocked =
+              siteBillingLocked && pageName !== billingLockPage;
             return (
               <button
+                aria-disabled={menuLocked}
                 className={cn(
                   "flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-ui-nav font-medium transition-colors",
                   isActive
                     ? "bg-zinc-200/70 text-zinc-900"
                     : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
+                  menuLocked && "cursor-not-allowed opacity-40 hover:bg-transparent",
                 )}
                 key={pageName}
                 onClick={() => navigate(pageName)}

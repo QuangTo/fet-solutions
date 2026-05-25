@@ -2,15 +2,31 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Menu, X } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { accessQueryOptions, apiRequest, billingQueryOptions, billingStatusQueryOptions, pageQueryOptions, saveAppSetting } from "@/lib/api";
-import { canManageBilling } from "@/lib/billing-utils";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  accountingContextQueryOptions,
+  apiRequest,
+  appContextPageFor,
+  billingQueryOptions,
+  dashboardSummaryQueryOptions,
+  pageQueryOptions,
+  saveAppSetting,
+  usersListQueryOptions,
+  shellContextQueryOptions,
+} from "@/lib/api";
+import {
+  billingIsLocked,
+  billingLockAllowedPage,
+  billingLockEnforcePage,
+  canManageBilling,
+} from "@/lib/billing-utils";
 import {
   composeState,
   defaultPageAccess,
   normalizePageAccess,
   normalizeRole,
+  pageIdFromPathname,
   pages,
   roleCanAccessPage,
   todayIso,
@@ -19,17 +35,20 @@ import { parseApiError } from "@/lib/api-errors";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LoginScreen } from "./components/login-screen";
+import { LoginScreen, SessionBootstrapScreen } from "./components/login-screen";
 import { BillingBanner } from "./components/billing-banner";
+import { BillingLockScreen } from "./components/billing-lock-screen";
 import { PeriodSelect } from "./components/period-select";
 import { LoadingSkeleton } from "./components/skeletons";
 import { Sidebar } from "./components/sidebar";
 import { Toast } from "./components/toast";
 import {
+  LOGIN_PATH,
   pagePaths,
   SELECTED_CUSTOMER_KEY,
   SESSION_KEY,
 } from "./lib/constants";
+import { readStoredSession } from "./lib/session";
 import {
   addMasterRecord,
   applyDispatchInventory,
@@ -37,6 +56,7 @@ import {
   dispatchMasterRecords,
   masterListFromPath,
   prependById,
+  prependToPaginatedList,
   receiptMasterRecord,
   removeMasterRecord,
   resetCustomerInventory,
@@ -50,8 +70,10 @@ import { SettingsPage } from "./pages/settings-page";
 
 export default function FetAppShell({ initialPage = "dashboard" }) {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const [activePage, setActivePage] = useState(initialPage);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState("");
@@ -63,17 +85,11 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
   const [dashboardPeriod, setDashboardPeriod] = useState("week");
   const [billingCheckout, setBillingCheckout] = useState(null);
   const [billingOpenRequest, setBillingOpenRequest] = useState(0);
+  const [usersPage, setUsersPage] = useState(1);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(SESSION_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.id) {
-        setSession({ ...parsed, role: normalizeRole(parsed.role) });
-      } else {
-        window.localStorage.removeItem(SESSION_KEY);
-      }
-    }
+    setSession(readStoredSession());
+    setAuthReady(true);
   }, []);
 
   useEffect(() => {
@@ -84,163 +100,304 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     if (storedCustomer) setSelectedCustomer(storedCustomer);
   }, [initialPage]);
 
-  const accessQuery = useQuery(accessQueryOptions(session));
-  const pageAccess = useMemo(() => {
-    const raw = accessQuery.data?.pageAccess;
-    if (raw && typeof raw === "object") return normalizePageAccess(raw);
-    return defaultPageAccess();
-  }, [accessQuery.data?.pageAccess]);
   const [pageAccessDraft, setPageAccessDraft] = useState(null);
   const [settingsDraft, setSettingsDraft] = useState(null);
   const [settingsApplyPending, setSettingsApplyPending] = useState(false);
   const [pageAccessApplyPending, setPageAccessApplyPending] = useState(false);
 
-  useEffect(() => {
-    const ui = accessQuery.data?.ui;
-    if (!ui) return;
-    setSettings({
-      accent: ui.accent === "slate" ? "slate" : "emerald",
-      density: ui.density === "compact" ? "compact" : "comfortable",
-    });
-  }, [accessQuery.data?.ui]);
-
-  useEffect(() => {
-    if (!session) return;
-    const role = normalizeRole(session.role);
-    if (roleCanAccessPage(pageAccess, role, activePage)) return;
-    router.replace(pagePaths.dashboard);
-  }, [session, activePage, pageAccess, router]);
+  const activeRole = normalizeRole(session?.role || "warehouse");
+  const pageAccessFallback = useMemo(() => defaultPageAccess(), []);
 
   const showToast = (message, tone = "success") => {
     setToast({ message, tone });
   };
 
-  const activeRole = normalizeRole(session?.role || "warehouse");
-  const navigate = (page) => {
-    setMobileNavOpen(false);
-    if (!roleCanAccessPage(pageAccess, activeRole, page)) return;
-    router.push(pagePaths[page] || "/dashboard");
-    setActivePage(page);
-  };
-
-  const visiblePage = roleCanAccessPage(pageAccess, activeRole, activePage)
+  const visiblePage = roleCanAccessPage(pageAccessFallback, activeRole, activePage)
     ? activePage
     : "dashboard";
-  const needsMaster = visiblePage !== "cai-dat";
-  const needsOperations = [
-    "dashboard",
-    "nhap-hang",
-    "xuat-hang",
-    "bao-cao",
-  ].includes(visiblePage);
-  const needsReport = ["dashboard", "bao-cao"].includes(visiblePage);
-  const usesBundledMaster =
-    visiblePage === "nhap-hang" || visiblePage === "xuat-hang";
-  const canLoadPageData = Boolean(session) && accessQuery.isSuccess;
-  const operationsPage =
-    visiblePage === "nhap-hang"
-      ? "receipt"
-      : visiblePage === "xuat-hang"
-        ? "dispatch"
-        : "operations";
-  const masterQuery = useQuery({
-    ...pageQueryOptions("master", session),
-    enabled: canLoadPageData && needsMaster && !usesBundledMaster,
-  });
-  const operationsQuery = useQuery({
-    ...pageQueryOptions(operationsPage, session),
-    enabled: canLoadPageData && needsOperations,
-  });
-  const reportQuery = useQuery({
-    ...pageQueryOptions("report", session),
-    enabled: canLoadPageData && needsReport,
-  });
-  const usersQuery = useQuery({
-    queryKey: ["users", session?.id, session?.role, session?.siteId],
-    queryFn: () => apiRequest("/users", {}, session),
-    enabled:
-      Boolean(session) &&
-      visiblePage === "quan-ly" &&
-      roleCanAccessPage(pageAccess, activeRole, "quan-ly"),
-  });
-  const billingStatusQuery = useQuery(billingStatusQueryOptions(session));
+  const shellContextQuery = useQuery(shellContextQueryOptions(session));
+  const pageAccess = useMemo(() => {
+    const raw = shellContextQuery.data?.pageAccess;
+    if (raw && typeof raw === "object") return normalizePageAccess(raw);
+    return pageAccessFallback;
+  }, [shellContextQuery.data?.pageAccess, pageAccessFallback]);
+
+  const visiblePageAuthorized = roleCanAccessPage(
+    pageAccess,
+    activeRole,
+    activePage,
+  )
+    ? activePage
+    : "dashboard";
+
+  const billingStatus = shellContextQuery.data?.billingStatus || null;
+  const siteBillingLocked = billingIsLocked(billingStatus);
   const canManageBillingSection =
     canManageBilling(activeRole) &&
     roleCanAccessPage(pageAccess, activeRole, "quan-ly");
+  const billingLockPage = billingLockAllowedPage(canManageBillingSection);
+
+  const navigate = useCallback(
+    (page) => {
+      setMobileNavOpen(false);
+      if (!roleCanAccessPage(pageAccess, activeRole, page)) return;
+
+      let targetPage = page;
+      if (siteBillingLocked) {
+        targetPage = billingLockEnforcePage(page, canManageBillingSection);
+        if (canManageBillingSection && targetPage === "quan-ly" && page !== "quan-ly") {
+          setBillingOpenRequest((count) => count + 1);
+        }
+      }
+
+      const nextPath = pagePaths[targetPage] || pagePaths.dashboard;
+      if (pagePaths[activePage] !== nextPath) {
+        router.replace(nextPath);
+      }
+      setActivePage(targetPage);
+    },
+    [
+      activePage,
+      activeRole,
+      canManageBillingSection,
+      pageAccess,
+      router,
+      siteBillingLocked,
+    ],
+  );
+
+  useEffect(() => {
+    const ui = shellContextQuery.data?.ui;
+    if (!ui) return;
+    setSettings({
+      accent: ui.accent === "slate" ? "slate" : "emerald",
+      density: ui.density === "compact" ? "compact" : "comfortable",
+    });
+  }, [shellContextQuery.data?.ui]);
+
+  useEffect(() => {
+    if (!authReady) return;
+    if (!session && pathname !== LOGIN_PATH) {
+      router.replace(LOGIN_PATH);
+    }
+  }, [authReady, session, pathname, router]);
+
+  useEffect(() => {
+    if (!authReady || !session) return;
+    if (pathname === LOGIN_PATH) {
+      router.replace(pagePaths.dashboard);
+    }
+  }, [authReady, session, pathname, router]);
+
+  useEffect(() => {
+    if (!session || !shellContextQuery.isSuccess) return;
+    const role = normalizeRole(session.role);
+    if (roleCanAccessPage(pageAccess, role, activePage)) return;
+    router.replace(pagePaths.dashboard);
+  }, [session, activePage, pageAccess, router, shellContextQuery.isSuccess]);
+
+  const hasSession = Boolean(session);
+  const shellReady = hasSession && shellContextQuery.isSuccess;
+
+  useEffect(() => {
+    if (!shellReady || !siteBillingLocked) return;
+    const fromUrl = pageIdFromPathname[pathname] || "dashboard";
+    const targetPage = billingLockEnforcePage(fromUrl, canManageBillingSection);
+    if (targetPage === "quan-ly" && fromUrl !== "quan-ly") {
+      setBillingOpenRequest((count) => count + 1);
+    }
+    const targetPath = pagePaths[targetPage] || pagePaths.dashboard;
+    if (pathname !== targetPath) {
+      router.replace(targetPath);
+    }
+    if (activePage !== targetPage) {
+      setActivePage(targetPage);
+    }
+  }, [
+    activePage,
+    canManageBillingSection,
+    pathname,
+    router,
+    shellReady,
+    siteBillingLocked,
+  ]);
+
+  const page = visiblePageAuthorized;
+  const contentPage =
+    siteBillingLocked && shellReady
+      ? billingLockEnforcePage(page, canManageBillingSection)
+      : page;
+  const showBillingLockScreen =
+    siteBillingLocked && shellReady && contentPage !== "quan-ly";
+
+  const dashboardQuery = useQuery({
+    ...dashboardSummaryQueryOptions(session),
+    enabled: hasSession && contentPage === "dashboard" && !showBillingLockScreen,
+  });
+  const accountingContextQuery = useQuery({
+    ...accountingContextQueryOptions(session),
+    enabled: hasSession && contentPage === "bao-cao" && !showBillingLockScreen,
+  });
+  const needsMaster = contentPage === "quan-ly";
+  const masterQuery = useQuery({
+    ...pageQueryOptions("master", session),
+    enabled: hasSession && needsMaster,
+  });
+  const receiptQuery = useQuery({
+    ...pageQueryOptions("receipt", session),
+    enabled: shellReady && contentPage === "nhap-hang" && !showBillingLockScreen,
+  });
+  const dispatchQuery = useQuery({
+    ...pageQueryOptions("dispatch", session),
+    enabled: shellReady && contentPage === "xuat-hang" && !showBillingLockScreen,
+  });
+  const usersQuery = useQuery({
+    ...usersListQueryOptions(session, usersPage),
+    enabled:
+      Boolean(session) &&
+      contentPage === "quan-ly" &&
+      roleCanAccessPage(pageAccess, activeRole, "quan-ly"),
+  });
   const billingQuery = useQuery({
     ...billingQueryOptions(session, { enabled: canManageBillingSection }),
-    enabled: Boolean(session) && visiblePage === "quan-ly" && canManageBillingSection,
+    enabled:
+      Boolean(session) && contentPage === "quan-ly" && canManageBillingSection,
   });
 
   useEffect(() => {
-    if (visiblePage !== "cai-dat") return;
+    if (contentPage !== "cai-dat") return;
     setPageAccessDraft(pageAccess);
     setSettingsDraft(settings);
-  }, [visiblePage, pageAccess, settings]);
+  }, [contentPage, pageAccess, settings]);
 
-  const bundledMaster = useMemo(() => {
-    if (!usesBundledMaster || !operationsQuery.data?.customers) return null;
-    return {
-      customers: operationsQuery.data.customers,
-      drivers: operationsQuery.data.drivers,
-      vehicles: operationsQuery.data.vehicles,
-    };
-  }, [operationsQuery.data, usesBundledMaster]);
-
-  const bundledOperations = useMemo(() => {
-    if (!operationsQuery.data) return null;
-    if (operationsPage === "receipt") {
+  const pageCatalog = useMemo(() => {
+    if (contentPage === "nhap-hang" && receiptQuery.data) {
       return {
-        inventory: operationsQuery.data.inventory,
-        receipts: operationsQuery.data.receipts,
+        customers: receiptQuery.data.customers,
+        drivers: receiptQuery.data.drivers,
+        vehicles: receiptQuery.data.vehicles,
+        warehouses: receiptQuery.data.warehouses || [],
       };
     }
-    if (operationsPage === "dispatch") {
+    if (contentPage === "xuat-hang" && dispatchQuery.data) {
       return {
-        dispatches: operationsQuery.data.dispatches,
-        inventory: operationsQuery.data.inventory,
+        customers: dispatchQuery.data.customers,
+        drivers: dispatchQuery.data.drivers,
+        vehicles: dispatchQuery.data.vehicles,
+        warehouses: dispatchQuery.data.warehouses || [],
       };
     }
-    return operationsQuery.data;
-  }, [operationsPage, operationsQuery.data]);
+    if (contentPage === "bao-cao" && accountingContextQuery.data?.catalog) {
+      return accountingContextQuery.data.catalog;
+    }
+    return masterQuery.data;
+  }, [
+    accountingContextQuery.data?.catalog,
+    contentPage,
+    dispatchQuery.data,
+    masterQuery.data,
+    receiptQuery.data,
+  ]);
 
-  const isMasterLoading =
-    needsMaster &&
-    !usesBundledMaster &&
-    !masterQuery.data &&
-    masterQuery.isPending;
-  const isOperationsLoading =
-    needsOperations && !operationsQuery.data && operationsQuery.isPending;
-  const isReportLoading =
-    needsReport && !reportQuery.data && reportQuery.isPending;
+  const pageOperations = useMemo(() => {
+    if (contentPage === "nhap-hang" && receiptQuery.data) {
+      return {
+        inventory: receiptQuery.data.inventory,
+        receipts: receiptQuery.data.receipts,
+      };
+    }
+    if (contentPage === "xuat-hang" && dispatchQuery.data) {
+      return {
+        dispatches: dispatchQuery.data.dispatches,
+        inventory: dispatchQuery.data.inventory,
+      };
+    }
+    return null;
+  }, [contentPage, dispatchQuery.data, receiptQuery.data]);
+
+  const pageAccounting =
+    contentPage === "bao-cao" ? accountingContextQuery.data?.accounting : null;
+
+  const isDashboardLoading =
+    contentPage === "dashboard" &&
+    !dashboardQuery.data &&
+    dashboardQuery.isPending;
+  const isAccountingLoading =
+    contentPage === "bao-cao" &&
+    !accountingContextQuery.data?.accounting &&
+    accountingContextQuery.isPending;
+  const isMasterLoading = needsMaster && !pageCatalog && masterQuery.isPending;
+  const isReceiptLoading =
+    contentPage === "nhap-hang" &&
+    !receiptQuery.data &&
+    receiptQuery.isPending;
+  const isDispatchLoading =
+    contentPage === "xuat-hang" &&
+    !dispatchQuery.data &&
+    dispatchQuery.isPending;
   const isUsersLoading =
     roleCanAccessPage(pageAccess, activeRole, "quan-ly") &&
-    visiblePage === "quan-ly" &&
-    !usersQuery.data &&
+    contentPage === "quan-ly" &&
+    !usersQuery.data?.items &&
     usersQuery.isPending;
-  const isBillingLoading =
-    visiblePage === "quan-ly" && !billingQuery.data && billingQuery.isPending;
   const isPageLoading =
-    isMasterLoading ||
-    isOperationsLoading ||
-    isReportLoading ||
-    isUsersLoading ||
-    isBillingLoading;
+    shellReady &&
+    !showBillingLockScreen &&
+    (isDashboardLoading ||
+      isAccountingLoading ||
+      isMasterLoading ||
+      isReceiptLoading ||
+      isDispatchLoading ||
+      isUsersLoading);
+
+  useEffect(() => {
+    if (!shellReady || !session?.id) return;
+    const role = normalizeRole(session.role);
+    queryClient.prefetchQuery(dashboardSummaryQueryOptions(session));
+    queryClient.prefetchQuery(pageQueryOptions("receipt", session));
+    queryClient.prefetchQuery(pageQueryOptions("dispatch", session));
+    queryClient.prefetchQuery(pageQueryOptions("master", session));
+    if (roleCanAccessPage(pageAccess, role, "bao-cao")) {
+      queryClient.prefetchQuery(accountingContextQueryOptions(session));
+    }
+    if (roleCanAccessPage(pageAccess, role, "quan-ly")) {
+      queryClient.prefetchQuery(usersListQueryOptions(session, 1));
+      if (canManageBilling(role)) {
+        queryClient.prefetchQuery(billingQueryOptions(session));
+      }
+    }
+  }, [
+    pageAccess,
+    queryClient,
+    session,
+    shellReady,
+  ]);
 
   const state = useMemo(
     () =>
       composeState({
-        master: masterQuery.data || bundledMaster,
-        operations: bundledOperations,
-        report: reportQuery.data,
+        catalog: pageCatalog,
+        master: pageCatalog,
+        operations: pageOperations,
+        accounting: pageAccounting,
       }),
-    [
-      masterQuery.data,
-      bundledMaster,
-      bundledOperations,
-      reportQuery.data,
-    ],
+    [pageAccounting, pageCatalog, pageOperations],
   );
+
+  const invalidateAppContext = (contextPages = []) => {
+    const pages = new Set(["shell", ...contextPages]);
+    pages.forEach((contextPage) => {
+      queryClient.invalidateQueries({
+        queryKey: ["app-context", session?.id, session?.siteId, contextPage],
+      });
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["dashboard-summary", session?.id, session?.siteId],
+    });
+    queryClient.invalidateQueries({ queryKey: ["receipts-list"] });
+    queryClient.invalidateQueries({ queryKey: ["dispatches-list"] });
+    queryClient.invalidateQueries({ queryKey: ["accounting-closures"] });
+  };
 
   const pageDataKey = (pageName) => [
     "page-data",
@@ -266,7 +423,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
 
   const invalidateBilling = () => {
     queryClient.invalidateQueries({ queryKey: ["billing"] });
-    queryClient.invalidateQueries({ queryKey: ["billing-status"] });
+    invalidateAppContext(["shell"]);
   };
 
   const mutationOptions = {
@@ -290,11 +447,6 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         session,
       ),
     onSuccess: (receipt) => {
-      updatePageData("operations", (data) => ({
-        ...data,
-        inventory: applyReceiptInventory(data.inventory || [], receipt),
-        receipts: prependById(data.receipts || [], receipt),
-      }));
       updatePageData("receipt", (data) => {
         const master = addMasterRecord(
           {
@@ -309,13 +461,15 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
           ...data,
           ...master,
           inventory: applyReceiptInventory(data.inventory || [], receipt),
-          receipts: prependById(data.receipts || [], receipt),
+          receipts: prependToPaginatedList(data.receipts, receipt),
         };
       });
       updatePageData("master", (data) =>
         addMasterRecord(data, "customers", receiptMasterRecord(receipt)),
       );
-      markPagesStale(["master", "operations", "receipt", "dispatch", "report"]);
+      markPagesStale(["receipt"]);
+      queryClient.invalidateQueries({ queryKey: ["receipts-list"] });
+      invalidateAppContext(["accounting"]);
       showToast("Đã nhập hàng");
     },
   });
@@ -329,11 +483,6 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
       ),
     onSuccess: (dispatch) => {
       const records = dispatchMasterRecords(dispatch);
-      updatePageData("operations", (data) => ({
-        ...data,
-        dispatches: prependById(data.dispatches || [], dispatch),
-        inventory: applyDispatchInventory(data.inventory || [], dispatch),
-      }));
       updatePageData("dispatch", (data) => {
         const master = addMasterRecord(
           addMasterRecord(
@@ -355,7 +504,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         return {
           ...data,
           ...master,
-          dispatches: prependById(data.dispatches || [], dispatch),
+          dispatches: prependToPaginatedList(data.dispatches, dispatch),
           inventory: applyDispatchInventory(data.inventory || [], dispatch),
         };
       });
@@ -370,7 +519,9 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
           records.driver,
         ),
       );
-      markPagesStale(["master", "operations", "receipt", "dispatch", "report"]);
+      markPagesStale(["dispatch"]);
+      queryClient.invalidateQueries({ queryKey: ["dispatches-list"] });
+      invalidateAppContext(["accounting"]);
       showToast("Đã xuất hàng");
     },
   });
@@ -384,14 +535,28 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
       ),
     onSuccess: (item, variables) => {
       const listName = masterListFromPath(variables.path);
-      updatePageData("master", (data) => {
+      const patchCatalog = (catalog) => {
         if (variables.method === "DELETE") {
           const id = variables.path.split("/").filter(Boolean)[1];
-          return removeMasterRecord(data, listName, id);
+          return removeMasterRecord(catalog, listName, id);
         }
-        return addMasterRecord(data, listName, item);
-      });
-      markPagesStale(["master", "operations", "receipt", "dispatch", "report"]);
+        return addMasterRecord(catalog, listName, item);
+      };
+      if (listName === "warehouses") {
+        ["accounting", "shell"].forEach((contextPage) => {
+          queryClient.setQueryData(
+            ["app-context", session?.id, session?.siteId, contextPage],
+            (current) =>
+              current?.catalog
+                ? { ...current, catalog: patchCatalog(current.catalog) }
+                : current,
+          );
+        });
+      } else {
+        updatePageData("master", (data) => patchCatalog(data));
+      }
+      markPagesStale(["master", "receipt", "dispatch"]);
+      invalidateAppContext(["dashboard", "accounting"]);
       showToast("Đã cập nhật danh mục");
     },
   });
@@ -404,9 +569,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         session,
       ),
     onSuccess: (_item, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["users", session?.id, session?.role, session?.siteId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["users-list"] });
       markPagesStale(["master"]);
       const messages = {
         DELETE: "Đã xóa tài khoản",
@@ -430,7 +593,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     ...mutationOptions,
     mutationFn: (payload) =>
       apiRequest(
-        "/invoice-approvals",
+        "/accounting/closures",
         { body: JSON.stringify(payload), method: "POST" },
         session,
       ),
@@ -470,25 +633,63 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
           payload.periodStart,
         status: approval.status || payload.status,
       };
-      updatePageData("report", (data) => ({
-        ...data,
-        billingReady: (data.billingReady || []).filter(
-          (item) =>
-            item.customerId !== payload.customerId ||
-            new Date(item.periodClosedAt || "").getTime() !==
-              new Date(payload.periodClosedAt || "").getTime(),
-        ),
-        invoiceApprovals: prependById(
-          data.invoiceApprovals || [],
-          invoiceApproval,
-        ),
-      }));
-      ["receipt", "dispatch", "operations"].forEach((pageName) => {
+      queryClient.setQueryData(
+        ["app-context", session?.id, session?.siteId, "accounting"],
+        (current) => {
+          if (!current?.accounting) return current;
+          const closuresPage = current.accounting.closuresPage;
+          return {
+            ...current,
+            accounting: {
+              ...current.accounting,
+              billingReady: (current.accounting.billingReady || []).filter(
+                (item) =>
+                  item.customerId !== payload.customerId ||
+                  new Date(item.periodClosedAt || "").getTime() !==
+                    new Date(payload.periodClosedAt || "").getTime(),
+              ),
+              closures: prependById(
+                current.accounting.closures || [],
+                invoiceApproval,
+              ),
+              closuresPage:
+                closuresPage && (closuresPage.page ?? 1) === 1
+                  ? prependToPaginatedList(closuresPage, invoiceApproval)
+                  : closuresPage,
+              invoiceApprovals: prependById(
+                current.accounting.invoiceApprovals || [],
+                invoiceApproval,
+              ),
+              ready: (current.accounting.ready || []).filter(
+                (item) =>
+                  item.customerId !== payload.customerId ||
+                  new Date(item.periodClosedAt || "").getTime() !==
+                    new Date(payload.periodClosedAt || "").getTime(),
+              ),
+            },
+          };
+        },
+      );
+      queryClient.setQueriesData(
+        {
+          queryKey: ["accounting-closures", session?.id, session?.siteId],
+        },
+        (current) => {
+          if (!current || (current.page ?? 1) !== 1) return current;
+          return prependToPaginatedList(current, invoiceApproval);
+        },
+      );
+      ["receipt", "dispatch"].forEach((pageName) => {
         updatePageData(pageName, (data) =>
           resetCustomerInventory(data, payload.customerId, customer),
         );
       });
-      markPagesStale(["report", "receipt", "dispatch", "operations"]);
+      invalidateAppContext(["dashboard", "accounting"]);
+      void queryClient.refetchQueries({
+        queryKey: ["accounting-closures", session?.id, session?.siteId],
+        type: "active",
+      });
+      queryClient.invalidateQueries({ queryKey: ["dispatches-list"] });
       showToast("Đã ghi nhận hóa đơn");
     },
   });
@@ -556,6 +757,8 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     };
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(normalized));
     setSession(normalized);
+    setActivePage("dashboard");
+    router.replace(pagePaths.dashboard);
   };
 
   const applyUiSettings = async () => {
@@ -565,9 +768,10 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
       await saveAppSetting("ui", settingsDraft, session);
       setSettings(settingsDraft);
       queryClient.setQueryData(
-        ["access", session.id, session.siteId],
+        ["app-context", session.id, session.siteId, appContextPageFor(page)],
         (current) => (current ? { ...current, ui: settingsDraft } : current),
       );
+      invalidateAppContext(["shell"]);
       showToast("Đã lưu cài đặt");
     } catch (error) {
       showToast(parseApiError(error), "error");
@@ -586,7 +790,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         session,
       );
       const nextAccess = normalizePageAccess(saved.value);
-      await queryClient.invalidateQueries({ queryKey: ["access"] });
+      await invalidateAppContext();
       setPageAccessDraft(nextAccess);
       showToast("Đã lưu cài đặt");
     } catch (error) {
@@ -596,9 +800,10 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     }
   };
 
+  if (!authReady) return <SessionBootstrapScreen />;
   if (!session) return <LoginScreen onLogin={saveSession} />;
 
-  const page = pages[visiblePage];
+  const pageMeta = pages[contentPage];
 
   return (
     <>
@@ -639,13 +844,17 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
       <Sidebar
         activePage={activePage}
         activeRole={activeRole}
+        billingLockPage={billingLockPage}
         mobileNavOpen={mobileNavOpen}
         navigate={navigate}
         pageAccess={pageAccess}
         session={session}
+        siteBillingLocked={siteBillingLocked}
         onLogout={() => {
           window.localStorage.removeItem(SESSION_KEY);
           setSession(null);
+          setMobileNavOpen(false);
+          router.replace(LOGIN_PATH);
         }}
         onPasswordChange={(payload) => passwordMutation.mutateAsync(payload)}
         passwordPending={passwordMutation.isPending}
@@ -654,12 +863,12 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         <header className="mb-5 flex flex-col gap-2.5 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0 flex-1">
             <h1 className="text-ui-title font-semibold tracking-tight text-zinc-900">
-              {page.title}
+              {pageMeta.title}
             </h1>
-            {visiblePage === "dashboard" ? (
+            {contentPage === "dashboard" ? (
               <div className="mt-1.5 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                 <p className="max-w-3xl text-ui-sm leading-5 text-zinc-500">
-                  {page.subtitle}
+                  {pageMeta.subtitle}
                 </p>
                 <PeriodSelect
                   value={dashboardPeriod}
@@ -668,19 +877,23 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
               </div>
             ) : (
               <p className="mt-1.5 max-w-3xl text-ui-sm leading-5 text-zinc-500">
-                {page.subtitle}
+                {pageMeta.subtitle}
               </p>
             )}
           </div>
-          {visiblePage !== "dashboard" ? (
+          {contentPage !== "dashboard" ? (
             isPageLoading ? (
               <Skeleton className="h-7 w-28 justify-self-end self-end rounded-full" />
             ) : (
               <Badge
                 className="w-fit justify-self-end self-end"
-                tone={operationsQuery.isFetching ? "amber" : "green"}
+                tone={
+                  receiptQuery.isFetching || dispatchQuery.isFetching
+                    ? "amber"
+                    : "green"
+                }
               >
-                {operationsQuery.isFetching
+                {receiptQuery.isFetching || dispatchQuery.isFetching
                   ? "Đang đồng bộ"
                   : "Dữ liệu mới nhất"}
               </Badge>
@@ -694,20 +907,34 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
             settings.density === "compact" ? "gap-3" : "gap-4",
           )}
         >
-          {billingStatusQuery.data ? (
+          <div className="min-h-0">
+          {billingStatus && !siteBillingLocked ? (
             <BillingBanner
               activeRole={activeRole}
-              billing={billingStatusQuery.data}
+              billing={billingStatus}
               onManageBilling={
                 canManageBillingSection ? openBillingManagement : undefined
               }
             />
           ) : null}
-          {isPageLoading ? <LoadingSkeleton page={visiblePage} /> : null}
-          {!isPageLoading && visiblePage === "dashboard" ? (
+          </div>
+          <div
+            className={cn(
+              "grid min-h-[480px] content-start",
+              settings.density === "compact" ? "gap-3" : "gap-4",
+            )}
+          >
+          {isPageLoading ? <LoadingSkeleton page={contentPage} /> : null}
+          {!isPageLoading && showBillingLockScreen ? (
+            <BillingLockScreen />
+          ) : null}
+          {!isPageLoading &&
+          !showBillingLockScreen &&
+          contentPage === "dashboard" &&
+          dashboardQuery.data ? (
             <DashboardPage
+              dashboard={dashboardQuery.data}
               period={dashboardPeriod}
-              state={state}
               onSelectCustomer={(customer) => {
                 setSelectedCustomer(customer);
                 window.sessionStorage.setItem(
@@ -718,7 +945,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
               }}
             />
           ) : null}
-          {!isPageLoading && visiblePage === "nhap-hang" ? (
+          {!isPageLoading && !showBillingLockScreen && contentPage === "nhap-hang" ? (
             <ReceiptPage
               mutation={receiptMutation}
               selectedCustomer={selectedCustomer}
@@ -733,7 +960,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
               state={state}
             />
           ) : null}
-          {!isPageLoading && visiblePage === "xuat-hang" ? (
+          {!isPageLoading && !showBillingLockScreen && contentPage === "xuat-hang" ? (
             <DispatchPage
               mutation={dispatchMutation}
               selectedCustomer={selectedCustomer}
@@ -748,33 +975,38 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
               state={state}
             />
           ) : null}
-          {!isPageLoading && visiblePage === "bao-cao" ? (
+          {!isPageLoading && !showBillingLockScreen && contentPage === "bao-cao" ? (
             <ReportsPage
+              activeRole={activeRole}
               mutation={invoiceMutation}
               session={session}
               state={state}
             />
           ) : null}
-          {!isPageLoading && visiblePage === "quan-ly" ? (
+          {!isPageLoading && contentPage === "quan-ly" ? (
             <ManagementPage
               activeRole={activeRole}
               approvePending={billingApproveMutation.isPending}
               billing={billingQuery.data}
               billingOpenRequest={billingOpenRequest}
+              sitePaywallLocked={siteBillingLocked}
               checkout={billingCheckout}
               checkoutPending={billingCheckoutMutation.isPending}
               confirmPending={billingConfirmMutation.isPending}
               mutation={masterMutation}
               state={state}
               userMutation={userMutation}
-              users={usersQuery.data || []}
+              users={usersQuery.data?.items || []}
+              usersPage={usersQuery.data?.page || 1}
+              usersPageCount={usersQuery.data?.pageCount || 1}
+              onUsersPageChange={setUsersPage}
               onApprovePayment={handleApprovePayment}
               onBillingCheckout={handleBillingCheckout}
               onCloseCheckout={() => setBillingCheckout(null)}
               onConfirmPayment={handleConfirmPayment}
             />
           ) : null}
-          {!isPageLoading && visiblePage === "cai-dat" ? (
+          {!isPageLoading && !showBillingLockScreen && contentPage === "cai-dat" ? (
             <SettingsPage
               isPageAccessPending={pageAccessApplyPending}
               isUiPending={settingsApplyPending}
@@ -786,6 +1018,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
               onApplyUi={applyUiSettings}
             />
           ) : null}
+          </div>
         </div>
       </section>
     </main>

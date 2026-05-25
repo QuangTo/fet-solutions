@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
   CartesianGrid,
+  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -16,55 +16,31 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { compactAxisNumber, number } from "../../lib/format";
-import { overviewStats, overviewTrend } from "../../lib/period-utils";
+import { periodLabel } from "../../lib/period-utils";
 
-export function InventoryChart({ period, state }) {
-  const chartRef = useRef(null);
-  const [chartSize, setChartSize] = useState({ height: 0, width: 0 });
-  const data = overviewTrend(state, period);
-  const stats = overviewStats(state, period);
+const CHART_HEIGHT = 288;
+
+export function InventoryChart({ period, trend = [] }) {
+  const data = trend;
   const last = data[data.length - 1]?.quantity || 0;
-  const maxQuantity = Math.max(
-    0,
-    ...data.map((item) => Number(item.quantity || 0)),
-  );
   const yAxisWidth = 48;
-
-  useEffect(() => {
-    const node = chartRef.current;
-    if (!node) return undefined;
-
-    const observer = new ResizeObserver(([entry]) => {
-      setChartSize({
-        height: Math.floor(entry.contentRect.height),
-        width: Math.floor(entry.contentRect.width),
-      });
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
-  const canRenderChart = chartSize.height > 0 && chartSize.width > 0;
 
   return (
     <Card className="min-w-0">
       <CardHeader>
         <CardTitle>Xu hướng tồn kho</CardTitle>
         <CardDescription>
-          Tồn cuối {stats.label}{" "}
+          Tồn cuối {periodLabel(period)}{" "}
           <strong className="text-emerald-700">{number(last)}</strong>
         </CardDescription>
       </CardHeader>
       <CardContent className="h-[320px] min-w-0">
-        <div className="h-full min-w-0" ref={chartRef}>
-          {canRenderChart ? (
+        <div className="h-[288px] min-w-0">
+          <ResponsiveContainer height={CHART_HEIGHT} width="100%">
             <AreaChart
               data={data}
-              height={chartSize.height}
               margin={{ bottom: 6, left: 8, right: 16, top: 18 }}
-              width={chartSize.width}
             >
               <defs>
                 <linearGradient id="stockGradient" x1="0" x2="0" y1="0" y2="1">
@@ -99,9 +75,7 @@ export function InventoryChart({ period, state }) {
                 type="monotone"
               />
             </AreaChart>
-          ) : (
-            <Skeleton className="h-full w-full rounded-lg" />
-          )}
+          </ResponsiveContainer>
         </div>
       </CardContent>
     </Card>

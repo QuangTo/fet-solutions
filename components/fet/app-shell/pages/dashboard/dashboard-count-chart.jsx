@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -15,13 +16,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useElementSize } from "../../hooks/use-element-size";
 import { number } from "../../lib/format";
 import { periodLabel } from "../../lib/period-utils";
 
+const CHART_HEIGHT = 288;
+
 export function DashboardCountChart({ color, data, period, title, total, unitLabel }) {
-  const [chartRef, chartSize] = useElementSize();
   const maxCount = Math.max(0, ...data.map((item) => Number(item.count || 0)));
   const longestYAxisLabel = [0, maxCount, total].reduce((longest, value) => {
     const label = number(value);
@@ -31,7 +31,6 @@ export function DashboardCountChart({ color, data, period, title, total, unitLab
     Math.max(longestYAxisLabel.length * 8 + 28, 48),
     96,
   );
-  const canRenderChart = chartSize.height > 0 && chartSize.width > 0;
   const normalizedUnitLabel = unitLabel.toLocaleLowerCase("vi-VN");
 
   return (
@@ -50,13 +49,11 @@ export function DashboardCountChart({ color, data, period, title, total, unitLab
         </div>
       </CardHeader>
       <CardContent className="h-[320px] min-w-0">
-        <div className="h-full min-w-0" ref={chartRef}>
-          {canRenderChart ? (
+        <div className="h-[288px] min-w-0">
+          <ResponsiveContainer height={CHART_HEIGHT} width="100%">
             <BarChart
               data={data}
-              height={chartSize.height}
               margin={{ bottom: 6, left: 8, right: 16, top: 18 }}
-              width={chartSize.width}
             >
               <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
               <XAxis
@@ -91,9 +88,7 @@ export function DashboardCountChart({ color, data, period, title, total, unitLab
                 radius={[6, 6, 0, 0]}
               />
             </BarChart>
-          ) : (
-            <Skeleton className="h-full w-full rounded-lg" />
-          )}
+          </ResponsiveContainer>
         </div>
       </CardContent>
     </Card>

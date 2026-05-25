@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { dispatchesListQueryOptions } from "@/lib/api";
 import {
   allCustomers,
-  dateComparator,
+  flattenDispatches,
   formatDate,
   normalizeSku,
   stockRows,
@@ -29,8 +31,7 @@ import {
   writeDispatchPrefs,
 } from "../lib/dispatch-prefs";
 import { number } from "../lib/format";
-import { paginate } from "../lib/pagination";
-import { dateInWindow, periodDescription, periodWindow } from "../lib/period-utils";
+import { periodDescription, periodToDateRange } from "../lib/period-utils";
 import { DispatchTable } from "./dispatch-table";
 
 export function DispatchPage({
@@ -107,17 +108,27 @@ export function DispatchPage({
     }));
   }, [selectedStock?.sku]);
 
-  const rows = state.dispatches
-    .filter(
-      (item) =>
-        filters.date || dateInWindow(item.date, periodWindow(filters.period)),
-    )
-    .filter((item) => !filters.date || item.date === filters.date)
-    .filter((item) => !form.customer || item.customer === form.customer)
-    .filter((item) => !filters.truck || item.truck === filters.truck)
-    .filter((item) => !filters.driver || item.driver === filters.driver)
-    .sort(dateComparator("desc"));
-  const dispatchPage = paginate(rows, page);
+  const customerId = state.customerIds[form.customer] || "";
+  const listFilters = useMemo(() => {
+    const base = {
+      customerId,
+      driver: filters.driver || undefined,
+      plate: filters.truck || undefined,
+    };
+    if (filters.date) {
+      return { ...base, date: filters.date };
+    }
+    return { ...base, ...periodToDateRange(filters.period) };
+  }, [customerId, filters.date, filters.driver, filters.period, filters.truck]);
+  const dispatchListQuery = useQuery({
+    ...dispatchesListQueryOptions(session, listFilters, page),
+    enabled: Boolean(session?.id && customerId),
+  });
+  const dispatchRows = flattenDispatches(dispatchListQuery.data?.items || []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [customerId, filters.date, filters.driver, filters.period, filters.truck]);
 
   return (
     <div className="grid gap-4">
@@ -365,10 +376,10 @@ export function DispatchPage({
             Xem tất cả
           </Button>
         </div>
-        <DispatchTable rows={dispatchPage.rows} />
+        <DispatchTable rows={dispatchRows} />
         <Pagination
-          page={dispatchPage.page}
-          pageCount={dispatchPage.pageCount}
+          page={dispatchListQuery.data?.page || page}
+          pageCount={dispatchListQuery.data?.pageCount || 1}
           onPageChange={setPage}
         />
       </DataTableCard>

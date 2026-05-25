@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { receiptsListQueryOptions } from "@/lib/api";
 import {
   allCustomers,
-  dateComparator,
+  flattenReceipts,
   formatDate,
   normalizeSku,
   receiptSummaryRows,
@@ -26,7 +28,7 @@ import { PeriodSelect } from "../components/period-select";
 import { operationActionButtonShellClass } from "../lib/constants";
 import { number } from "../lib/format";
 import { paginate } from "../lib/pagination";
-import { dateInWindow, periodDescription, periodWindow } from "../lib/period-utils";
+import { periodDescription, periodToDateRange } from "../lib/period-utils";
 
 export function ReceiptPage({
   mutation,
@@ -47,16 +49,23 @@ export function ReceiptPage({
   const [historyPeriod, setHistoryPeriod] = useState("week");
   const customers = allCustomers(state);
   const customer = form.customer || selectedCustomer;
-  const historyWindow = periodWindow(historyPeriod);
-  const summary = paginate(receiptSummaryRows(state, customer), summaryPage);
-  const history = paginate(
-    state.invoice
-      .filter((item) => !customer || item.customer === customer)
-      .filter(
-        (item) => !historyWindow || dateInWindow(item.date, historyWindow),
-      )
-      .sort(dateComparator("desc")),
-    historyPage,
+  const customerId = state.customerIds[customer] || "";
+  const historyFilters = useMemo(
+    () => ({
+      customerId,
+      ...periodToDateRange(historyPeriod),
+    }),
+    [customerId, historyPeriod],
+  );
+  const historyQuery = useQuery({
+    ...receiptsListQueryOptions(session, historyFilters, historyPage),
+    enabled: Boolean(session?.id && customerId),
+  });
+  const historyRows = flattenReceipts(historyQuery.data?.items || []);
+  const summary = paginate(
+    receiptSummaryRows(state, customer),
+    summaryPage,
+    10,
   );
 
   useEffect(() => {
@@ -141,7 +150,7 @@ export function ReceiptPage({
               <Field>
                 Loại hàng
                 <Input
-                  placeholder="A"
+                  placeholder="VD: Gạo ST25"
                   required
                   value={form.sku}
                   onChange={(event) =>
@@ -149,54 +158,42 @@ export function ReceiptPage({
                   }
                 />
               </Field>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field>
-                  Số lượng nhập
-                  <Input
-                    min="1"
-                    required
-                    type="number"
-                    value={form.quantity}
-                    onChange={(event) =>
-                      setForm({ ...form, quantity: event.target.value })
-                    }
-                  />
-                </Field>
-                <Field>
-                  Đơn vị
-                  <Input
-                    required
-                    value={form.unit}
-                    onChange={(event) =>
-                      setForm({ ...form, unit: event.target.value })
-                    }
-                  />
-                </Field>
-              </div>
+              <Field>
+                Số lượng
+                <Input
+                  min="0"
+                  required
+                  step="any"
+                  type="number"
+                  value={form.quantity}
+                  onChange={(event) =>
+                    setForm({ ...form, quantity: event.target.value })
+                  }
+                />
+              </Field>
+              <Field>
+                Đơn vị
+                <Input
+                  required
+                  value={form.unit}
+                  onChange={(event) =>
+                    setForm({ ...form, unit: event.target.value })
+                  }
+                />
+              </Field>
               <div className={operationActionButtonShellClass}>
-                <Button
-                  className="w-full"
-                  disabled={mutation.isPending}
-                  type="submit"
-                >
-                  Nhập hàng
+                <Button disabled={mutation.isPending} type="submit">
+                  Ghi nhận nhập
                 </Button>
               </div>
             </form>
           </CardContent>
         </Card>
         <DataTableCard
-          className="h-full"
-          description={
-            customer
-              ? "Tồn kho kỳ hiện tại — reset sau khi xuất hóa đơn."
-              : "Chọn khách hàng để xem tồn kho kỳ hiện tại."
-          }
-          title={
-            customer ? `Tổng hợp hàng nhập - ${customer}` : "Tổng hợp hàng nhập"
-          }
+          title="Tổng hợp hàng nhập"
+          description="Tồn kho theo loại hàng của khách đang chọn."
         >
-          <DataTable className="text-ui-sm" width="receiptSummary">
+          <DataTable width="receiptSummary">
             <thead>
               <tr>
                 <Th>Loại hàng</Th>
@@ -207,16 +204,11 @@ export function ReceiptPage({
             <tbody>
               {summary.rows.length ? (
                 summary.rows.map((row) => (
-                  <tr key={`${row.sku}-${row.unit}`}>
+                  <tr key={`${row.customer}-${row.sku}`}>
                     <Td data-label="Loại hàng">
                       <strong>{row.sku}</strong>
                     </Td>
                     <Td
-                      className={
-                        row.remainingQuantity > 0
-                          ? "font-semibold text-emerald-700"
-                          : "font-semibold text-slate-500"
-                      }
                       data-label="Số lượng"
                       title={`Đã nhập ${number(row.receivedQuantity)} · Đã xuất ${number(row.dispatchedQuantity)}`}
                     >
@@ -261,8 +253,8 @@ export function ReceiptPage({
             </tr>
           </thead>
           <tbody>
-            {history.rows.length ? (
-              history.rows.map((row) => (
+            {historyRows.length ? (
+              historyRows.map((row) => (
                 <tr key={row.id}>
                   <Td data-label="Ngày nhập">{formatDate(row.date)}</Td>
                   <Td data-label="Loại hàng">
@@ -274,14 +266,18 @@ export function ReceiptPage({
               ))
             ) : (
               <EmptyRow colSpan={4}>
-                Khách hàng này chưa có lịch sử nhập hàng.
+                {customer
+                  ? historyQuery.isPending
+                    ? "Đang tải lịch sử..."
+                    : "Khách hàng này chưa có lịch sử nhập hàng."
+                  : "Chọn khách hàng để xem lịch sử nhập hàng."}
               </EmptyRow>
             )}
           </tbody>
         </DataTable>
         <Pagination
-          page={history.page}
-          pageCount={history.pageCount}
+          page={historyQuery.data?.page || historyPage}
+          pageCount={historyQuery.data?.pageCount || 1}
           onPageChange={setHistoryPage}
         />
       </DataTableCard>

@@ -26,6 +26,15 @@ export function periodWindow(period) {
   return { ...config, end, start };
 }
 
+export function periodToDateRange(period) {
+  const window = periodWindow(period);
+  if (!window?.start || !window?.end) return {};
+  return {
+    dateFrom: window.start.toISOString().slice(0, 10),
+    dateTo: window.end.toISOString().slice(0, 10),
+  };
+}
+
 export function dateInWindow(value, window) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return false;

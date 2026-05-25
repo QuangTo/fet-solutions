@@ -3,37 +3,19 @@ require("dotenv").config();
 const { Client } = require("pg");
 const { hashPassword } = require("../../lib/server/passwords");
 
-const customers = [
-  "Vinamilk",
-  "Hoa Phat Group",
-  "Masan Consumer",
-  "Vingroup",
-  "Petrolimex",
-  "FPT Corporation",
-  "Viettel Post",
-  "Sabeco",
-];
-
-const vehicles = ["51C-123.45", "50H-888.88", "29C-456.78", "60C-222.11"];
-const drivers = [
-  "Nguyễn Văn An",
-  "Trần Minh Quân",
-  "Lê Hoàng Nam",
-  "Phạm Quốc Huy",
-];
-
-const items = [
-  { sku: "THEP", unit: "tan" },
-  { sku: "SUA", unit: "thung" },
-  { sku: "VAI", unit: "cuon" },
-  { sku: "NHUA", unit: "kien" },
-  { sku: "BANH", unit: "thung" },
-  { sku: "HOA CHAT", unit: "can" },
-];
+const ADMIN_PHONE = "123456789";
+const ADMIN_PASSWORD = "123456789";
+const ADMIN_NAME = "Admin";
+const WAREHOUSE_PHONE = "0900111222";
+const WAREHOUSE_PASSWORD = "0900111222";
+const WAREHOUSE_NAME = "Thủ kho mẫu";
+const ACCOUNTANT_PHONE = "0900333444";
+const ACCOUNTANT_PASSWORD = "0900333444";
+const ACCOUNTANT_NAME = "Kế toán mẫu";
 
 async function seed() {
   if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is required to seed sample data.");
+    throw new Error("DATABASE_URL is required to seed.");
   }
 
   const client = new Client({
@@ -61,6 +43,7 @@ async function seed() {
         receipts,
         drivers,
         vehicles,
+        warehouses,
         customers,
         users
       restart identity cascade
@@ -80,21 +63,29 @@ async function seed() {
     );
     const site = await client.query(
       `
-        insert into sites (organization_id, name, code, billing_status)
-        values ($1, $2, $3, $4)
+        insert into sites (
+          organization_id,
+          name,
+          code,
+          billing_status,
+          trial_started_at,
+          trial_ends_at
+        )
+        values ($1, $2, $3, $4, now() - interval '40 days', now() - interval '5 days')
         on conflict (organization_id, code) do update
         set name = excluded.name,
             status = 'active',
-            billing_status = 'active',
-            trial_started_at = now() - interval '45 days',
-            trial_ends_at = now() - interval '15 days',
+            billing_status = 'trialing',
+            trial_started_at = now() - interval '40 days',
+            trial_ends_at = now() - interval '5 days',
             updated_at = now()
         returning id
       `,
-      [organization.rows[0].id, "Default Site", "default", "active"],
+      [organization.rows[0].id, "Default Site", "default", "trialing"],
     );
     const siteId = site.rows[0].id;
-    const plan = await client.query(
+
+    await client.query(
       `
         insert into plans (code, name, price_monthly, currency, max_users, max_vehicles)
         values ($1, $2, $3, $4, $5, $6)
@@ -105,160 +96,66 @@ async function seed() {
             max_users = excluded.max_users,
             max_vehicles = excluded.max_vehicles,
             updated_at = now()
-        returning id
       `,
       ["plus", "Plus", 299000, "VND", 10, 10],
     );
-    const subscription = await client.query(
+
+    const adminUser = await client.query(
       `
-        insert into subscriptions (
-          site_id, plan_id, status, current_period_start, current_period_end, trial_ends_at, provider
-        )
-        values ($1, $2, 'active', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', null, 'manual_qr')
+        insert into users (display_name, phone, password_hash, role)
+        values ($1, $2, $3, $4)
         returning id
       `,
-      [siteId, plan.rows[0].id],
-    );
-    const invoice = await client.query(
-      `
-        insert into billing_invoices (
-          site_id, subscription_id, amount, currency, status, due_date, paid_at, provider, provider_invoice_id
-        )
-        values ($1, $2, 299000, 'VND', 'paid', current_date, now() - interval '2 days', 'manual_qr', 'MOCK-PAID-001')
-        returning id
-      `,
-      [siteId, subscription.rows[0].id],
+      [ADMIN_NAME, ADMIN_PHONE, hashPassword(ADMIN_PASSWORD), "admin"],
     );
     await client.query(
-      `
-        insert into payments (
-          site_id, invoice_id, provider, provider_payment_id, amount, currency, status, paid_at, meta
-        )
-        values (
-          $1,
-          $2,
-          'manual_qr',
-          'MOCK-QR-001',
-          299000,
-          'VND',
-          'succeeded',
-          now() - interval '2 days',
-          '{"method":"bank_qr","bank":"Mock Bank","note":"Seeded paid test site"}'::jsonb
-        )
-      `,
-      [siteId, invoice.rows[0].id],
+      "insert into site_memberships (site_id, user_id, role) values ($1, $2, $3)",
+      [siteId, adminUser.rows[0].id, "admin"],
     );
 
-    const userIds = {};
-    for (const user of [
-      ["Admin mẫu", "0900000000", "admin"],
-      ["Thủ kho mẫu", "0900000001", "warehouse"],
-      ["Kế toán mẫu", "0900000002", "accountant"],
-      ["Tài xế mẫu", "0900000003", "driver"],
-    ]) {
-      const result = await client.query(
-        "insert into users (display_name, phone, password_hash, role) values ($1, $2, $3, $4) returning id",
-        [user[0], user[1], hashPassword(user[1]), user[2]],
-      );
-      userIds[user[2]] = result.rows[0].id;
-      await client.query(
-        "insert into site_memberships (site_id, user_id, role) values ($1, $2, $3)",
-        [siteId, result.rows[0].id, user[2]],
-      );
-    }
+    const warehouseUser = await client.query(
+      `
+        insert into users (display_name, phone, password_hash, role)
+        values ($1, $2, $3, $4)
+        returning id
+      `,
+      [WAREHOUSE_NAME, WAREHOUSE_PHONE, hashPassword(WAREHOUSE_PASSWORD), "warehouse"],
+    );
+    await client.query(
+      "insert into site_memberships (site_id, user_id, role) values ($1, $2, $3)",
+      [siteId, warehouseUser.rows[0].id, "warehouse"],
+    );
 
-    const customerIds = {};
-    for (const name of customers) {
-      const result = await client.query(
-        "insert into customers (site_id, name) values ($1, $2) returning id",
-        [siteId, name],
-      );
-      customerIds[name] = result.rows[0].id;
-    }
-
-    const vehicleIds = {};
-    for (const plate of vehicles) {
-      const result = await client.query(
-        "insert into vehicles (site_id, plate) values ($1, $2) returning id",
-        [siteId, plate],
-      );
-      vehicleIds[plate] = result.rows[0].id;
-    }
-
-    const driverIds = {};
-    for (const name of drivers) {
-      const result = await client.query(
-        "insert into drivers (site_id, name) values ($1, $2) returning id",
-        [siteId, name],
-      );
-      driverIds[name] = result.rows[0].id;
-    }
-
-    const receiptItemsByCustomer = {};
-    for (const [customerIndex, customer] of customers.entries()) {
-      const date = `2026-05-${String(3 + customerIndex).padStart(2, "0")}`;
-      const receipt = await client.query(
-        `
-          insert into receipts (site_id, customer_id, received_by_id, received_by_name, received_date)
-          values ($1, $2, $3, $4, $5)
-          returning id
-        `,
-        [siteId, customerIds[customer], userIds.warehouse, "Thủ kho mẫu", date],
-      );
-
-      for (let lineIndex = 0; lineIndex < 3; lineIndex += 1) {
-        const item = items[(customerIndex + lineIndex) % items.length];
-        const quantity = 80 + ((customerIndex + 2) * (lineIndex + 3) * 17) % 300;
-        receiptItemsByCustomer[customer] = receiptItemsByCustomer[customer] || [];
-        receiptItemsByCustomer[customer].push({ ...item, quantity });
-        await client.query(
-          `
-            insert into receipt_items (receipt_id, sku, quantity, unit)
-            values ($1, $2, $3, $4)
-          `,
-          [receipt.rows[0].id, item.sku, quantity, item.unit],
-        );
-      }
-    }
-
-    for (const [index, customer] of customers.slice(0, 4).entries()) {
-      const plate = vehicles[index % vehicles.length];
-      const driver = drivers[index % drivers.length];
-      const dispatch = await client.query(
-        `
-          insert into dispatches (
-            site_id, customer_id, vehicle_id, driver_id, warehouse_user_id, warehouse_name, dispatch_date
-          )
-          values ($1, $2, $3, $4, $5, $6, $7)
-          returning id
-        `,
-        [
-          siteId,
-          customerIds[customer],
-          vehicleIds[plate],
-          driverIds[driver],
-          userIds.warehouse,
-          "Thủ kho mẫu",
-          `2026-05-${String(12 + index).padStart(2, "0")}`,
-        ],
-      );
-      const dispatchItems =
-        index === 0
-          ? receiptItemsByCustomer[customer]
-          : [{ ...items[index % items.length], quantity: 40 + index * 20 }];
-      for (const item of dispatchItems) {
-        await client.query(
-          `
-            insert into dispatch_items (dispatch_id, sku, quantity, unit)
-            values ($1, $2, $3, $4)
-          `,
-          [dispatch.rows[0].id, item.sku, item.quantity, item.unit],
-        );
-      }
-    }
+    const accountantUser = await client.query(
+      `
+        insert into users (display_name, phone, password_hash, role)
+        values ($1, $2, $3, $4)
+        returning id
+      `,
+      [
+        ACCOUNTANT_NAME,
+        ACCOUNTANT_PHONE,
+        hashPassword(ACCOUNTANT_PASSWORD),
+        "accountant",
+      ],
+    );
+    await client.query(
+      "insert into site_memberships (site_id, user_id, role) values ($1, $2, $3)",
+      [siteId, accountantUser.rows[0].id, "accountant"],
+    );
 
     await client.query("commit");
-    console.log("Seeded Supabase sample data.");
+    console.log("Seeded empty site (no ops data, no billing history).");
+    console.log(
+      "Billing: trial ended 5d ago, grace ended 2d ago (site locked). Pay in Quản lý to unlock.",
+    );
+    console.log(`Admin login — phone: ${ADMIN_PHONE}, password: ${ADMIN_PASSWORD}`);
+    console.log(
+      `Warehouse login — phone: ${WAREHOUSE_PHONE}, password: ${WAREHOUSE_PASSWORD}`,
+    );
+    console.log(
+      `Accountant login — phone: ${ACCOUNTANT_PHONE}, password: ${ACCOUNTANT_PASSWORD}`,
+    );
   } catch (error) {
     await client.query("rollback");
     throw error;

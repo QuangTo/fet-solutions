@@ -29,12 +29,21 @@ import {
 import { Field, Input, Select } from "@/components/ui/form";
 import { EmptyRow, Td, Th } from "@/components/ui/table";
 import { DataTable } from "../../components/data-table";
+import { Pagination } from "../../components/pagination";
 import { managedUserRoles } from "@/lib/fet-domain";
 import { primaryActionButtonShellClass } from "../../lib/constants";
 import { digitsOnly } from "../../lib/format";
 import { EditUserForm } from "./edit-user-form";
 
-export function UserSection({ isActive, mutation, onToggle, users }) {
+export function UserSection({
+  isActive,
+  mutation,
+  onToggle,
+  onUsersPageChange,
+  users,
+  usersPage = 1,
+  usersPageCount = 1,
+}) {
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -250,6 +259,13 @@ export function UserSection({ isActive, mutation, onToggle, users }) {
                 )}
               </tbody>
             </DataTable>
+            {onUsersPageChange ? (
+              <Pagination
+                page={usersPage}
+                pageCount={usersPageCount}
+                onPageChange={onUsersPageChange}
+              />
+            ) : null}
           </div>
           <Dialog
             open={Boolean(editing)}

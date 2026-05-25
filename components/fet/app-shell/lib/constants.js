@@ -6,9 +6,9 @@ import {
   SlidersHorizontal,
   Truck,
 } from "lucide-react";
-import { composeState, pageOrder, pagePaths } from "@/lib/fet-domain";
+import { composeState, loginPath, pageOrder, pagePaths } from "@/lib/fet-domain";
 
-export { pageOrder, pagePaths };
+export { loginPath as LOGIN_PATH, pageOrder, pagePaths };
 
 export const SESSION_KEY = "fet-logistics-session";
 export const DISPATCH_PREFS_KEY = "fet-dispatch-prefs";

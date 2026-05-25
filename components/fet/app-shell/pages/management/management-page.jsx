@@ -9,6 +9,7 @@ import { BillingSection } from "./billing-section";
 import { masterSections } from "./master-sections";
 import { MasterSection } from "./master-section";
 import { UserSection } from "./user-section";
+import { WarehouseSection } from "./warehouse-section";
 
 export function ManagementPage({
   activeRole,
@@ -26,6 +27,10 @@ export function ManagementPage({
   state,
   userMutation,
   users,
+  usersPage = 1,
+  usersPageCount = 1,
+  onUsersPageChange,
+  sitePaywallLocked = false,
 }) {
   const [activeList, setActiveList] = useState("");
   const billingSectionRef = useRef(null);
@@ -33,8 +38,15 @@ export function ManagementPage({
   const recordsByList = {
     customers: state.customerRecords,
     vehicles: state.vehicleRecords,
+    warehouses: state.warehouseRecords,
   };
   const showBilling = canManageBilling(activeRole);
+
+  useEffect(() => {
+    if (sitePaywallLocked && showBilling) {
+      setActiveList("billing");
+    }
+  }, [sitePaywallLocked, showBilling]);
 
   useEffect(() => {
     if (!billingOpenRequest || billingOpenRequest === lastBillingOpenRequest.current) {
@@ -59,6 +71,29 @@ export function ManagementPage({
     setActiveList(activeList === listName ? "" : listName);
   };
 
+  if (sitePaywallLocked && showBilling) {
+    return (
+      <div className="grid gap-3">
+        <div className="scroll-mt-24" ref={billingSectionRef}>
+          <BillingSection
+            activeRole={activeRole}
+            approvePending={approvePending}
+            billing={billing}
+            checkout={checkout}
+            checkoutPending={checkoutPending}
+            confirmPending={confirmPending}
+            isActive
+            onApprove={onApprovePayment}
+            onCheckout={onBillingCheckout}
+            onCloseCheckout={onCloseCheckout}
+            onConfirmPayment={onConfirmPayment}
+            onToggle={() => {}}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-3">
       {activeRole === "admin" ? (
@@ -66,9 +101,18 @@ export function ManagementPage({
           isActive={activeList === "users"}
           mutation={userMutation}
           onToggle={() => toggleList("users")}
+          onUsersPageChange={onUsersPageChange}
           users={users}
+          usersPage={usersPage}
+          usersPageCount={usersPageCount}
         />
       ) : null}
+      <WarehouseSection
+        isActive={activeList === "warehouses"}
+        mutation={mutation}
+        onToggle={() => toggleList("warehouses")}
+        records={recordsByList.warehouses}
+      />
       {masterSections.map((section) => {
         const isActive = section.listName === activeList;
         return (

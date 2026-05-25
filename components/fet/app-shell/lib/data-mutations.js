@@ -1,3 +1,18 @@
+export function prependToPaginatedList(list, item) {
+  if (!list) {
+    return { items: [item], page: 1, pageCount: 1, pageSize: 1, total: 1 };
+  }
+  if (Array.isArray(list)) {
+    return prependById(list, item);
+  }
+  const items = prependById(list.items || [], item);
+  return {
+    ...list,
+    items,
+    total: (list.total || items.length - 1) + 1,
+  };
+}
+
 export function prependById(rows = [], item) {
   if (!item?.id) return rows;
   return [item, ...rows.filter((row) => row.id !== item.id)];
@@ -13,12 +28,18 @@ export function upsertById(rows = [], item) {
 }
 
 export function normalizeMasterItem(item, listName) {
-  const label = item?.label || item?.name || item?.plate || "";
+  const label =
+    item?.label ||
+    item?.name ||
+    item?.plate ||
+    (item?.name && item?.code ? `${item.name} (${item.code})` : "");
   return {
+    code: item?.code,
     createdAt: item?.createdAt || item?.created_at,
     id: item?.id,
     isActive: item?.isActive ?? item?.is_active ?? true,
     label,
+    name: item?.name,
     updatedAt:
       item?.updatedAt ||
       item?.updated_at ||
