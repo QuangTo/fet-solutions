@@ -7,7 +7,10 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { operationActionButtonShellClass } from "../lib/constants";
+import {
+  operationActionButtonClass,
+  operationActionButtonShellClass,
+} from "../lib/constants";
 import { DataTableCard } from "./data-table-card";
 
 export function LoadingSkeleton({ page }) {
@@ -135,12 +138,9 @@ export function FormSkeleton({ fields = 4, title }) {
               <Skeleton className="h-11 w-full" />
             </div>
           ))}
-          <Skeleton
-            className={cn(
-              "h-11 lg:col-span-2",
-              operationActionButtonShellClass,
-            )}
-          />
+          <div className={cn(operationActionButtonShellClass, "lg:col-span-2")}>
+            <Skeleton className={cn("h-11", operationActionButtonClass)} />
+          </div>
         </div>
       </CardContent>
     </Card>

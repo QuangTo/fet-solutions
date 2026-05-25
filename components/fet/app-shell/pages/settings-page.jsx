@@ -15,7 +15,11 @@ import {
 } from "@/components/ui/card";
 import { Field, Select } from "@/components/ui/form";
 import { Table, Td, Th } from "@/components/ui/table";
-import { pageOrder, primaryActionButtonShellClass } from "../lib/constants";
+import {
+  operationActionButtonClass,
+  operationActionButtonShellClass,
+  pageOrder,
+} from "../lib/constants";
 
 export function SettingsPage({
   isPageAccessPending,
@@ -80,15 +84,17 @@ export function SettingsPage({
             </Select>
           </Field>
         </CardContent>
-        <div className="flex justify-center border-t border-slate-200 px-6 pb-6 pt-4">
-          <Button
-            className={primaryActionButtonShellClass}
-            disabled={isUiPending}
-            onClick={onApplyUi}
-            type="button"
-          >
-            Áp dụng
-          </Button>
+        <div className="border-t border-slate-200 px-6 pb-6 pt-4">
+          <div className={operationActionButtonShellClass}>
+            <Button
+              className={operationActionButtonClass}
+              disabled={isUiPending}
+              onClick={onApplyUi}
+              type="button"
+            >
+              Áp dụng
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -143,15 +149,17 @@ export function SettingsPage({
             </tbody>
           </Table>
         </CardContent>
-        <div className="flex justify-center border-t border-slate-200 px-6 pb-6 pt-4">
-          <Button
-            className={primaryActionButtonShellClass}
-            disabled={isPageAccessPending}
-            onClick={onApplyPageAccess}
-            type="button"
-          >
-            Áp dụng
-          </Button>
+        <div className="border-t border-slate-200 px-6 pb-6 pt-4">
+          <div className={operationActionButtonShellClass}>
+            <Button
+              className={operationActionButtonClass}
+              disabled={isPageAccessPending}
+              onClick={onApplyPageAccess}
+              type="button"
+            >
+              Áp dụng
+            </Button>
+          </div>
         </div>
       </Card>
     </div>

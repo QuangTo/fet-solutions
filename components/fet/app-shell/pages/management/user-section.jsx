@@ -188,14 +188,14 @@ export function UserSection({
                 onChange={(event) => setSearch(event.target.value)}
               />
             </div>
-            <DataTable width="users">
+            <DataTable width="managementEntity">
               <thead>
                 <tr>
                   <Th>Tên</Th>
                   <Th>Số điện thoại</Th>
-                  <Th>Chức vụ</Th>
-                  <Th>Cập nhật</Th>
-                  <Th className="text-right">Thao tác</Th>
+                  <Th className="whitespace-nowrap">Chức vụ</Th>
+                  <Th className="whitespace-nowrap">Cập nhật</Th>
+                  <Th className="text-right whitespace-nowrap">Thao tác</Th>
                 </tr>
               </thead>
               <tbody>
@@ -212,20 +212,22 @@ export function UserSection({
                           </strong>
                         </div>
                       </Td>
-                      <Td>
+                      <Td className="whitespace-nowrap">
                         <span className="inline-flex items-center gap-2">
                           <Phone className="h-4 w-4 text-slate-400" />
                           {user.phone || "Chưa có"}
                         </span>
                       </Td>
-                      <Td>
+                      <Td className="whitespace-nowrap">
                         <Badge tone="green">
                           {roles[normalizeRole(user.role)] || user.role}
                         </Badge>
                       </Td>
-                      <Td>{formatDate(user.updatedAt || user.createdAt)}</Td>
-                      <Td>
-                        <div className="flex justify-end gap-2">
+                      <Td className="whitespace-nowrap">
+                        {formatDate(user.updatedAt || user.createdAt)}
+                      </Td>
+                      <Td className="text-right">
+                        <div className="inline-flex justify-end gap-2">
                           <Button
                             aria-label={`Sửa ${user.name}`}
                             size="icon"

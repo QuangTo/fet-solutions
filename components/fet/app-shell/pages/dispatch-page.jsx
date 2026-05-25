@@ -24,7 +24,10 @@ import { Field, Input, Select } from "@/components/ui/form";
 import { DataTableCard } from "../components/data-table-card";
 import { Pagination } from "../components/pagination";
 import { PeriodSelect } from "../components/period-select";
-import { operationActionButtonShellClass } from "../lib/constants";
+import {
+  operationActionButtonClass,
+  operationActionButtonShellClass,
+} from "../lib/constants";
 import {
   readDispatchPrefs,
   resolveDispatchPrefs,
@@ -292,7 +295,7 @@ export function DispatchPage({
               className={cn(operationActionButtonShellClass, "lg:col-span-2")}
             >
               <Button
-                className="w-full"
+                className={operationActionButtonClass}
                 disabled={mutation.isPending}
                 type="submit"
               >
@@ -365,16 +368,18 @@ export function DispatchPage({
               ))}
             </Select>
           </Field>
-          <Button
-            className="w-full self-end lg:w-48"
-            onClick={() => {
-              setFilters({ date: "", driver: "", period: "week", truck: "" });
-              setPage(1);
-            }}
-            type="button"
-          >
-            Xem tất cả
-          </Button>
+          <div className={cn(operationActionButtonShellClass, "self-end")}>
+            <Button
+              className={operationActionButtonClass}
+              onClick={() => {
+                setFilters({ date: "", driver: "", period: "week", truck: "" });
+                setPage(1);
+              }}
+              type="button"
+            >
+              Xem tất cả
+            </Button>
+          </div>
         </div>
         <DispatchTable rows={dispatchRows} />
         <Pagination

@@ -45,6 +45,7 @@ export function BillingBanner({
   }, [canDismiss, dismissKey]);
 
   const message = billingBannerMessage(billing);
+  if (!canManageBilling(activeRole)) return null;
   if (!message || (canDismiss && dismissed)) return null;
 
   const tone = billingBannerTone(billing);

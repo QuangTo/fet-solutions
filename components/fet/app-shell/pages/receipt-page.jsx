@@ -25,7 +25,10 @@ import { DataTable } from "../components/data-table";
 import { DataTableCard } from "../components/data-table-card";
 import { Pagination } from "../components/pagination";
 import { PeriodSelect } from "../components/period-select";
-import { operationActionButtonShellClass } from "../lib/constants";
+import {
+  operationActionButtonClass,
+  operationActionButtonShellClass,
+} from "../lib/constants";
 import { number } from "../lib/format";
 import { paginate } from "../lib/pagination";
 import { periodDescription, periodToDateRange } from "../lib/period-utils";
@@ -182,8 +185,12 @@ export function ReceiptPage({
                 />
               </Field>
               <div className={operationActionButtonShellClass}>
-                <Button disabled={mutation.isPending} type="submit">
-                  Ghi nhận nhập
+                <Button
+                  className={operationActionButtonClass}
+                  disabled={mutation.isPending}
+                  type="submit"
+                >
+                  Nhập hàng
                 </Button>
               </div>
             </form>

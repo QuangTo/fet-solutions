@@ -39,6 +39,7 @@ import {
 import { BillingMetric } from "./billing-metric";
 import { BillingPayDialog } from "./billing-pay-dialog";
 import { BillingPlanPricing } from "./billing-plan-pricing";
+import { billingBodyClass, billingValueClass } from "./billing-typography";
 
 export function BillingSection({
   activeRole,
@@ -229,7 +230,7 @@ export function BillingSection({
 
             <div className="grid gap-3 p-3 sm:gap-4 sm:p-4 lg:p-5">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                <p className="text-xs font-semibold text-slate-600 sm:text-sm">
+                <p className={billingBodyClass}>
                   {invoiceAwaitingReview
                     ? "Đã ghi nhận chuyển khoản · chờ admin duyệt"
                     : billing?.billingStatus === "trialing" && trialDays != null
@@ -241,7 +242,7 @@ export function BillingSection({
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   {plans.length ? (
                     <Button
-                      className="h-9 w-full text-xs sm:w-auto sm:text-sm"
+                      className="h-9 w-full sm:w-auto"
                       size="sm"
                       type="button"
                       variant="outline"
@@ -253,7 +254,7 @@ export function BillingSection({
                   ) : null}
                   {showPaymentInfoButton ? (
                     <Button
-                      className="h-9 w-full text-xs sm:w-auto sm:text-sm"
+                      className="h-9 w-full sm:w-auto"
                       size="sm"
                       type="button"
                       variant="outline"
@@ -264,7 +265,7 @@ export function BillingSection({
                   ) : null}
                   {showCheckoutButton ? (
                     <Button
-                      className="h-9 w-full text-xs sm:w-auto sm:text-sm"
+                      className="h-9 w-full sm:w-auto"
                       disabled={checkoutPending}
                       size="sm"
                       type="button"
@@ -280,7 +281,7 @@ export function BillingSection({
                   ) : null}
                   {showApproveButton ? (
                     <Button
-                      className="h-9 w-full text-xs sm:w-auto sm:text-sm"
+                      className="h-9 w-full sm:w-auto"
                       disabled={approvePending}
                       size="sm"
                       type="button"
@@ -380,10 +381,10 @@ export function BillingSection({
       <Dialog open={planPickerOpen} onOpenChange={setPlanPickerOpen}>
         <DialogContent className="max-h-[calc(100vh-32px)] w-[calc(100vw-32px)] max-w-5xl overflow-y-auto p-0">
           <div className="border-b border-slate-100 px-5 py-4">
-            <DialogTitle className="text-base font-black text-slate-950 sm:text-lg">
+            <DialogTitle className={billingValueClass}>
               Chọn gói cho {billing?.siteName?.trim() || "khách hàng"}
             </DialogTitle>
-            <DialogDescription className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
+            <DialogDescription className="mt-1 text-ui-sm text-slate-500">
               So sánh các gói và chọn gói phù hợp. Sau khi chọn, hệ thống sẽ
               tạo hóa đơn để thanh toán.
             </DialogDescription>

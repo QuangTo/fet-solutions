@@ -11,13 +11,14 @@ export const dataTableConfigs = {
     columns: ["46%", "18%", "20%", "16%"],
     width: "min-w-[760px]",
   },
+  /** Tài khoản, Kho hàng — cùng 5 cột: tên, chi tiết, trạng thái, cập nhật, thao tác */
+  managementEntity: {
+    columns: ["30%", "18%", "16%", "20%", "16%"],
+    width: "min-w-[800px]",
+  },
   billingInvoices: {
     columns: ["28%", "24%", "24%", "24%"],
     width: "min-w-[680px]",
-  },
-  users: {
-    columns: ["28%", "24%", "18%", "18%", "12%"],
-    width: "min-w-[760px]",
   },
   receiptHistory: {
     columns: ["20%", "44%", "18%", "18%"],

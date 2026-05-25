@@ -12,6 +12,13 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { money } from "../../lib/format";
+import {
+  billingBodyClass,
+  billingHighlightClass,
+  billingLabelClass,
+  billingMutedClass,
+  billingValueClass,
+} from "./billing-typography";
 
 function planLimitLabel(plan) {
   return `${plan.maxUsers} user · ${plan.maxVehicles} xe`;
@@ -22,7 +29,7 @@ function IntervalToggle({ billingInterval, onChange }) {
     <div className="inline-flex shrink-0 rounded-full border border-slate-200 bg-slate-100 p-0.5">
       <button
         className={cn(
-          "rounded-full px-3 py-1 text-xs font-bold transition",
+          "rounded-full px-3 py-1 text-ui-sm font-semibold transition",
           billingInterval === "monthly"
             ? "bg-white text-slate-950 shadow-sm"
             : "text-slate-500 hover:text-slate-800",
@@ -34,7 +41,7 @@ function IntervalToggle({ billingInterval, onChange }) {
       </button>
       <button
         className={cn(
-          "rounded-full px-3 py-1 text-xs font-bold transition",
+          "rounded-full px-3 py-1 text-ui-sm font-semibold transition",
           billingInterval === "yearly"
             ? "bg-white text-slate-950 shadow-sm"
             : "text-slate-500 hover:text-slate-800",
@@ -74,13 +81,9 @@ export function BillingPlanPricing({
     <div className="grid gap-3 rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-3 sm:gap-4 sm:p-4 lg:p-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-            Bảng giá gói
-          </p>
-          <h3 className="mt-1 text-base font-black text-slate-950 sm:text-lg">
-            Chọn gói phù hợp kho của bạn
-          </h3>
-          <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
+          <p className={billingLabelClass}>Bảng giá gói</p>
+          <h3 className={cn("mt-1", billingValueClass)}>Chọn gói phù hợp kho của bạn</h3>
+          <p className={cn("mt-1", billingMutedClass)}>
             {usageSummary({ billingInterval, currentPlanName, siteName })}
           </p>
         </div>
@@ -118,12 +121,8 @@ export function BillingPlanPricing({
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-sm font-black text-slate-950 sm:text-base">
-                    {plan.name}
-                  </p>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">
-                    {planLimitLabel(plan)}
-                  </p>
+                  <p className={billingValueClass}>{plan.name}</p>
+                  <p className={cn("mt-1", billingMutedClass)}>{planLimitLabel(plan)}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {active ? <Badge tone="green">Đang dùng</Badge> : null}
@@ -133,24 +132,22 @@ export function BillingPlanPricing({
 
               <div className="mt-3 sm:mt-4">
                 <div className="flex items-end gap-1">
-                  <span className="text-xl font-black tracking-tight text-slate-950 sm:text-2xl">
+                  <span className={billingHighlightClass}>
                     {money(monthlyEquivalent, plan.currency)}
                   </span>
-                  <span className="pb-0.5 text-xs font-semibold text-slate-500 sm:pb-1 sm:text-sm">
-                    /tháng
-                  </span>
+                  <span className={cn("pb-0.5", billingMutedClass)}>/tháng</span>
                 </div>
-                <p className="mt-1 text-xs font-bold text-slate-600 sm:text-sm">
+                <p className={cn("mt-1", billingBodyClass)}>
                   {yearly
                     ? `${money(chargeAmount, plan.currency)} /năm`
                     : `${money(chargeAmount, plan.currency)} mỗi tháng`}
                 </p>
                 {yearly ? (
-                  <p className="mt-1 text-[11px] font-semibold text-emerald-700 sm:text-xs">
+                  <p className="mt-1 text-ui-sm font-medium text-emerald-700">
                     Giảm {discountLabel} · tiết kiệm {money(savings, plan.currency)}
                   </p>
                 ) : (
-                  <p className="mt-1 text-[11px] font-semibold text-slate-400 sm:text-xs">
+                  <p className={cn("mt-1", billingMutedClass)}>
                     Trả năm giảm {discountLabel}
                   </p>
                 )}
@@ -158,7 +155,7 @@ export function BillingPlanPricing({
 
               <div className="mt-4 sm:mt-5">
                 <Button
-                  className="h-9 w-full text-xs sm:text-sm"
+                  className="h-9 w-full"
                   disabled={checkoutPending}
                   size="sm"
                   type="button"

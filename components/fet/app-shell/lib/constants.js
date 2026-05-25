@@ -26,7 +26,12 @@ export const iconMap = {
 export const emptyState = composeState({});
 
 export const primaryActionButtonShellClass =
-  "w-[clamp(10rem,34%,14rem)] max-w-full justify-self-center";
+  "flex w-full justify-center";
 
-export const operationActionButtonShellClass =
-  "w-[clamp(20rem,68%,28rem)] max-w-full justify-self-center";
+export const primaryActionButtonClass =
+  "w-full max-w-[min(100%,11.5rem)] sm:max-w-[13rem]";
+
+/** Centered submit on receipt/dispatch forms; scales on narrow screens. */
+export const operationActionButtonShellClass = primaryActionButtonShellClass;
+
+export const operationActionButtonClass = primaryActionButtonClass;

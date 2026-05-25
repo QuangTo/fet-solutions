@@ -68,8 +68,10 @@ function WarehouseForm({ initial, isPending, onCancel, onSubmit }) {
   );
 }
 
+const emptyForm = { code: "", name: "" };
+
 export function WarehouseSection({ isActive, mutation, onToggle, records }) {
-  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [search, setSearch] = useState("");
@@ -129,12 +131,60 @@ export function WarehouseSection({ isActive, mutation, onToggle, records }) {
             </div>
           </div>
           <div className="grid gap-4 p-4 lg:p-5">
-            <div className={cn(primaryActionButtonShellClass, "justify-self-start")}>
-              <Button onClick={() => setCreating(true)} type="button">
-                <Plus className="h-4 w-4" />
+            <form
+              className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(10rem,18%)]"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!form.name.trim() || !form.code.trim()) return;
+                mutation.mutate(
+                  {
+                    body: {
+                      code: form.code.trim(),
+                      name: form.name.trim(),
+                    },
+                    method: "POST",
+                    path: "/warehouses",
+                  },
+                  { onSuccess: () => setForm(emptyForm) },
+                );
+              }}
+            >
+              <Field>
                 Thêm kho
-              </Button>
-            </div>
+                <Input
+                  placeholder="Kho trung tâm"
+                  required
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm({ ...form, name: event.target.value })
+                  }
+                />
+              </Field>
+              <Field>
+                Mã kho
+                <Input
+                  placeholder="MAIN"
+                  required
+                  value={form.code}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      code: event.target.value.toUpperCase(),
+                    })
+                  }
+                />
+              </Field>
+              <div className={cn(primaryActionButtonShellClass, "self-end")}>
+                <Button
+                  className="w-full"
+                  disabled={mutation.isPending}
+                  type="submit"
+                >
+                  <Plus className="h-4 w-4" />
+                  Thêm
+                </Button>
+              </div>
+            </form>
             <div className="relative w-full lg:max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -144,13 +194,14 @@ export function WarehouseSection({ isActive, mutation, onToggle, records }) {
                 onChange={(event) => setSearch(event.target.value)}
               />
             </div>
-            <DataTable width="management">
+            <DataTable width="managementEntity">
               <thead>
                 <tr>
                   <Th>Kho</Th>
                   <Th>Mã</Th>
-                  <Th>Cập nhật</Th>
-                  <Th className="text-right">Thao tác</Th>
+                  <Th className="whitespace-nowrap">Trạng thái</Th>
+                  <Th className="whitespace-nowrap">Cập nhật</Th>
+                  <Th className="text-right whitespace-nowrap">Thao tác</Th>
                 </tr>
               </thead>
               <tbody>
@@ -158,15 +209,28 @@ export function WarehouseSection({ isActive, mutation, onToggle, records }) {
                   recordView.rows.map((item) => (
                     <tr key={item.id}>
                       <Td>
-                        <strong className="text-slate-900">{item.name}</strong>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-slate-100 text-slate-600">
+                            <Warehouse className="h-4 w-4" />
+                          </span>
+                          <strong className="min-w-0 truncate text-slate-900">
+                            {item.name}
+                          </strong>
+                        </div>
                       </Td>
-                      <Td>{item.code}</Td>
-                      <Td>{formatDate(item.updatedAt || item.createdAt)}</Td>
-                      <Td>
-                        <div className="flex justify-end gap-2">
+                      <Td className="whitespace-nowrap">{item.code}</Td>
+                      <Td className="whitespace-nowrap">
+                        <Badge tone="green">Đang dùng</Badge>
+                      </Td>
+                      <Td className="whitespace-nowrap">
+                        {formatDate(item.updatedAt || item.createdAt)}
+                      </Td>
+                      <Td className="text-right">
+                        <div className="inline-flex justify-end gap-2">
                           <Button
                             aria-label={`Sửa ${item.label}`}
                             size="icon"
+                            title="Sửa"
                             type="button"
                             variant="outline"
                             onClick={() => setEditing(item)}
@@ -176,6 +240,7 @@ export function WarehouseSection({ isActive, mutation, onToggle, records }) {
                           <Button
                             aria-label={`Xóa ${item.label}`}
                             size="icon"
+                            title="Xóa"
                             type="button"
                             variant="destructive"
                             onClick={() => setDeleting(item)}
@@ -187,7 +252,11 @@ export function WarehouseSection({ isActive, mutation, onToggle, records }) {
                     </tr>
                   ))
                 ) : (
-                  <EmptyRow colSpan={4}>Chưa có kho.</EmptyRow>
+                  <EmptyRow colSpan={5}>
+                    {records.length
+                      ? "Không tìm thấy kho phù hợp."
+                      : "Chưa có kho."}
+                  </EmptyRow>
                 )}
               </tbody>
             </DataTable>
@@ -197,24 +266,10 @@ export function WarehouseSection({ isActive, mutation, onToggle, records }) {
               onPageChange={setPage}
             />
           </div>
-          <Dialog open={creating} onOpenChange={setCreating}>
-            <DialogContent>
-              <DialogTitle className="text-lg font-black text-slate-950">
-                Thêm kho
-              </DialogTitle>
-              <WarehouseForm
-                isPending={mutation.isPending}
-                onCancel={() => setCreating(false)}
-                onSubmit={(body) => {
-                  mutation.mutate(
-                    { body, method: "POST", path: "/warehouses" },
-                    { onSuccess: () => setCreating(false) },
-                  );
-                }}
-              />
-            </DialogContent>
-          </Dialog>
-          <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
+          <Dialog
+            open={Boolean(editing)}
+            onOpenChange={(open) => !open && setEditing(null)}
+          >
             <DialogContent>
               <DialogTitle className="text-lg font-black text-slate-950">
                 Sửa kho
