@@ -9,7 +9,7 @@ export function AppFooter({ className }) {
       )}
     >
       Powered by{" "}
-      <span className="font-medium text-zinc-500">WooTech</span>
+      <span className="font-medium text-zinc-500">WooTechVN</span>
     </footer>
   );
 }
