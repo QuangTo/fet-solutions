@@ -55,7 +55,7 @@ function LoginBackdrop({ children }) {
           </div>
         </div>
       </div>
-      <div className="relative z-10 grid min-h-[calc(100vh-2rem)] place-items-center gap-3">
+      <div className="relative z-10 grid min-h-[calc(100vh-2rem)] place-items-center">
         {children}
       </div>
     </main>
@@ -105,7 +105,7 @@ export function LoginScreen({ onLogin }) {
         </CardHeader>
         <CardContent>
           <form
-            className="grid gap-4"
+            className="mx-auto grid w-full max-w-sm gap-4"
             onSubmit={async (event) => {
               event.preventDefault();
               setMessage("");
@@ -153,7 +153,7 @@ export function LoginScreen({ onLogin }) {
           </form>
         </CardContent>
       </Card>
-      <AppFooter className="w-full max-w-md" />
+      <AppFooter className="absolute bottom-5 left-1/2 w-full max-w-md -translate-x-1/2 text-xs leading-5 text-zinc-500 sm:bottom-7" />
     </LoginBackdrop>
   );
 }
