@@ -122,22 +122,22 @@ export function DashboardPage({ dashboard, onSelectCustomer, period }) {
       </div>
       <div className="grid gap-3 lg:grid-cols-3">
         <OperationalMetric
-          activeLabel="đang chạy"
-          idleLabel="xe rảnh"
-          label={`Xe trong ${metrics.stats.label}`}
-          stats={metrics.operationalStats.vehicles}
+          label="Tổng số xe"
+          stats={{
+            active: metrics.operationalStats.vehicles.total,
+            total: metrics.operationalStats.vehicles.total,
+          }}
           tone="amber"
         />
         <OperationalMetric
-          activeLabel="đang chạy"
-          idleLabel="tài xế rảnh"
-          label={`Tài xế trong ${metrics.stats.label}`}
-          stats={metrics.operationalStats.drivers}
+          label="Tổng số tài xế"
+          stats={{
+            active: metrics.operationalStats.drivers.total,
+            total: metrics.operationalStats.drivers.total,
+          }}
           tone="blue"
         />
         <OperationalMetric
-          activeLabel="chờ xuất"
-          idleLabel="ngoài kỳ"
           label={`Hóa đơn tồn trong ${metrics.stats.label}`}
           stats={metrics.operationalStats.invoices}
           tone="green"

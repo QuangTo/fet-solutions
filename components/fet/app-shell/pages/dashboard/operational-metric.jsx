@@ -16,6 +16,7 @@ export function OperationalMetric({ activeLabel, idleLabel, label, stats, tone }
     blue: "bg-blue-600",
     green: "bg-emerald-600",
   }[tone];
+  const showBreakdown = Boolean(activeLabel || idleLabel);
 
   return (
     <Card className="min-w-0">
@@ -27,9 +28,11 @@ export function OperationalMetric({ activeLabel, idleLabel, label, stats, tone }
               {number(stats.active)}
             </strong>
           </div>
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-600">
-            {number(stats.total)} tổng
-          </span>
+          {showBreakdown ? (
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-600">
+              {number(stats.total)} tổng
+            </span>
+          ) : null}
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-slate-100">
           <div
@@ -37,20 +40,22 @@ export function OperationalMetric({ activeLabel, idleLabel, label, stats, tone }
             style={{ width: `${activePercent}%` }}
           />
         </div>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <span className="font-bold text-slate-500">{activeLabel}</span>
-            <strong className="block text-lg font-black text-slate-950">
-              {number(stats.active)}
-            </strong>
+        {showBreakdown ? (
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span className="font-bold text-slate-500">{activeLabel}</span>
+              <strong className="block text-lg font-black text-slate-950">
+                {number(stats.active)}
+              </strong>
+            </div>
+            <div>
+              <span className="font-bold text-slate-500">{idleLabel}</span>
+              <strong className="block text-lg font-black text-slate-950">
+                {number(stats.idle)}
+              </strong>
+            </div>
           </div>
-          <div>
-            <span className="font-bold text-slate-500">{idleLabel}</span>
-            <strong className="block text-lg font-black text-slate-950">
-              {number(stats.idle)}
-            </strong>
-          </div>
-        </div>
+        ) : null}
       </CardContent>
     </Card>
   );
