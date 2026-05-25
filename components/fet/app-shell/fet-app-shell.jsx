@@ -464,10 +464,26 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
           receipts: prependToPaginatedList(data.receipts, receipt),
         };
       });
+      updatePageData("dispatch", (data) => {
+        const master = addMasterRecord(
+          {
+            customers: data.customers,
+            drivers: data.drivers,
+            vehicles: data.vehicles,
+          },
+          "customers",
+          receiptMasterRecord(receipt),
+        );
+        return {
+          ...data,
+          ...master,
+          inventory: applyReceiptInventory(data.inventory || [], receipt),
+        };
+      });
       updatePageData("master", (data) =>
         addMasterRecord(data, "customers", receiptMasterRecord(receipt)),
       );
-      markPagesStale(["receipt"]);
+      markPagesStale(["receipt", "dispatch"]);
       queryClient.invalidateQueries({ queryKey: ["receipts-list"] });
       invalidateAppContext(["accounting"]);
       showToast("Đã nhập hàng");
@@ -483,24 +499,22 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
       ),
     onSuccess: (dispatch) => {
       const records = dispatchMasterRecords(dispatch);
-      updatePageData("dispatch", (data) => {
-        const master = addMasterRecord(
+      const applyMasterToCatalog = (catalog) =>
+        addMasterRecord(
           addMasterRecord(
-            addMasterRecord(
-              {
-                customers: data.customers,
-                drivers: data.drivers,
-                vehicles: data.vehicles,
-              },
-              "customers",
-              records.customer,
-            ),
+            addMasterRecord(catalog, "customers", records.customer),
             "vehicles",
             records.vehicle,
           ),
           "drivers",
           records.driver,
         );
+      updatePageData("dispatch", (data) => {
+        const master = applyMasterToCatalog({
+          customers: data.customers,
+          drivers: data.drivers,
+          vehicles: data.vehicles,
+        });
         return {
           ...data,
           ...master,
@@ -508,18 +522,20 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
           inventory: applyDispatchInventory(data.inventory || [], dispatch),
         };
       });
-      updatePageData("master", (data) =>
-        addMasterRecord(
-          addMasterRecord(
-            addMasterRecord(data, "customers", records.customer),
-            "vehicles",
-            records.vehicle,
-          ),
-          "drivers",
-          records.driver,
-        ),
-      );
-      markPagesStale(["dispatch"]);
+      updatePageData("receipt", (data) => {
+        const master = applyMasterToCatalog({
+          customers: data.customers,
+          drivers: data.drivers,
+          vehicles: data.vehicles,
+        });
+        return {
+          ...data,
+          ...master,
+          inventory: applyDispatchInventory(data.inventory || [], dispatch),
+        };
+      });
+      updatePageData("master", (data) => applyMasterToCatalog(data));
+      markPagesStale(["receipt", "dispatch"]);
       queryClient.invalidateQueries({ queryKey: ["dispatches-list"] });
       invalidateAppContext(["accounting"]);
       showToast("Đã xuất hàng");

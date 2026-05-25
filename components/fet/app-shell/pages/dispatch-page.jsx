@@ -114,7 +114,7 @@ export function DispatchPage({
   const customerId = state.customerIds[form.customer] || "";
   const listFilters = useMemo(() => {
     const base = {
-      customerId,
+      customerId: customerId || undefined,
       driver: filters.driver || undefined,
       plate: filters.truck || undefined,
     };
@@ -125,7 +125,7 @@ export function DispatchPage({
   }, [customerId, filters.date, filters.driver, filters.period, filters.truck]);
   const dispatchListQuery = useQuery({
     ...dispatchesListQueryOptions(session, listFilters, page),
-    enabled: Boolean(session?.id && customerId),
+    enabled: Boolean(session?.id),
   });
   const dispatchRows = flattenDispatches(dispatchListQuery.data?.items || []);
 
@@ -373,6 +373,7 @@ export function DispatchPage({
               className={operationActionButtonClass}
               onClick={() => {
                 setFilters({ date: "", driver: "", period: "week", truck: "" });
+                setSelectedCustomer("");
                 setPage(1);
               }}
               type="button"

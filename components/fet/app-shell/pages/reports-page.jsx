@@ -67,7 +67,6 @@ export function ReportsPage({ activeRole, mutation, session, state }) {
       currentRow?.customerId
         ? {
             customerId: currentRow.customerId,
-            periodClosedAt: currentRow.periodClosedAt || undefined,
             periodOpenAt: currentRow.periodOpenAt || undefined,
           }
         : {},
