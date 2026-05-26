@@ -23,7 +23,7 @@ export function DialogContent({ children, className, ...props }) {
         <DialogPrimitive.Close asChild>
           <Button
             aria-label="Đóng"
-            className="absolute right-3 top-3"
+            className="absolute right-2 top-2 h-8 w-8"
             size="icon"
             type="button"
             variant="ghost"

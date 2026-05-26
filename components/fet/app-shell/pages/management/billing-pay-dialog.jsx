@@ -3,7 +3,6 @@
 import { AlertCircle, Copy, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { money } from "../../lib/format";
-import { invoiceCopy, paymentCopy } from "./billing-copy";
+import { paymentCopy } from "./billing-copy";
 import {
   billingLabelClass,
   billingMutedClass,
@@ -86,16 +85,11 @@ export function BillingPayDialog({
 
   const { bankTransfer, invoice, payment } = paymentView;
   const paymentStatus = payment ? paymentCopy(payment.status) : null;
-  const invoiceStatus = invoice ? invoiceCopy(invoice.status) : null;
   const canConfirm = bankTransfer?.isPreview || payment?.status === "pending";
   const amount = money(
     invoice?.amount || bankTransfer?.amount,
     invoice?.currency,
   );
-  const statusBadge =
-    payment?.status === "awaiting_review"
-      ? paymentStatus
-      : invoiceStatus || { label: "Chờ thanh toán", tone: "amber" };
   const hasQr = Boolean(
     bankTransfer?.qrImageUrl || bankTransfer?.momoQrImageUrl,
   );
@@ -106,25 +100,11 @@ export function BillingPayDialog({
         <div className="border-b border-slate-100 px-4 py-3 pr-12">
           <div className="flex flex-wrap items-center gap-2">
             <DialogTitle className={billingValueClass}>
-              Thanh toán chuyển khoản
+              Thông tin chuyển khoản
             </DialogTitle>
             <DialogDescription className="sr-only">
               Thông tin chuyển khoản, mã QR và xác nhận đã thanh toán.
             </DialogDescription>
-            <Badge
-              className={cn(
-                "h-auto px-2 py-0.5 text-ui-xs font-semibold",
-                statusBadge.tone === "amber" &&
-                  "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
-                statusBadge.tone === "blue" &&
-                  "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
-                statusBadge.tone === "green" &&
-                  "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
-              )}
-              tone={statusBadge.tone}
-            >
-              {statusBadge.label}
-            </Badge>
           </div>
         </div>
 

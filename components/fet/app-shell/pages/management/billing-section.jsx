@@ -285,7 +285,7 @@ export function BillingSection({
                       ) : null}
                       {openInvoice?.status === "open"
                         ? "Thanh toán ngay"
-                        : "Mua / nâng cấp gói"}
+                        : "Thông tin thanh toán"}
                     </Button>
                   ) : null}
                   {showApproveButton ? (
