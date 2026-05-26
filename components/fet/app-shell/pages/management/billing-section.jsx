@@ -133,9 +133,9 @@ export function BillingSection({
   );
   const showApproveButton =
     activeRole === "admin" && pendingPayment?.status === "awaiting_review";
-  const nextDueLabel = dueDates.headlineDate
-    ? `${formatDate(dueDates.headlineDate)} · ${dueDates.headlineDetail}`
-    : dueDates.headlineDetail;
+  const paymentDueLabel = dueDates.paymentDueDate
+    ? formatDate(dueDates.paymentDueDate)
+    : "Chưa có hóa đơn cần thanh toán";
 
   const handleCheckout = (payload = {}) => {
     const nextPlanCode = payload.planCode || selectedPlanCode;
@@ -305,8 +305,8 @@ export function BillingSection({
                       {periodLabel}
                     </span>
                     <span>
-                      <strong className="font-semibold text-slate-900">Hạn:</strong>{" "}
-                      {nextDueLabel}
+                      <strong className="font-semibold text-slate-900">Hạn thanh toán:</strong>{" "}
+                      {paymentDueLabel}
                     </span>
                   </div>
                 </div>
@@ -314,8 +314,9 @@ export function BillingSection({
                   <thead>
                     <tr>
                       <Th>Hóa đơn</Th>
+                      <Th>Gói</Th>
                       <Th>Số tiền</Th>
-                      <Th>Hạn</Th>
+                      <Th>Hạn thanh toán</Th>
                       <Th>Trạng thái</Th>
                     </tr>
                   </thead>
@@ -331,6 +332,7 @@ export function BillingSection({
                                 {formatDate(invoice.createdAt)}
                               </span>
                             </Td>
+                            <Td>{invoice.planName || invoice.planCode || "Chưa rõ"}</Td>
                             <Td>{money(invoice.amount, invoice.currency)}</Td>
                             <Td>{formatDate(invoice.dueDate)}</Td>
                             <Td>
@@ -340,7 +342,7 @@ export function BillingSection({
                         );
                       })
                     ) : (
-                      <EmptyRow colSpan={4}>Chưa có hóa đơn billing.</EmptyRow>
+                      <EmptyRow colSpan={5}>Chưa có hóa đơn billing.</EmptyRow>
                     )}
                   </tbody>
                 </DataTable>
