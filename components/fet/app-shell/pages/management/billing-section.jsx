@@ -11,7 +11,6 @@ import { useEffect, useMemo, useState } from "react";
 import { buildBillingPaymentView } from "@/lib/billing-payment-view";
 import {
   buildPaymentPreview,
-  planChargeAmount,
   resolveDueDates,
 } from "@/lib/billing-pricing";
 import { trialDaysRemaining } from "@/lib/billing-utils";
@@ -34,12 +33,7 @@ import { DataTable } from "../../components/data-table";
 import { Pagination } from "../../components/pagination";
 import { money } from "../../lib/format";
 import { paginate } from "../../lib/pagination";
-import {
-  billingCopy,
-  invoiceCopy,
-  paymentCopy,
-} from "./billing-copy";
-import { BillingMetric } from "./billing-metric";
+import { invoiceCopy } from "./billing-copy";
 import { BillingPayDialog } from "./billing-pay-dialog";
 import { BillingPlanPricing } from "./billing-plan-pricing";
 import { billingBodyClass, billingValueClass } from "./billing-typography";
@@ -62,7 +56,6 @@ export function BillingSection({
   const bankTransfer = billing?.bankTransfer || {};
   const plans = billing?.plans || [];
   const invoices = billing?.invoices || [];
-  const latestPaidInvoice = invoices.find((invoice) => invoice.status === "paid");
   const openInvoice = billing?.openInvoice;
   const pendingPayment = billing?.pendingPayment;
   const currentPlanCode =
@@ -100,13 +93,6 @@ export function BillingSection({
     plans.find((plan) => plan.code === currentPlanCode) ||
     plans[0];
 
-  const siteStatus = billingCopy(billing?.billingStatus);
-  const subscriptionStatus = billingCopy(subscription.status, "Chưa có gói");
-  const paymentStatus = pendingPayment
-    ? paymentCopy(pendingPayment.status)
-    : openInvoice
-      ? invoiceCopy(openInvoice.status)
-      : { label: "Chưa có", tone: "default" };
   const trialDays = trialDaysRemaining(billing?.trialEndsAt);
   const effectivePlanName =
     bankTransfer.effectivePlanName ||
@@ -132,17 +118,6 @@ export function BillingSection({
       : billing?.billingStatus === "trialing"
         ? "Gói Plus trong trial"
         : "Chưa có kỳ";
-  const amountLabel = openInvoice
-    ? money(openInvoice.amount, openInvoice.currency)
-    : selectedPlan
-      ? money(
-          planChargeAmount(selectedPlan.priceMonthly, billingInterval),
-          selectedPlan.currency,
-        )
-      : "Chưa phát sinh";
-  const paidLabel = latestPaidInvoice
-    ? `${money(latestPaidInvoice.amount, latestPaidInvoice.currency)} · ${formatDate(latestPaidInvoice.paidAt)}`
-    : "Chưa thanh toán";
   const maxUsers = selectedPlan?.maxUsers ?? subscription.maxUsers;
   const maxVehicles = selectedPlan?.maxVehicles ?? subscription.maxVehicles;
   const usageLabel =
@@ -158,6 +133,9 @@ export function BillingSection({
   );
   const showApproveButton =
     activeRole === "admin" && pendingPayment?.status === "awaiting_review";
+  const nextDueLabel = dueDates.headlineDate
+    ? `${formatDate(dueDates.headlineDate)} · ${dueDates.headlineDetail}`
+    : dueDates.headlineDetail;
 
   const handleCheckout = (payload = {}) => {
     const nextPlanCode = payload.planCode || selectedPlanCode;
@@ -237,8 +215,6 @@ export function BillingSection({
                       <h3 className="text-ui-base font-bold leading-tight text-slate-950">
                         {planName}
                       </h3>
-                      <Badge tone={siteStatus.tone}>{siteStatus.label}</Badge>
-                      <Badge tone={paymentStatus.tone}>{paymentStatus.label}</Badge>
                     </div>
                     <CardDescription className="mt-1">
                       {invoiceAwaitingReview
@@ -307,59 +283,32 @@ export function BillingSection({
             </div>
 
             <div className="grid gap-4 p-3 sm:p-4 lg:p-5">
-              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 sm:p-4">
-                <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <section className="grid gap-2">
+                <div className="grid gap-2 px-1">
                   <div>
-                    <p className="text-ui-label font-semibold uppercase tracking-wide text-slate-500">
-                      Gói đang hoạt động
-                    </p>
-                    <p className={cn("mt-1", billingValueClass)}>
-                      Tổng quan gói
+                    <h3 className={billingValueClass}>Lịch sử thanh toán</h3>
+                    <p className={billingBodyClass}>
+                      Theo dõi hóa đơn phát sinh, hạn thanh toán và trạng thái duyệt.
                     </p>
                   </div>
-                  <p className={billingBodyClass}>{usageLabel}</p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
-                  <BillingMetric
-                    detail={subscriptionStatus.label}
-                    label="Gói"
-                    value={planName}
-                  />
-                  <BillingMetric
-                    detail="Kỳ sử dụng hiện tại"
-                    label="Sử dụng"
-                    value={periodLabel}
-                  />
-                  <BillingMetric
-                    detail={paidLabel}
-                    label="Lần trả gần nhất"
-                    value={amountLabel}
-                  />
-                  <BillingMetric
-                    detail={
-                      dueDates.paymentDueDate
-                        ? dueDates.headlineDetail
-                        : billing?.billingStatus === "trialing" && trialDays != null
-                          ? `Còn ${trialDays} ngày dùng thử`
-                          : dueDates.headlineDetail
-                    }
-                    label="Hạn tới"
-                    value={
-                      dueDates.headlineDate
-                        ? formatDate(dueDates.headlineDate)
-                        : "Chưa có"
-                    }
-                  />
-                </div>
-              </div>
-
-              <section className="grid gap-2">
-                <div className="px-1">
-                  <h3 className={billingValueClass}>Lịch sử hóa đơn</h3>
-                  <p className={billingBodyClass}>
-                    Theo dõi hóa đơn phát sinh, hạn thanh toán và trạng thái duyệt.
-                  </p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-ui-sm text-slate-600">
+                    <span>
+                      <strong className="font-semibold text-slate-900">Gói:</strong>{" "}
+                      {planName}
+                    </span>
+                    <span>
+                      <strong className="font-semibold text-slate-900">Sử dụng:</strong>{" "}
+                      {usageLabel}
+                    </span>
+                    <span>
+                      <strong className="font-semibold text-slate-900">Kỳ:</strong>{" "}
+                      {periodLabel}
+                    </span>
+                    <span>
+                      <strong className="font-semibold text-slate-900">Hạn:</strong>{" "}
+                      {nextDueLabel}
+                    </span>
+                  </div>
                 </div>
                 <DataTable width="billingInvoices">
                   <thead>
