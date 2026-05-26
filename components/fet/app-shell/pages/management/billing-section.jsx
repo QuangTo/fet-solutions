@@ -316,7 +316,6 @@ export function BillingSection({
                       <Th>Hóa đơn</Th>
                       <Th>Gói</Th>
                       <Th>Số tiền</Th>
-                      <Th>Hạn thanh toán</Th>
                       <Th>Trạng thái</Th>
                     </tr>
                   </thead>
@@ -334,7 +333,6 @@ export function BillingSection({
                             </Td>
                             <Td>{invoice.planName || invoice.planCode || "Chưa rõ"}</Td>
                             <Td>{money(invoice.amount, invoice.currency)}</Td>
-                            <Td>{formatDate(invoice.dueDate)}</Td>
                             <Td>
                               <Badge tone={status.tone}>{status.label}</Badge>
                             </Td>
@@ -342,7 +340,7 @@ export function BillingSection({
                         );
                       })
                     ) : (
-                      <EmptyRow colSpan={5}>Chưa có hóa đơn billing.</EmptyRow>
+                      <EmptyRow colSpan={4}>Chưa có hóa đơn billing.</EmptyRow>
                     )}
                   </tbody>
                 </DataTable>
