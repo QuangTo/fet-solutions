@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const { Client } = require("pg");
+const { BILLING_PLANS } = require("../../lib/billing-plans.cjs");
 const { hashPassword } = require("../../lib/server/passwords");
 
 const ADMIN_PHONE = "123456789";
@@ -88,16 +89,35 @@ async function seed() {
     await client.query(
       `
         insert into plans (code, name, price_monthly, currency, max_users, max_vehicles)
-        values ($1, $2, $3, $4, $5, $6)
+        select
+          item.code,
+          item.name,
+          item."priceMonthly",
+          item.currency,
+          item."maxUsers",
+          item."maxVehicles"
+        from jsonb_to_recordset($1::jsonb) as item(
+          code text,
+          name text,
+          "priceMonthly" numeric,
+          currency text,
+          "maxUsers" integer,
+          "maxVehicles" integer
+        )
         on conflict (code) do update
         set name = excluded.name,
             price_monthly = excluded.price_monthly,
             currency = excluded.currency,
             max_users = excluded.max_users,
             max_vehicles = excluded.max_vehicles,
+            is_active = true,
             updated_at = now()
       `,
-      ["plus", "Plus", 299000, "VND", 10, 10],
+      [JSON.stringify(BILLING_PLANS)],
+    );
+    await client.query(
+      "update plans set is_active = false, updated_at = now() where code not in (select code from jsonb_to_recordset($1::jsonb) as item(code text))",
+      [JSON.stringify(BILLING_PLANS)],
     );
 
     const adminUser = await client.query(

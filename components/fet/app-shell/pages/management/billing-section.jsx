@@ -25,7 +25,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyRow, Td, Th } from "@/components/ui/table";
@@ -68,6 +67,7 @@ export function BillingSection({
   const [invoicePage, setInvoicePage] = useState(1);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentPreview, setPaymentPreview] = useState(null);
+  const [confirmedPayment, setConfirmedPayment] = useState(null);
   const [planPickerOpen, setPlanPickerOpen] = useState(false);
 
   const invoicePagination = useMemo(
@@ -75,10 +75,22 @@ export function BillingSection({
     [invoicePage, invoices],
   );
 
-  const paymentView = useMemo(
-    () => checkout || paymentPreview || buildBillingPaymentView(billing),
-    [billing, checkout, paymentPreview],
-  );
+  const paymentView = useMemo(() => {
+    const view = checkout || paymentPreview || buildBillingPaymentView(billing);
+    if (!view || !confirmedPayment) return view;
+    return {
+      ...view,
+      bankTransfer: {
+        ...view.bankTransfer,
+        isPreview: false,
+      },
+      payment: {
+        ...(view.payment || {}),
+        ...confirmedPayment,
+        status: confirmedPayment.status || "awaiting_review",
+      },
+    };
+  }, [billing, checkout, confirmedPayment, paymentPreview]);
 
   useEffect(() => {
     setSelectedPlanCode((current) => current || currentPlanCode || "plus");
@@ -146,6 +158,14 @@ export function BillingSection({
     if (payload.planCode) setSelectedPlanCode(payload.planCode);
     if (payload.billingInterval) setBillingInterval(payload.billingInterval);
     setPlanPickerOpen(false);
+    setConfirmedPayment(null);
+
+    if (pendingPayment?.status === "awaiting_review") {
+      setPaymentPreview(null);
+      setConfirmedPayment(pendingPayment);
+      setPaymentDialogOpen(true);
+      return;
+    }
 
     setPaymentPreview({
       billingInterval: nextInterval,
@@ -177,7 +197,27 @@ export function BillingSection({
   const handleClosePayment = () => {
     setPaymentDialogOpen(false);
     setPaymentPreview(null);
+    setConfirmedPayment(null);
     onCloseCheckout?.();
+  };
+
+  const handleConfirmPayment = async (view) => {
+    try {
+      const confirmed = await onConfirmPayment?.(view);
+      if (!confirmed) {
+        if (pendingPayment?.status === "awaiting_review") {
+          setPaymentPreview(null);
+          setConfirmedPayment(pendingPayment);
+        }
+        return;
+      }
+      setConfirmedPayment({
+        ...confirmed,
+        status: confirmed.status || "awaiting_review",
+      });
+    } catch {
+      // Mutation handlers show the parsed API error.
+    }
   };
 
   return (
@@ -241,7 +281,11 @@ export function BillingSection({
                   ) : null}
                   {showPaymentInfoButton ? (
                     <Button
-                      className="w-full sm:w-auto"
+                      className={cn(
+                        "w-full sm:w-auto",
+                        invoiceAwaitingReview &&
+                          "border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100 hover:text-amber-950",
+                      )}
                       type="button"
                       variant="outline"
                       onClick={() => setPaymentDialogOpen(true)}
@@ -360,34 +404,20 @@ export function BillingSection({
         open={paymentDialogOpen && Boolean(paymentView)}
         paymentView={paymentView}
         onClose={handleClosePayment}
-        onConfirm={onConfirmPayment}
+        onConfirm={handleConfirmPayment}
       />
 
       <Dialog open={planPickerOpen} onOpenChange={setPlanPickerOpen}>
-        <DialogContent className="max-h-[calc(100vh-32px)] w-[calc(100vw-32px)] max-w-5xl overflow-y-auto p-0">
-          <div className="border-b border-slate-100 px-5 py-4">
-            <DialogTitle className={billingValueClass}>
-              Chọn gói cho {billing?.siteName?.trim() || "khách hàng"}
-            </DialogTitle>
-            <DialogDescription className="mt-1 text-ui-sm text-slate-500">
-              So sánh các gói và chọn gói phù hợp. Sau khi chọn, hệ thống sẽ
-              tạo hóa đơn để thanh toán.
-            </DialogDescription>
-          </div>
+        <DialogContent className="max-h-[calc(100vh-32px)] w-[calc(100vw-32px)] max-w-4xl overflow-y-auto bg-slate-50 p-0">
+          <DialogTitle className="sr-only">Chọn gói</DialogTitle>
           {plans.length ? (
-            <div className="p-3 sm:p-4 lg:p-5">
+            <div className="p-2.5 pt-8 sm:p-5 sm:pt-10">
               <BillingPlanPricing
                 billingInterval={billingInterval}
                 checkoutPending={checkoutPending}
                 currentPlanCode={currentPlanCode}
-                currentPlanName={
-                  subscription.planName ||
-                  bankTransfer.effectivePlanName ||
-                  "Plus"
-                }
                 plans={plans}
                 selectedPlanCode={selectedPlanCode}
-                siteName={billing?.siteName}
                 onCheckout={handleCheckout}
                 onIntervalChange={setBillingInterval}
                 onSelectPlan={setSelectedPlanCode}

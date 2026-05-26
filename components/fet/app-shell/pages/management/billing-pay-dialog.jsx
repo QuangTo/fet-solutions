@@ -96,8 +96,8 @@ export function BillingPayDialog({
 
   return (
     <Dialog onOpenChange={(next) => !next && onClose()} open={open}>
-      <DialogContent className="max-h-[88vh] max-w-md gap-0 overflow-y-auto p-0">
-        <div className="border-b border-slate-100 px-4 py-3 pr-12">
+      <DialogContent className="max-h-[88vh] max-w-md gap-0 overflow-y-auto bg-slate-50 p-0">
+        <div className="border-b border-slate-200/70 px-4 py-3 pr-12">
           <div className="flex flex-wrap items-center gap-2">
             <DialogTitle className={billingValueClass}>
               Thông tin chuyển khoản
@@ -109,14 +109,14 @@ export function BillingPayDialog({
         </div>
 
         <div className="grid gap-3 px-4 py-3">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+          <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2.5">
             <p className={billingMutedClass}>Số tiền</p>
             <p className="mt-0.5 text-ui-base font-bold leading-snug text-slate-950">
               {amount}
             </p>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-white px-3">
+          <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3">
             <DetailRow label="Ngân hàng" value={bankTransfer?.bankName || ""} />
             <DetailRow
               label="Số tài khoản"
@@ -128,10 +128,10 @@ export function BillingPayDialog({
             />
           </div>
 
-          <div className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2.5">
+          <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2.5">
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
-                <p className={cn(billingLabelClass, "text-amber-800")}>
+                <p className="text-[11px] font-semibold uppercase leading-4 tracking-wide text-amber-800">
                   Nội dung chuyển khoản
                 </p>
                 <p className={cn("mt-1 break-all", billingValueClass, "text-amber-950")}>
@@ -148,7 +148,7 @@ export function BillingPayDialog({
           </div>
 
           {hasQr ? (
-            <div className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+            <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3 py-3">
               <div
                 className={cn(
                   "flex justify-center",
@@ -191,7 +191,7 @@ export function BillingPayDialog({
           ) : null}
         </div>
 
-        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-4 py-3 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-200/70 px-4 py-3 sm:flex-row sm:justify-end">
           <Button
             className="border-0 bg-transparent shadow-none hover:bg-slate-100 hover:text-slate-700"
             type="button"

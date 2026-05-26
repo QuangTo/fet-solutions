@@ -1,35 +1,36 @@
 "use client";
 
-import { LoaderCircle } from "lucide-react";
+import { Check, LoaderCircle } from "lucide-react";
 import {
-  billingIntervalLabel,
-  planChargeAmount,
   planMonthlyEquivalent,
   yearlyDiscountLabel,
-  yearlySavingsAmount,
 } from "@/lib/billing-pricing";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { money } from "../../lib/format";
 import {
-  billingBodyClass,
-  billingHighlightClass,
-  billingLabelClass,
   billingMutedClass,
   billingValueClass,
 } from "./billing-typography";
 
 function planLimitLabel(plan) {
-  return `${plan.maxUsers} user · ${plan.maxVehicles} xe`;
+  return plan.limitsLabel || `${plan.maxUsers} user · ${plan.maxVehicles} xe`;
+}
+
+function planLimitItems(plan) {
+  return planLimitLabel(plan)
+    .split("·")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function IntervalToggle({ billingInterval, onChange }) {
   return (
-    <div className="inline-flex shrink-0 rounded-full border border-slate-200 bg-slate-100 p-0.5">
+    <div className="inline-flex shrink-0 rounded-full border border-slate-200 bg-slate-100/80 p-[calc(var(--spacing)*0.9)]">
       <button
         className={cn(
-          "rounded-full px-3 py-1 text-ui-sm font-semibold transition",
+          "rounded-full px-2 py-0.5 text-[11px] font-semibold transition sm:px-2.5 sm:text-sm",
           billingInterval === "monthly"
             ? "bg-white text-slate-950 shadow-sm"
             : "text-slate-500 hover:text-slate-800",
@@ -41,7 +42,7 @@ function IntervalToggle({ billingInterval, onChange }) {
       </button>
       <button
         className={cn(
-          "rounded-full px-3 py-1 text-ui-sm font-semibold transition",
+          "rounded-full px-2 py-0.5 text-[11px] font-semibold transition sm:px-2.5 sm:text-sm",
           billingInterval === "yearly"
             ? "bg-white text-slate-950 shadow-sm"
             : "text-slate-500 hover:text-slate-800",
@@ -50,44 +51,29 @@ function IntervalToggle({ billingInterval, onChange }) {
         onClick={() => onChange("yearly")}
       >
         Hằng năm
-        <span className="ml-1 text-emerald-700">-15%</span>
+        <span className="ml-1 text-emerald-700">-{yearlyDiscountLabel()}</span>
       </button>
     </div>
   );
-}
-
-function usageSummary({ billingInterval, currentPlanName, siteName }) {
-  const interval = billingIntervalLabel(billingInterval).toLowerCase();
-  const customer = siteName?.trim() || "này";
-  const plan = currentPlanName?.trim() || "Plus";
-  return `Khách hàng ${customer} đang dùng gói ${plan} ${interval}.`;
 }
 
 export function BillingPlanPricing({
   billingInterval,
   checkoutPending = false,
   currentPlanCode,
-  currentPlanName,
   onCheckout,
   onIntervalChange,
   onSelectPlan,
   plans,
   selectedPlanCode,
-  siteName,
 }) {
-  const yearly = billingInterval === "yearly";
-
   return (
-    <div className="grid gap-3 rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-3 sm:gap-4 sm:p-4 lg:p-5">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-        <div className="min-w-0">
-          <p className={billingLabelClass}>Bảng giá gói</p>
-          <h3 className={cn("mt-1", billingValueClass)}>Chọn gói phù hợp kho của bạn</h3>
-          <p className={cn("mt-1", billingMutedClass)}>
-            {usageSummary({ billingInterval, currentPlanName, siteName })}
-          </p>
-        </div>
-        <div className="self-end sm:shrink-0">
+    <div className="grid gap-3 sm:gap-4">
+      <div className="grid justify-items-center gap-2 pb-0.5 sm:gap-3 sm:pb-1">
+        <h3 className="text-center text-base font-bold leading-tight text-slate-950 sm:text-xl">
+          Tối ưu gói
+        </h3>
+        <div>
           <IntervalToggle
             billingInterval={billingInterval}
             onChange={onIntervalChange}
@@ -95,101 +81,79 @@ export function BillingPlanPricing({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-2 md:grid-cols-3 md:gap-3">
         {plans.map((plan) => {
           const selected = plan.code === selectedPlanCode;
           const active = plan.code === currentPlanCode;
-          const featured = plan.code === "plus";
-          const discountLabel = yearlyDiscountLabel();
-          const chargeAmount = planChargeAmount(plan.priceMonthly, billingInterval);
+          const buttonPending = checkoutPending && selected;
           const monthlyEquivalent = planMonthlyEquivalent(
             plan.priceMonthly,
             billingInterval,
           );
-          const savings = yearly ? yearlySavingsAmount(plan.priceMonthly) : 0;
 
           return (
             <div
               className={cn(
-                "relative flex h-full flex-col rounded-xl border p-3 text-left transition sm:p-4",
+                "relative flex min-h-0 flex-col rounded-xl border bg-white/90 p-2.5 text-left transition sm:min-h-[220px] sm:p-4",
                 selected
-                  ? "border-emerald-500 bg-white shadow-[0_0_0_1px_rgba(16,185,129,0.35)]"
-                  : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm",
-                featured && !selected && "border-slate-300",
+                  ? "border-emerald-400 shadow-[0_0_0_1px_rgba(52,211,153,0.22),0_10px_24px_rgba(15,23,42,0.07)]"
+                  : "border-slate-200/80 hover:border-slate-300 hover:bg-white hover:shadow-sm",
               )}
               key={plan.code}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className={billingValueClass}>{plan.name}</p>
-                  <p className={cn("mt-1", billingMutedClass)}>{planLimitLabel(plan)}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {active ? <Badge tone="green">Đang dùng</Badge> : null}
-                  {featured ? <Badge tone="amber">Trial</Badge> : null}
                 </div>
               </div>
 
-              <div className="mt-3 sm:mt-4">
-                <div className="flex items-end gap-1">
-                  <span className={billingHighlightClass}>
+              <ul className="mt-1.5 grid gap-0.5 text-xs leading-4 text-slate-600 sm:mt-3 sm:gap-1.5 sm:text-sm sm:leading-5">
+                {planLimitItems(plan).map((item) => (
+                  <li className="flex items-center gap-2" key={item}>
+                    <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 sm:h-4 sm:w-4">
+                      <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-2 sm:mt-4">
+                <div className="flex flex-wrap items-end gap-1">
+                  <span className="text-xl font-bold leading-none text-slate-950 sm:text-[28px]">
                     {money(monthlyEquivalent, plan.currency)}
                   </span>
-                  <span className={cn("pb-0.5", billingMutedClass)}>/tháng</span>
+                  <span className="pb-0.5 text-[10px] font-medium leading-4 text-slate-500 sm:text-[11px] sm:leading-5">
+                    /tháng
+                  </span>
                 </div>
-                <p className={cn("mt-1", billingBodyClass)}>
-                  {yearly
-                    ? `${money(chargeAmount, plan.currency)} /năm`
-                    : `${money(chargeAmount, plan.currency)} mỗi tháng`}
-                </p>
-                {yearly ? (
-                  <p className="mt-1 text-ui-sm font-medium text-emerald-700">
-                    Giảm {discountLabel} · tiết kiệm {money(savings, plan.currency)}
-                  </p>
-                ) : (
-                  <p className={cn("mt-1", billingMutedClass)}>
-                    Trả năm giảm {discountLabel}
-                  </p>
-                )}
               </div>
 
-              <div className="mt-4 sm:mt-5">
+              <div className="mt-auto pt-2 sm:pt-4">
                 <Button
-                  className="h-9 w-full"
+                  className="h-8 w-full text-xs sm:h-9 sm:text-sm"
                   disabled={checkoutPending}
                   size="sm"
                   type="button"
                   variant={selected ? "default" : "outline"}
-                  onClick={() => onSelectPlan(plan.code)}
+                  onClick={() =>
+                    selected
+                      ? onCheckout?.({ billingInterval, planCode: plan.code })
+                      : onSelectPlan(plan.code)
+                  }
                 >
-                  {checkoutPending ? (
+                  {buttonPending ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
                   ) : null}
-                  {selected ? "Đang chọn" : "Chọn"}
+                  {selected ? "Tiếp tục thanh toán" : "Chọn"}
                 </Button>
               </div>
             </div>
           );
         })}
-      </div>
-
-      <div className="flex flex-col gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className={billingMutedClass}>
-          Chọn gói chỉ để xem trước. Hệ thống chỉ ghi nhận khi bạn xác nhận đã chuyển khoản.
-        </p>
-        <Button
-          className="w-full sm:w-auto"
-          disabled={checkoutPending || !selectedPlanCode}
-          type="button"
-          onClick={() =>
-            onCheckout?.({ billingInterval, planCode: selectedPlanCode })
-          }
-        >
-          {checkoutPending ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" />
-          ) : null}
-          Tiếp tục thanh toán
-        </Button>
       </div>
     </div>
   );
