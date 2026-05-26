@@ -7,6 +7,8 @@ export const billingBodyClass = "text-ui-sm leading-5 text-slate-600";
 
 export const billingMutedClass = "text-ui-sm leading-5 text-slate-500";
 
+export const billingDetailClass = "text-ui-sm leading-5 text-slate-600";
+
 export const billingValueClass =
   "text-ui-base font-semibold leading-snug text-slate-950";
 

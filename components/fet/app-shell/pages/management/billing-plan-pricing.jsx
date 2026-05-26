@@ -160,20 +160,36 @@ export function BillingPlanPricing({
                   size="sm"
                   type="button"
                   variant={selected ? "default" : "outline"}
-                  onClick={() => {
-                    onSelectPlan(plan.code);
-                    onCheckout?.({ billingInterval, planCode: plan.code });
-                  }}
+                  onClick={() => onSelectPlan(plan.code)}
                 >
                   {checkoutPending ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
                   ) : null}
-                  {selected ? "Chọn gói này" : "Chọn"}
+                  {selected ? "Đang chọn" : "Chọn"}
                 </Button>
               </div>
             </div>
           );
         })}
+      </div>
+
+      <div className="flex flex-col gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className={billingMutedClass}>
+          Chọn gói chỉ để xem trước. Hệ thống chỉ ghi nhận khi bạn xác nhận đã chuyển khoản.
+        </p>
+        <Button
+          className="w-full sm:w-auto"
+          disabled={checkoutPending || !selectedPlanCode}
+          type="button"
+          onClick={() =>
+            onCheckout?.({ billingInterval, planCode: selectedPlanCode })
+          }
+        >
+          {checkoutPending ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : null}
+          Tiếp tục thanh toán
+        </Button>
       </div>
     </div>
   );

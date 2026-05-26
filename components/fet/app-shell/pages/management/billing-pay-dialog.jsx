@@ -1,15 +1,19 @@
 "use client";
 
-import { AlertCircle, Copy, Lightbulb, LoaderCircle } from "lucide-react";
+import { AlertCircle, Copy, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { money } from "../../lib/format";
 import { invoiceCopy, paymentCopy } from "./billing-copy";
 import {
-  billingHighlightClass,
   billingLabelClass,
   billingMutedClass,
   billingValueClass,
@@ -25,7 +29,7 @@ function CopyButton({ label, value }) {
   return (
     <button
       aria-label={`Sao chép ${label}`}
-      className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+      className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
       type="button"
       onClick={async () => {
         await copyText(value);
@@ -42,9 +46,11 @@ function CopyButton({ label, value }) {
 function DetailRow({ label, value }) {
   if (!value) return null;
   return (
-    <div className="flex items-center gap-2 border-b border-slate-100 py-2.5 last:border-b-0">
-      <span className={cn("w-[7.5rem] shrink-0", billingMutedClass)}>{label}</span>
-      <span className={cn("min-w-0 flex-1", billingValueClass)}>{value}</span>
+    <div className="flex items-center gap-2 border-b border-slate-100 py-2 last:border-b-0">
+      <span className={cn("w-28 shrink-0", billingMutedClass)}>{label}</span>
+      <span className={cn("min-w-0 flex-1 break-words", billingValueClass)}>
+        {value}
+      </span>
       <CopyButton label={label} value={value} />
     </div>
   );
@@ -54,15 +60,15 @@ function QrBlock({ alt, label, src }) {
   return (
     <div className="text-center">
       {label ? (
-        <p className={cn("mb-2", billingLabelClass)}>{label}</p>
+        <p className={cn("mb-1.5", billingLabelClass)}>{label}</p>
       ) : null}
-      <div className="inline-block rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="inline-block rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
         <img
           alt={alt}
-          className="h-36 w-36 object-contain sm:h-40 sm:w-40"
-          height={160}
+          className="h-28 w-28 object-contain sm:h-32 sm:w-32"
+          height={128}
           src={src}
-          width={160}
+          width={128}
         />
       </div>
     </div>
@@ -81,7 +87,7 @@ export function BillingPayDialog({
   const { bankTransfer, invoice, payment } = paymentView;
   const paymentStatus = payment ? paymentCopy(payment.status) : null;
   const invoiceStatus = invoice ? invoiceCopy(invoice.status) : null;
-  const canConfirm = payment?.status === "pending";
+  const canConfirm = bankTransfer?.isPreview || payment?.status === "pending";
   const amount = money(
     invoice?.amount || bankTransfer?.amount,
     invoice?.currency,
@@ -96,18 +102,18 @@ export function BillingPayDialog({
 
   return (
     <Dialog onOpenChange={(next) => !next && onClose()} open={open}>
-      <DialogContent className="max-h-[90vh] max-w-lg gap-0 overflow-y-auto p-0">
-        <div className="border-b border-slate-100 px-5 py-4 pr-12">
-          <DialogTitle className={billingValueClass}>Thanh toán chuyển khoản</DialogTitle>
-        </div>
-
-        <div className="grid gap-0 px-5 py-4">
-          <div>
-            <p className={billingMutedClass}>Số tiền cần thanh toán</p>
-            <p className={cn("mt-1", billingHighlightClass)}>{amount}</p>
+      <DialogContent className="max-h-[88vh] max-w-md gap-0 overflow-y-auto p-0">
+        <div className="border-b border-slate-100 px-4 py-3 pr-12">
+          <div className="flex flex-wrap items-center gap-2">
+            <DialogTitle className={billingValueClass}>
+              Thanh toán chuyển khoản
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Thông tin chuyển khoản, mã QR và xác nhận đã thanh toán.
+            </DialogDescription>
             <Badge
               className={cn(
-                "mt-2.5 h-auto px-2.5 py-0.5 text-ui-xs font-semibold",
+                "h-auto px-2 py-0.5 text-ui-xs font-semibold",
                 statusBadge.tone === "amber" &&
                   "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
                 statusBadge.tone === "blue" &&
@@ -120,10 +126,17 @@ export function BillingPayDialog({
               {statusBadge.label}
             </Badge>
           </div>
+        </div>
 
-          <hr className="my-4 border-slate-200" />
+        <div className="grid gap-3 px-4 py-3">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <p className={billingMutedClass}>Số tiền</p>
+            <p className="mt-0.5 text-ui-base font-bold leading-snug text-slate-950">
+              {amount}
+            </p>
+          </div>
 
-          <div>
+          <div className="rounded-lg border border-slate-200 bg-white px-3">
             <DetailRow label="Ngân hàng" value={bankTransfer?.bankName || ""} />
             <DetailRow
               label="Số tài khoản"
@@ -135,13 +148,13 @@ export function BillingPayDialog({
             />
           </div>
 
-          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-3">
+          <div className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2.5">
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <p className={cn(billingLabelClass, "text-amber-800")}>
-                  Nội dung chuyển khoản (Bắt buộc ghi đúng)
+                  Nội dung chuyển khoản
                 </p>
-                <p className={cn("mt-1.5 break-all", billingValueClass, "text-amber-950")}>
+                <p className={cn("mt-1 break-all", billingValueClass, "text-amber-950")}>
                   {bankTransfer?.transferContent || "—"}
                 </p>
               </div>
@@ -155,20 +168,13 @@ export function BillingPayDialog({
           </div>
 
           {hasQr ? (
-            <div className="mt-5">
-              <p className={cn("flex items-start gap-2", billingMutedClass)}>
-                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                <span>
-                  Mẹo: Quét mã QR dưới đây để tự động điền thông tin chuyển
-                  khoản.
-                </span>
-              </p>
+            <div className="rounded-lg border border-slate-200 bg-white px-3 py-3">
               <div
                 className={cn(
-                  "mt-3 flex justify-center",
+                  "flex justify-center",
                   bankTransfer?.qrImageUrl &&
                     bankTransfer?.momoQrImageUrl &&
-                    "gap-6 sm:gap-8",
+                    "gap-4 sm:gap-6",
                 )}
               >
                 {bankTransfer?.qrImageUrl ? (
@@ -194,7 +200,7 @@ export function BillingPayDialog({
           {paymentStatus && payment?.status === "awaiting_review" ? (
             <div
               className={cn(
-                "mt-4 flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-ui-sm font-semibold text-sky-900",
+                "flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-ui-sm font-semibold text-sky-900",
               )}
             >
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -205,9 +211,9 @@ export function BillingPayDialog({
           ) : null}
         </div>
 
-        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-4 py-3 sm:flex-row sm:justify-end">
           <Button
-            className="h-9 border-0 bg-transparent shadow-none hover:bg-slate-100 hover:text-slate-700"
+            className="border-0 bg-transparent shadow-none hover:bg-slate-100 hover:text-slate-700"
             type="button"
             variant="ghost"
             onClick={onClose}
@@ -216,10 +222,9 @@ export function BillingPayDialog({
           </Button>
           {canConfirm ? (
             <Button
-              className="h-9"
               disabled={confirmPending}
               type="button"
-              onClick={() => onConfirm(payment.id)}
+              onClick={() => onConfirm(paymentView)}
             >
               {confirmPending ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />

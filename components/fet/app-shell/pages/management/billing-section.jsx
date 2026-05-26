@@ -9,7 +9,11 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { buildBillingPaymentView } from "@/lib/billing-payment-view";
-import { planChargeAmount, resolveDueDates } from "@/lib/billing-pricing";
+import {
+  buildPaymentPreview,
+  planChargeAmount,
+  resolveDueDates,
+} from "@/lib/billing-pricing";
 import { trialDaysRemaining } from "@/lib/billing-utils";
 import { formatDate } from "@/lib/fet-domain";
 import { cn } from "@/lib/utils";
@@ -18,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardDescription,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -71,6 +74,7 @@ export function BillingSection({
   const [selectedPlanCode, setSelectedPlanCode] = useState(currentPlanCode);
   const [invoicePage, setInvoicePage] = useState(1);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentPreview, setPaymentPreview] = useState(null);
   const [planPickerOpen, setPlanPickerOpen] = useState(false);
 
   const invoicePagination = useMemo(
@@ -79,8 +83,8 @@ export function BillingSection({
   );
 
   const paymentView = useMemo(
-    () => buildBillingPaymentView(billing, checkout),
-    [billing, checkout],
+    () => checkout || paymentPreview || buildBillingPaymentView(billing),
+    [billing, checkout, paymentPreview],
   );
 
   useEffect(() => {
@@ -158,13 +162,26 @@ export function BillingSection({
   const handleCheckout = (payload = {}) => {
     const nextPlanCode = payload.planCode || selectedPlanCode;
     const nextInterval = payload.billingInterval || billingInterval;
+    const nextPlan =
+      plans.find((plan) => plan.code === nextPlanCode) || selectedPlan;
+
     if (payload.planCode) setSelectedPlanCode(payload.planCode);
     if (payload.billingInterval) setBillingInterval(payload.billingInterval);
     setPlanPickerOpen(false);
-    onCheckout({
+
+    setPaymentPreview({
       billingInterval: nextInterval,
-      planCode: nextPlanCode,
+      bankTransfer: buildPaymentPreview({
+        bankTransfer,
+        billingInterval: nextInterval,
+        contactPhone: billing?.contactPhone,
+        plan: nextPlan,
+      }),
+      invoice: null,
+      payment: null,
+      plan: nextPlan,
     });
+    setPaymentDialogOpen(true);
   };
 
   const handlePayNow = () => {
@@ -181,6 +198,7 @@ export function BillingSection({
 
   const handleClosePayment = () => {
     setPaymentDialogOpen(false);
+    setPaymentPreview(null);
     onCloseCheckout?.();
   };
 
@@ -208,66 +226,57 @@ export function BillingSection({
         </button>
         {isActive ? (
           <>
-            <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="border-b border-slate-100 bg-slate-50/60 px-4 py-4 sm:px-5">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-emerald-600 text-white shadow-sm">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-emerald-600 text-white shadow-sm">
                     <CreditCard className="h-5 w-5" />
                   </span>
                   <div className="min-w-0">
-                    <CardTitle>Thanh toán</CardTitle>
-                    <CardDescription>
-                      Chọn gói, tạo hóa đơn và chuyển khoản theo thông tin ngân hàng.
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-ui-base font-bold leading-tight text-slate-950">
+                        {planName}
+                      </h3>
+                      <Badge tone={siteStatus.tone}>{siteStatus.label}</Badge>
+                      <Badge tone={paymentStatus.tone}>{paymentStatus.label}</Badge>
+                    </div>
+                    <CardDescription className="mt-1">
+                      {invoiceAwaitingReview
+                        ? "Đã ghi nhận chuyển khoản, đang chờ admin duyệt."
+                        : billing?.billingStatus === "trialing" && trialDays != null
+                          ? `Trial gói Plus còn ${trialDays} ngày.`
+                          : billing?.billingStatus === "active"
+                            ? "Gói đang hoạt động, theo dõi hạn và lịch sử hóa đơn tại đây."
+                            : "Chọn gói, tạo hóa đơn và chuyển khoản theo thông tin ngân hàng."}
                     </CardDescription>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge tone={siteStatus.tone}>{siteStatus.label}</Badge>
-                  <Badge tone={paymentStatus.tone}>{paymentStatus.label}</Badge>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-3 p-3 sm:gap-4 sm:p-4 lg:p-5">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                <p className={billingBodyClass}>
-                  {invoiceAwaitingReview
-                    ? "Đã ghi nhận chuyển khoản · chờ admin duyệt"
-                    : billing?.billingStatus === "trialing" && trialDays != null
-                      ? `Trial gói Plus · còn ${trialDays} ngày`
-                      : billing?.billingStatus === "active"
-                        ? "Gói đang hoạt động"
-                        : "Chọn gói và thanh toán để kích hoạt"}
-                </p>
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap xl:justify-end">
                   {plans.length ? (
                     <Button
-                      className="h-9 w-full sm:w-auto"
-                      size="sm"
+                      className="w-full sm:w-auto"
                       type="button"
                       variant="outline"
                       onClick={() => setPlanPickerOpen(true)}
                     >
                       <Sparkles className="h-4 w-4" />
-                      Nâng cấp / Thay đổi gói
+                      Thay đổi gói
                     </Button>
                   ) : null}
                   {showPaymentInfoButton ? (
                     <Button
-                      className="h-9 w-full sm:w-auto"
-                      size="sm"
+                      className="w-full sm:w-auto"
                       type="button"
                       variant="outline"
                       onClick={() => setPaymentDialogOpen(true)}
                     >
-                      Xem thông tin chuyển khoản
+                      Thông tin chuyển khoản
                     </Button>
                   ) : null}
                   {showCheckoutButton ? (
                     <Button
-                      className="h-9 w-full sm:w-auto"
+                      className="w-full sm:w-auto"
                       disabled={checkoutPending}
-                      size="sm"
                       type="button"
                       onClick={handlePayNow}
                     >
@@ -281,9 +290,8 @@ export function BillingSection({
                   ) : null}
                   {showApproveButton ? (
                     <Button
-                      className="h-9 w-full sm:w-auto"
+                      className="w-full sm:w-auto"
                       disabled={approvePending}
-                      size="sm"
                       type="button"
                       variant="secondary"
                       onClick={() => onApprove(pendingPayment.id)}
@@ -296,82 +304,110 @@ export function BillingSection({
                   ) : null}
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <BillingMetric
-                  detail={subscriptionStatus.label}
-                  label="Gói"
-                  value={planName}
-                />
-                <BillingMetric detail={usageLabel} label="Sử dụng" value={periodLabel} />
-                <BillingMetric
-                  detail={paidLabel}
-                  label="Lần trả gần nhất"
-                  value={amountLabel}
-                />
-                <BillingMetric
-                  detail={
-                    dueDates.paymentDueDate
-                      ? dueDates.headlineDetail
-                      : billing?.billingStatus === "trialing" && trialDays != null
-                        ? `Còn ${trialDays} ngày dùng thử`
-                        : dueDates.headlineDetail
-                  }
-                  label="Hạn tới"
-                  value={
-                    dueDates.headlineDate
-                      ? formatDate(dueDates.headlineDate)
-                      : "Chưa có"
-                  }
-                />
+            <div className="grid gap-4 p-3 sm:p-4 lg:p-5">
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 sm:p-4">
+                <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-ui-label font-semibold uppercase tracking-wide text-slate-500">
+                      Gói đang hoạt động
+                    </p>
+                    <p className={cn("mt-1", billingValueClass)}>
+                      Tổng quan gói
+                    </p>
+                  </div>
+                  <p className={billingBodyClass}>{usageLabel}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
+                  <BillingMetric
+                    detail={subscriptionStatus.label}
+                    label="Gói"
+                    value={planName}
+                  />
+                  <BillingMetric
+                    detail="Kỳ sử dụng hiện tại"
+                    label="Sử dụng"
+                    value={periodLabel}
+                  />
+                  <BillingMetric
+                    detail={paidLabel}
+                    label="Lần trả gần nhất"
+                    value={amountLabel}
+                  />
+                  <BillingMetric
+                    detail={
+                      dueDates.paymentDueDate
+                        ? dueDates.headlineDetail
+                        : billing?.billingStatus === "trialing" && trialDays != null
+                          ? `Còn ${trialDays} ngày dùng thử`
+                          : dueDates.headlineDetail
+                    }
+                    label="Hạn tới"
+                    value={
+                      dueDates.headlineDate
+                        ? formatDate(dueDates.headlineDate)
+                        : "Chưa có"
+                    }
+                  />
+                </div>
               </div>
 
-              <DataTable width="billingInvoices">
-                <thead>
-                  <tr>
-                    <Th>Hóa đơn</Th>
-                    <Th>Số tiền</Th>
-                    <Th>Hạn</Th>
-                    <Th>Trạng thái</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoices.length ? (
-                    invoicePagination.rows.map((invoice) => {
-                      const status = invoiceCopy(invoice.status);
-                      return (
-                        <tr key={invoice.id}>
-                          <Td>
-                            <span className="inline-flex items-center gap-2">
-                              <ReceiptText className="h-4 w-4 text-slate-400" />
-                              {formatDate(invoice.createdAt)}
-                            </span>
-                          </Td>
-                          <Td>{money(invoice.amount, invoice.currency)}</Td>
-                          <Td>{formatDate(invoice.dueDate)}</Td>
-                          <Td>
-                            <Badge tone={status.tone}>{status.label}</Badge>
-                          </Td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <EmptyRow colSpan={4}>Chưa có hóa đơn billing.</EmptyRow>
-                  )}
-                </tbody>
-              </DataTable>
-              <Pagination
-                page={invoicePagination.page}
-                pageCount={invoicePagination.pageCount}
-                onPageChange={setInvoicePage}
-              />
+              <section className="grid gap-2">
+                <div className="px-1">
+                  <h3 className={billingValueClass}>Lịch sử hóa đơn</h3>
+                  <p className={billingBodyClass}>
+                    Theo dõi hóa đơn phát sinh, hạn thanh toán và trạng thái duyệt.
+                  </p>
+                </div>
+                <DataTable width="billingInvoices">
+                  <thead>
+                    <tr>
+                      <Th>Hóa đơn</Th>
+                      <Th>Số tiền</Th>
+                      <Th>Hạn</Th>
+                      <Th>Trạng thái</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoices.length ? (
+                      invoicePagination.rows.map((invoice) => {
+                        const status = invoiceCopy(invoice.status);
+                        return (
+                          <tr key={invoice.id}>
+                            <Td>
+                              <span className="inline-flex items-center gap-2">
+                                <ReceiptText className="h-4 w-4 text-slate-400" />
+                                {formatDate(invoice.createdAt)}
+                              </span>
+                            </Td>
+                            <Td>{money(invoice.amount, invoice.currency)}</Td>
+                            <Td>{formatDate(invoice.dueDate)}</Td>
+                            <Td>
+                              <Badge tone={status.tone}>{status.label}</Badge>
+                            </Td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <EmptyRow colSpan={4}>Chưa có hóa đơn billing.</EmptyRow>
+                    )}
+                  </tbody>
+                </DataTable>
+                <Pagination
+                  page={invoicePagination.page}
+                  pageCount={invoicePagination.pageCount}
+                  onPageChange={setInvoicePage}
+                />
+              </section>
             </div>
           </>
         ) : null}
       </Card>
 
       <BillingPayDialog
-        confirmPending={confirmPending}
+        confirmPending={confirmPending || checkoutPending}
         open={paymentDialogOpen && Boolean(paymentView)}
         paymentView={paymentView}
         onClose={handleClosePayment}

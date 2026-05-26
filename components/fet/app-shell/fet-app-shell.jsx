@@ -720,7 +720,6 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     onSuccess: (checkout) => {
       setBillingCheckout(checkout);
       invalidateBilling();
-      showToast("Đã tạo mã thanh toán");
     },
   });
   const billingConfirmMutation = useMutation({
@@ -759,8 +758,30 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
   const handleBillingCheckout = (payload) => {
     billingCheckoutMutation.mutate(payload || {});
   };
-  const handleConfirmPayment = (paymentId) => {
-    billingConfirmMutation.mutate(paymentId);
+  const handleConfirmPayment = async (paymentRequest) => {
+    const paymentId =
+      typeof paymentRequest === "string"
+        ? paymentRequest
+        : paymentRequest?.payment?.id;
+
+    if (paymentId) {
+      billingConfirmMutation.mutate(paymentId);
+      return;
+    }
+
+    if (paymentRequest?.bankTransfer?.isPreview) {
+      try {
+        const checkout = await billingCheckoutMutation.mutateAsync({
+          billingInterval: paymentRequest.billingInterval,
+          planCode: paymentRequest.plan?.code,
+        });
+        if (checkout?.payment?.id) {
+          await billingConfirmMutation.mutateAsync(checkout.payment.id);
+        }
+      } catch {
+        // Mutation handlers show the parsed API error.
+      }
+    }
   };
   const handleApprovePayment = (paymentId) => {
     billingApproveMutation.mutate(paymentId);
