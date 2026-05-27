@@ -132,10 +132,15 @@ export function BillingSection({
         : "Chưa có kỳ";
   const maxUsers = selectedPlan?.maxUsers ?? subscription.maxUsers;
   const maxVehicles = selectedPlan?.maxVehicles ?? subscription.maxVehicles;
-  const usageLabel =
-    maxUsers || maxVehicles
-      ? `${billing?.userCount ?? 0}/${maxUsers ?? "∞"} users · ${billing?.vehicleCount ?? 0}/${maxVehicles ?? "∞"} xe`
-      : `${billing?.userCount ?? 0} users · ${billing?.vehicleCount ?? 0} xe`;
+  const maxCustomers = selectedPlan?.maxCustomers ?? subscription.maxCustomers;
+  const maxWarehouses =
+    selectedPlan?.maxWarehouses ?? subscription.maxWarehouses;
+  const usageLabel = [
+    `${billing?.userCount ?? 0}/${maxUsers ?? "∞"} Người dùng`,
+    `${billing?.customerCount ?? 0}/${maxCustomers ?? "∞"} Đối tác`,
+    `${billing?.vehicleCount ?? 0}/${maxVehicles ?? "∞"} Xe`,
+    `${billing?.warehouseCount ?? 0}/${maxWarehouses ?? "∞"} Kho`,
+  ].join(" · ");
   const invoiceAwaitingReview =
     openInvoice?.status === "pending" ||
     pendingPayment?.status === "awaiting_review";
@@ -336,10 +341,6 @@ export function BillingSection({
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-ui-sm text-slate-600">
-                    <span>
-                      <strong className="font-semibold text-slate-900">Gói:</strong>{" "}
-                      {planName}
-                    </span>
                     <span>
                       <strong className="font-semibold text-slate-900">Sử dụng:</strong>{" "}
                       {usageLabel}

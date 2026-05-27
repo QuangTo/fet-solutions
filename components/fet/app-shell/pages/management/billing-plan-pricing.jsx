@@ -9,23 +9,21 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { money } from "../../lib/format";
-import {
-  billingMutedClass,
-  billingValueClass,
-} from "./billing-typography";
+import { billingValueClass } from "./billing-typography";
 
-function planLimitLabel(plan) {
-  return (
-    plan.limitsLabel ||
-    `${plan.maxUsers} Người dùng · ${plan.maxVehicles} xe`
-  );
-}
+const PLAN_LIMIT_FIELDS = [
+  { key: "maxUsers", label: "Người dùng" },
+  { key: "maxCustomers", label: "Đối tác" },
+  { key: "maxVehicles", label: "Xe" },
+  { key: "maxWarehouses", label: "Kho" },
+];
 
 function planLimitItems(plan) {
-  return planLimitLabel(plan)
-    .split("·")
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return PLAN_LIMIT_FIELDS.flatMap(({ key, label }) => {
+    const value = plan[key];
+    if (value == null) return [];
+    return [`${value} ${label}`];
+  });
 }
 
 function IntervalToggle({ billingInterval, onChange }) {

@@ -47,10 +47,15 @@ export function MasterSection({
     item.label.toLowerCase().includes(search.trim().toLowerCase()),
   );
   const recordView = paginate(filteredRecords, page, 10);
-  const maxVehicles =
-    listName === "vehicles" ? planLimits?.maxVehicles ?? null : null;
-  const vehicleLimitReached =
-    maxVehicles != null && records.length >= maxVehicles;
+  const planLimitMax =
+    listName === "vehicles"
+      ? planLimits?.maxVehicles ?? null
+      : listName === "customers"
+        ? planLimits?.maxCustomers ?? null
+        : null;
+  const limitReached =
+    planLimitMax != null && records.length >= planLimitMax;
+  const lowerLabel = label.toLowerCase();
 
   useEffect(() => {
     setPage(1);
@@ -74,9 +79,9 @@ export function MasterSection({
               <CardDescription>{config.description}</CardDescription>
             </div>
           </div>
-          <Badge tone={vehicleLimitReached ? "amber" : "green"}>
-            {maxVehicles != null
-              ? `${records.length} / ${maxVehicles} ${label.toLowerCase()}`
+          <Badge tone={limitReached ? "amber" : "green"}>
+            {planLimitMax != null
+              ? `${records.length} / ${planLimitMax} ${lowerLabel}`
               : `${filteredRecords.length} / ${records.length} mục`}
           </Badge>
         </div>
@@ -87,9 +92,9 @@ export function MasterSection({
           onSubmit={(event) => {
             event.preventDefault();
             if (!value.trim()) return;
-            if (vehicleLimitReached) {
+            if (limitReached) {
               onToast?.(
-                `Gói ${planLimits?.planName || "hiện tại"} chỉ cho phép ${maxVehicles} xe. Nâng cấp gói để thêm.`,
+                `Gói ${planLimits?.planName || "hiện tại"} chỉ cho phép ${planLimitMax} ${lowerLabel}. Nâng cấp gói để thêm.`,
                 "error",
               );
               return;
@@ -109,10 +114,10 @@ export function MasterSection({
           <div className={cn(primaryActionButtonShellClass, "self-end")}>
             <Button
               className="w-full"
-              disabled={mutation.isPending || vehicleLimitReached}
+              disabled={mutation.isPending || limitReached}
               title={
-                vehicleLimitReached
-                  ? `Đã đạt giới hạn ${maxVehicles} xe của gói ${planLimits?.planName || ""}`.trim()
+                limitReached
+                  ? `Đã đạt giới hạn ${planLimitMax} ${lowerLabel} của gói ${planLimits?.planName || ""}`.trim()
                   : undefined
               }
               type="submit"
@@ -126,9 +131,9 @@ export function MasterSection({
             </Button>
           </div>
         </form>
-        {vehicleLimitReached ? (
+        {limitReached ? (
           <p className="text-ui-sm font-medium text-amber-700">
-            Gói {planLimits?.planName || "hiện tại"} cho phép tối đa {maxVehicles} xe. Nâng cấp gói để mở rộng đội xe.
+            Gói {planLimits?.planName || "hiện tại"} cho phép tối đa {planLimitMax} {lowerLabel}. Nâng cấp gói để mở rộng danh mục.
           </p>
         ) : null}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
