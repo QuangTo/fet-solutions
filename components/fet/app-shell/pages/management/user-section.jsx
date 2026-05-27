@@ -2,6 +2,7 @@
 
 import {
   ChevronRight,
+  LoaderCircle,
   Pencil,
   Phone,
   Plus,
@@ -174,7 +175,11 @@ export function UserSection({
                   disabled={mutation.isPending}
                   type="submit"
                 >
-                  <Plus className="h-4 w-4" />
+                  {mutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
                   Thêm
                 </Button>
               </div>

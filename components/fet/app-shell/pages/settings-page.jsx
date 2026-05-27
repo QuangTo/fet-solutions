@@ -1,5 +1,6 @@
 "use client";
 
+import { LoaderCircle } from "lucide-react";
 import {
   configurableRoleOrder,
   pages,
@@ -92,6 +93,9 @@ export function SettingsPage({
               onClick={onApplyUi}
               type="button"
             >
+              {isUiPending ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : null}
               Áp dụng
             </Button>
           </div>
@@ -157,6 +161,9 @@ export function SettingsPage({
               onClick={onApplyPageAccess}
               type="button"
             >
+              {isPageAccessPending ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : null}
               Áp dụng
             </Button>
           </div>

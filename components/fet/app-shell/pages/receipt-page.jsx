@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { receiptsListQueryOptions } from "@/lib/api";
 import {
@@ -190,6 +191,9 @@ export function ReceiptPage({
                   disabled={mutation.isPending}
                   type="submit"
                 >
+                  {mutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : null}
                   Nhập hàng
                 </Button>
               </div>

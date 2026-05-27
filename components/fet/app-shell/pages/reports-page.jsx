@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { LoaderCircle, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   accountingClosuresQueryOptions,
@@ -151,12 +151,16 @@ export function ReportsPage({ activeRole, mutation, session, state }) {
                   {canApprove ? (
                     <Button
                       className="relative z-20 w-full"
+                      disabled={mutation.isPending}
                       onClick={(event) => {
                         event.stopPropagation();
                         setConfirmCustomer(row);
                       }}
                       type="button"
                     >
+                      {mutation.isPending ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                      ) : null}
                       Xuất hóa đơn
                     </Button>
                   ) : null}
@@ -271,6 +275,9 @@ export function ReportsPage({ activeRole, mutation, session, state }) {
               }}
               type="button"
             >
+              {mutation.isPending ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : null}
               Đồng ý
             </Button>
           </div>

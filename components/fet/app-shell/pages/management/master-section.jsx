@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { LoaderCircle, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/fet-domain";
 import { cn } from "@/lib/utils";
@@ -93,7 +93,11 @@ export function MasterSection({ config, mutation, records }) {
               disabled={mutation.isPending}
               type="submit"
             >
-              <Plus className="h-4 w-4" />
+              {mutation.isPending ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
               Thêm
             </Button>
           </div>

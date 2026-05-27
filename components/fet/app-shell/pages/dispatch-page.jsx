@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { dispatchesListQueryOptions } from "@/lib/api";
 import {
@@ -299,6 +300,9 @@ export function DispatchPage({
                 disabled={mutation.isPending}
                 type="submit"
               >
+                {mutation.isPending ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : null}
                 Xuất hàng
               </Button>
             </div>
@@ -371,6 +375,7 @@ export function DispatchPage({
           <div className={cn(operationActionButtonShellClass, "self-end")}>
             <Button
               className={operationActionButtonClass}
+              disabled={dispatchListQuery.isFetching}
               onClick={() => {
                 setFilters({ date: "", driver: "", period: "week", truck: "" });
                 setSelectedCustomer("");
@@ -378,6 +383,9 @@ export function DispatchPage({
               }}
               type="button"
             >
+              {dispatchListQuery.isFetching ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : null}
               Xem tất cả
             </Button>
           </div>
