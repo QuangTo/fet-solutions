@@ -13,7 +13,6 @@ import {
   formatDateTime,
   reportRows,
 } from "@/lib/fet-domain";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -124,11 +123,7 @@ export function ReportsPage({ activeRole, mutation, session, state }) {
             {rows.length ? (
               customerView.rows.map((row) => (
                 <article
-                  className={cn(
-                    "relative grid min-h-32 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50",
-                    current === row.reportKey &&
-                      "border-emerald-400 bg-emerald-50",
-                  )}
+                  className="relative grid min-h-32 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50"
                   key={row.reportKey}
                 >
                   <button
