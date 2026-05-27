@@ -78,7 +78,14 @@ function WarehouseForm({ initial, isPending, onCancel, onSubmit }) {
 
 const emptyForm = { code: "", name: "" };
 
-export function WarehouseSection({ isActive, mutation, onToggle, records }) {
+export function WarehouseSection({
+  isActive,
+  mutation,
+  onToast,
+  onToggle,
+  planLimits,
+  records,
+}) {
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -92,6 +99,9 @@ export function WarehouseSection({ isActive, mutation, onToggle, records }) {
       .some((value) => value.toString().toLowerCase().includes(term));
   });
   const recordView = paginate(filteredRecords, page, 10);
+  const maxWarehouses = planLimits?.maxWarehouses ?? null;
+  const warehouseLimitReached =
+    maxWarehouses != null && records.length >= maxWarehouses;
 
   useEffect(() => {
     setPage(1);
@@ -133,8 +143,10 @@ export function WarehouseSection({ isActive, mutation, onToggle, records }) {
                   </CardDescription>
                 </div>
               </div>
-              <Badge tone="green">
-                {filteredRecords.length} / {records.length} kho
+              <Badge tone={warehouseLimitReached ? "amber" : "green"}>
+                {maxWarehouses != null
+                  ? `${records.length} / ${maxWarehouses} kho`
+                  : `${filteredRecords.length} / ${records.length} kho`}
               </Badge>
             </div>
           </div>
@@ -144,6 +156,13 @@ export function WarehouseSection({ isActive, mutation, onToggle, records }) {
               onSubmit={(event) => {
                 event.preventDefault();
                 if (!form.name.trim() || !form.code.trim()) return;
+                if (warehouseLimitReached) {
+                  onToast?.(
+                    `Gói ${planLimits?.planName || "hiện tại"} chỉ cho phép ${maxWarehouses} kho. Nâng cấp gói để thêm.`,
+                    "error",
+                  );
+                  return;
+                }
                 mutation.mutate(
                   {
                     body: {
@@ -185,7 +204,12 @@ export function WarehouseSection({ isActive, mutation, onToggle, records }) {
               <div className={cn(primaryActionButtonShellClass, "self-end")}>
                 <Button
                   className="w-full"
-                  disabled={mutation.isPending}
+                  disabled={mutation.isPending || warehouseLimitReached}
+                  title={
+                    warehouseLimitReached
+                      ? `Đã đạt giới hạn ${maxWarehouses} kho của gói ${planLimits?.planName || ""}`.trim()
+                      : undefined
+                  }
                   type="submit"
                 >
                   {mutation.isPending ? (
@@ -197,6 +221,11 @@ export function WarehouseSection({ isActive, mutation, onToggle, records }) {
                 </Button>
               </div>
             </form>
+            {warehouseLimitReached ? (
+              <p className="text-ui-sm font-medium text-amber-700">
+                Gói {planLimits?.planName || "hiện tại"} cho phép tối đa {maxWarehouses} kho. Nâng cấp gói để mở rộng kho hàng.
+              </p>
+            ) : null}
             <div className="relative w-full lg:max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input

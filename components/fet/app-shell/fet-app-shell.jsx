@@ -1037,11 +1037,13 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
               users={usersQuery.data?.items || []}
               usersPage={usersQuery.data?.page || 1}
               usersPageCount={usersQuery.data?.pageCount || 1}
+              usersTotal={usersQuery.data?.total || 0}
               onUsersPageChange={setUsersPage}
               onApprovePayment={handleApprovePayment}
               onBillingCheckout={handleBillingCheckout}
               onCloseCheckout={() => setBillingCheckout(null)}
               onConfirmPayment={handleConfirmPayment}
+              onToast={showToast}
             />
           ) : null}
           {!isPageLoading && !showBillingLockScreen && contentPage === "cai-dat" ? (

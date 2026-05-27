@@ -15,7 +15,10 @@ import {
 } from "./billing-typography";
 
 function planLimitLabel(plan) {
-  return plan.limitsLabel || `${plan.maxUsers} user · ${plan.maxVehicles} xe`;
+  return (
+    plan.limitsLabel ||
+    `${plan.maxUsers} Người dùng · ${plan.maxVehicles} xe`
+  );
 }
 
 function planLimitItems(plan) {

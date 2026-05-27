@@ -21,7 +21,13 @@ import { primaryActionButtonShellClass } from "../../lib/constants";
 import { paginate } from "../../lib/pagination";
 import { EditMasterForm } from "./edit-master-form";
 
-export function MasterSection({ config, mutation, records }) {
+export function MasterSection({
+  config,
+  mutation,
+  onToast,
+  planLimits,
+  records,
+}) {
   const { icon: Icon, label, listName, placeholder } = config;
   const [value, setValue] = useState("");
   const [editing, setEditing] = useState(null);
@@ -41,6 +47,10 @@ export function MasterSection({ config, mutation, records }) {
     item.label.toLowerCase().includes(search.trim().toLowerCase()),
   );
   const recordView = paginate(filteredRecords, page, 10);
+  const maxVehicles =
+    listName === "vehicles" ? planLimits?.maxVehicles ?? null : null;
+  const vehicleLimitReached =
+    maxVehicles != null && records.length >= maxVehicles;
 
   useEffect(() => {
     setPage(1);
@@ -64,8 +74,10 @@ export function MasterSection({ config, mutation, records }) {
               <CardDescription>{config.description}</CardDescription>
             </div>
           </div>
-          <Badge tone="green">
-            {filteredRecords.length} / {records.length} mục
+          <Badge tone={vehicleLimitReached ? "amber" : "green"}>
+            {maxVehicles != null
+              ? `${records.length} / ${maxVehicles} ${label.toLowerCase()}`
+              : `${filteredRecords.length} / ${records.length} mục`}
           </Badge>
         </div>
       </div>
@@ -75,6 +87,13 @@ export function MasterSection({ config, mutation, records }) {
           onSubmit={(event) => {
             event.preventDefault();
             if (!value.trim()) return;
+            if (vehicleLimitReached) {
+              onToast?.(
+                `Gói ${planLimits?.planName || "hiện tại"} chỉ cho phép ${maxVehicles} xe. Nâng cấp gói để thêm.`,
+                "error",
+              );
+              return;
+            }
             mutation.mutate({ body: payload(value), method: "POST", path });
             setValue("");
           }}
@@ -90,7 +109,12 @@ export function MasterSection({ config, mutation, records }) {
           <div className={cn(primaryActionButtonShellClass, "self-end")}>
             <Button
               className="w-full"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || vehicleLimitReached}
+              title={
+                vehicleLimitReached
+                  ? `Đã đạt giới hạn ${maxVehicles} xe của gói ${planLimits?.planName || ""}`.trim()
+                  : undefined
+              }
               type="submit"
             >
               {mutation.isPending ? (
@@ -102,6 +126,11 @@ export function MasterSection({ config, mutation, records }) {
             </Button>
           </div>
         </form>
+        {vehicleLimitReached ? (
+          <p className="text-ui-sm font-medium text-amber-700">
+            Gói {planLimits?.planName || "hiện tại"} cho phép tối đa {maxVehicles} xe. Nâng cấp gói để mở rộng đội xe.
+          </p>
+        ) : null}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />

@@ -1,8 +1,8 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { canManageBilling } from "@/lib/billing-utils";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { canManageBilling, getCurrentPlanLimits } from "@/lib/billing-utils";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { BillingSection } from "./billing-section";
@@ -24,11 +24,13 @@ export function ManagementPage({
   onBillingCheckout,
   onCloseCheckout,
   onConfirmPayment,
+  onToast,
   state,
   userMutation,
   users,
   usersPage = 1,
   usersPageCount = 1,
+  usersTotal = 0,
   onUsersPageChange,
   sitePaywallLocked = false,
 }) {
@@ -41,6 +43,7 @@ export function ManagementPage({
     warehouses: state.warehouseRecords,
   };
   const showBilling = canManageBilling(activeRole);
+  const planLimits = useMemo(() => getCurrentPlanLimits(billing), [billing]);
 
   useEffect(() => {
     if (sitePaywallLocked && showBilling) {
@@ -100,17 +103,22 @@ export function ManagementPage({
         <UserSection
           isActive={activeList === "users"}
           mutation={userMutation}
+          onToast={onToast}
           onToggle={() => toggleList("users")}
           onUsersPageChange={onUsersPageChange}
+          planLimits={planLimits}
           users={users}
           usersPage={usersPage}
           usersPageCount={usersPageCount}
+          usersTotal={usersTotal}
         />
       ) : null}
       <WarehouseSection
         isActive={activeList === "warehouses"}
         mutation={mutation}
+        onToast={onToast}
         onToggle={() => toggleList("warehouses")}
+        planLimits={planLimits}
         records={recordsByList.warehouses}
       />
       {masterSections.map((section) => {
@@ -140,6 +148,8 @@ export function ManagementPage({
               <MasterSection
                 config={section}
                 mutation={mutation}
+                onToast={onToast}
+                planLimits={planLimits}
                 records={recordsByList[section.listName] || []}
               />
             ) : null}

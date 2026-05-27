@@ -39,11 +39,14 @@ import { EditUserForm } from "./edit-user-form";
 export function UserSection({
   isActive,
   mutation,
+  onToast,
   onToggle,
   onUsersPageChange,
+  planLimits,
   users,
   usersPage = 1,
   usersPageCount = 1,
+  usersTotal = 0,
 }) {
   const [form, setForm] = useState({
     name: "",
@@ -59,6 +62,9 @@ export function UserSection({
       .filter(Boolean)
       .some((value) => value.toString().toLowerCase().includes(searchTerm)),
   );
+  const maxUsers = planLimits?.maxUsers ?? null;
+  const usedUsers = Math.max(usersTotal, users.length);
+  const userLimitReached = maxUsers != null && usedUsers >= maxUsers;
 
   return (
     <Card className="overflow-hidden">
@@ -97,8 +103,10 @@ export function UserSection({
                   </CardDescription>
                 </div>
               </div>
-              <Badge tone="green">
-                {filteredUsers.length} / {users.length} user
+              <Badge tone={userLimitReached ? "amber" : "green"}>
+                {maxUsers != null
+                  ? `${usedUsers} / ${maxUsers} Người dùng`
+                  : `${filteredUsers.length} / ${users.length} Người dùng`}
               </Badge>
             </div>
           </div>
@@ -108,6 +116,13 @@ export function UserSection({
               onSubmit={(event) => {
                 event.preventDefault();
                 if (!form.name.trim() || !form.phone.trim()) return;
+                if (userLimitReached) {
+                  onToast?.(
+                    `Gói ${planLimits?.planName || "hiện tại"} chỉ cho phép ${maxUsers} Người dùng. Nâng cấp gói để thêm.`,
+                    "error",
+                  );
+                  return;
+                }
                 mutation.mutate(
                   {
                     body: {
@@ -172,7 +187,12 @@ export function UserSection({
               <div className={cn(primaryActionButtonShellClass, "self-end")}>
                 <Button
                   className="w-full"
-                  disabled={mutation.isPending}
+                  disabled={mutation.isPending || userLimitReached}
+                  title={
+                    userLimitReached
+                      ? `Đã đạt giới hạn ${maxUsers} Người dùng của gói ${planLimits?.planName || ""}`.trim()
+                      : undefined
+                  }
                   type="submit"
                 >
                   {mutation.isPending ? (
@@ -184,6 +204,11 @@ export function UserSection({
                 </Button>
               </div>
             </form>
+            {userLimitReached ? (
+              <p className="text-ui-sm font-medium text-amber-700">
+                Gói {planLimits?.planName || "hiện tại"} cho phép tối đa {maxUsers} Người dùng. Nâng cấp gói để mở rộng đội ngũ.
+              </p>
+            ) : null}
             <div className="relative w-full lg:max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
