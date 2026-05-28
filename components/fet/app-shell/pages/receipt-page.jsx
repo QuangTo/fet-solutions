@@ -192,29 +192,33 @@ export function ReceiptPage({
                     }
                   />
                 </Field>
-                <Field>
-                  Số lượng
-                  <Input
-                    min="0"
-                    required
-                    step="any"
-                    type="number"
-                    value={form.quantity}
-                    onChange={(event) =>
-                      setForm({ ...form, quantity: event.target.value })
-                    }
-                  />
-                </Field>
-                <Field>
-                  Đơn vị
-                  <Input
-                    required
-                    value={form.unit}
-                    onChange={(event) =>
-                      setForm({ ...form, unit: event.target.value })
-                    }
-                  />
-                </Field>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field>
+                    Số lượng
+                    <Input
+                      className="min-w-0"
+                      min="0"
+                      required
+                      step="any"
+                      type="number"
+                      value={form.quantity}
+                      onChange={(event) =>
+                        setForm({ ...form, quantity: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field>
+                    Đơn vị
+                    <Input
+                      className="min-w-0"
+                      required
+                      value={form.unit}
+                      onChange={(event) =>
+                        setForm({ ...form, unit: event.target.value })
+                      }
+                    />
+                  </Field>
+                </div>
                 <div className={operationActionButtonShellClass}>
                   <Button
                     className={operationActionButtonClass}
