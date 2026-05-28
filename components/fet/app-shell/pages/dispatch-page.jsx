@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { LoaderCircle } from "lucide-react";
+import { Download, LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { dispatchesListQueryOptions } from "@/lib/api";
 import {
@@ -35,6 +35,7 @@ import {
   resolveDispatchPrefs,
   writeDispatchPrefs,
 } from "../lib/dispatch-prefs";
+import { downloadCsv } from "../lib/csv-export";
 import { number } from "../lib/format";
 import { periodDescription, periodToDateRange } from "../lib/period-utils";
 import { DispatchTable } from "./dispatch-table";
@@ -347,13 +348,39 @@ export function DispatchPage({
           filters.period,
         )}
         actions={
-          <PeriodSelect
-            value={filters.period}
-            onChange={(period) => {
-              setFilters({ ...filters, period });
-              setPage(1);
-            }}
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <PeriodSelect
+              value={filters.period}
+              onChange={(period) => {
+                setFilters({ ...filters, period });
+                setPage(1);
+              }}
+            />
+            <Button
+              disabled={!dispatchRows.length}
+              onClick={() =>
+                downloadCsv({
+                  columns: [
+                    { label: "Ngày xuất", value: (row) => formatDate(row.date) },
+                    { label: "Khách hàng", value: "customer" },
+                    { label: "Xe", value: "truck" },
+                    { label: "Tài xế", value: "driver" },
+                    { label: "Kho", value: (row) => row.warehouse || "" },
+                    { label: "Loại hàng", value: "sku" },
+                    { label: "Số lượng", value: (row) => number(row.quantity) },
+                    { label: "Đơn vị", value: (row) => row.unit || "đơn vị" },
+                  ],
+                  filename: `lich-su-xuat-hang-${filters.period}-trang-${dispatchListQuery.data?.page || page}.csv`,
+                  rows: dispatchRows,
+                })
+              }
+              type="button"
+              variant="outline"
+            >
+              <Download className="h-4 w-4" />
+              Tải csv
+            </Button>
+          </div>
         }
         title="Lịch sử xuất hàng"
       >

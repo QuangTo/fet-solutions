@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { LoaderCircle } from "lucide-react";
+import { Download, LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { receiptsListQueryOptions } from "@/lib/api";
 import {
@@ -31,6 +31,7 @@ import {
   operationActionButtonClass,
   operationActionButtonShellClass,
 } from "../lib/constants";
+import { downloadCsv } from "../lib/csv-export";
 import { number } from "../lib/format";
 import { paginate } from "../lib/pagination";
 import { periodDescription, periodToDateRange } from "../lib/period-utils";
@@ -288,7 +289,30 @@ export function ReceiptPage({
           historyPeriod,
         )}
         actions={
-          <PeriodSelect value={historyPeriod} onChange={setHistoryPeriod} />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <PeriodSelect value={historyPeriod} onChange={setHistoryPeriod} />
+            <Button
+              disabled={!historyRows.length}
+              onClick={() =>
+                downloadCsv({
+                  columns: [
+                    { label: "Ngày nhập", value: (row) => formatDate(row.date) },
+                    { label: "Kho", value: (row) => row.warehouse || "" },
+                    { label: "Loại hàng", value: "sku" },
+                    { label: "Số lượng", value: (row) => number(row.quantity) },
+                    { label: "Đơn vị", value: "unit" },
+                  ],
+                  filename: `lich-su-nhap-hang-${historyPeriod}-trang-${historyQuery.data?.page || historyPage}.csv`,
+                  rows: historyRows,
+                })
+              }
+              type="button"
+              variant="outline"
+            >
+              <Download className="h-4 w-4" />
+              Tải csv
+            </Button>
+          </div>
         }
       >
         <DataTable width="receiptHistory">
