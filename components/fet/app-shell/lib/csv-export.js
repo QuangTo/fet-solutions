@@ -14,7 +14,8 @@ function safeFilename(value) {
 
 export function downloadCsv({ columns, filename, rows }) {
   if (typeof window === "undefined" || !rows?.length) return;
-  const header = columns.map((column) => csvCell(column.label)).join(",");
+  const delimiter = ";";
+  const header = columns.map((column) => csvCell(column.label)).join(delimiter);
   const body = rows.map((row) =>
     columns
       .map((column) =>
@@ -24,9 +25,9 @@ export function downloadCsv({ columns, filename, rows }) {
             : row[column.value],
         ),
       )
-      .join(","),
+      .join(delimiter),
   );
-  const csv = `\uFEFF${[header, ...body].join("\r\n")}`;
+  const csv = `\uFEFF${["sep=;", header, ...body].join("\r\n")}`;
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement("a");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Download, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { dispatchesListQueryOptions } from "@/lib/api";
 import {
@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/form";
+import { CsvDownloadButton } from "../components/csv-download-button";
 import { DataTableCard } from "../components/data-table-card";
 import { EmptyPanel } from "../components/empty-panel";
 import { Pagination } from "../components/pagination";
@@ -348,17 +349,18 @@ export function DispatchPage({
           filters.period,
         )}
         actions={
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="grid w-full grid-cols-2 gap-2 sm:w-72">
             <PeriodSelect
+              className="w-full sm:w-full"
               value={filters.period}
               onChange={(period) => {
                 setFilters({ ...filters, period });
                 setPage(1);
               }}
             />
-            <Button
+            <CsvDownloadButton
               disabled={!dispatchRows.length}
-              onClick={() =>
+              onDownload={() =>
                 downloadCsv({
                   columns: [
                     { label: "Ngày xuất", value: (row) => formatDate(row.date) },
@@ -374,12 +376,7 @@ export function DispatchPage({
                   rows: dispatchRows,
                 })
               }
-              type="button"
-              variant="outline"
-            >
-              <Download className="h-4 w-4" />
-              Tải csv
-            </Button>
+            />
           </div>
         }
         title="Lịch sử xuất hàng"

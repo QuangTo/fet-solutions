@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Download, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { receiptsListQueryOptions } from "@/lib/api";
 import {
@@ -24,6 +24,7 @@ import { Field, Input, Select } from "@/components/ui/form";
 import { EmptyRow, Td, Th } from "@/components/ui/table";
 import { DataTable } from "../components/data-table";
 import { DataTableCard } from "../components/data-table-card";
+import { CsvDownloadButton } from "../components/csv-download-button";
 import { EmptyPanel } from "../components/empty-panel";
 import { Pagination } from "../components/pagination";
 import { PeriodSelect } from "../components/period-select";
@@ -289,11 +290,15 @@ export function ReceiptPage({
           historyPeriod,
         )}
         actions={
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <PeriodSelect value={historyPeriod} onChange={setHistoryPeriod} />
-            <Button
+          <div className="grid w-full grid-cols-2 gap-2 sm:w-72">
+            <PeriodSelect
+              className="w-full sm:w-full"
+              value={historyPeriod}
+              onChange={setHistoryPeriod}
+            />
+            <CsvDownloadButton
               disabled={!historyRows.length}
-              onClick={() =>
+              onDownload={() =>
                 downloadCsv({
                   columns: [
                     { label: "Ngày nhập", value: (row) => formatDate(row.date) },
@@ -306,12 +311,7 @@ export function ReceiptPage({
                   rows: historyRows,
                 })
               }
-              type="button"
-              variant="outline"
-            >
-              <Download className="h-4 w-4" />
-              Tải csv
-            </Button>
+            />
           </div>
         }
       >
