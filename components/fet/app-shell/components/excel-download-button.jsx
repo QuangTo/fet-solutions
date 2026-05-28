@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function CsvDownloadButton({ className, disabled, onDownload }) {
+export function ExcelDownloadButton({ className, disabled, onDownload }) {
   const [isDownloading, setIsDownloading] = useState(false);
 
   return (
@@ -24,7 +24,7 @@ export function CsvDownloadButton({ className, disabled, onDownload }) {
       ) : (
         <Download className="h-4 w-4" />
       )}
-      Tải csv
+      Tải Excel
     </Button>
   );
 }

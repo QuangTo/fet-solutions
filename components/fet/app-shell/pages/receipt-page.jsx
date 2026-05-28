@@ -24,7 +24,7 @@ import { Field, Input, Select } from "@/components/ui/form";
 import { EmptyRow, Td, Th } from "@/components/ui/table";
 import { DataTable } from "../components/data-table";
 import { DataTableCard } from "../components/data-table-card";
-import { CsvDownloadButton } from "../components/csv-download-button";
+import { ExcelDownloadButton } from "../components/excel-download-button";
 import { EmptyPanel } from "../components/empty-panel";
 import { Pagination } from "../components/pagination";
 import { PeriodSelect } from "../components/period-select";
@@ -32,7 +32,7 @@ import {
   operationActionButtonClass,
   operationActionButtonShellClass,
 } from "../lib/constants";
-import { downloadCsv } from "../lib/csv-export";
+import { downloadExcel } from "../lib/excel-export";
 import { number } from "../lib/format";
 import { paginate } from "../lib/pagination";
 import { periodDescription, periodToDateRange } from "../lib/period-utils";
@@ -290,16 +290,17 @@ export function ReceiptPage({
           historyPeriod,
         )}
         actions={
-          <div className="grid w-full grid-cols-2 gap-2 sm:w-72">
+          <div className="grid w-full gap-2 sm:grid-cols-2">
             <PeriodSelect
-              className="w-full sm:w-full"
+              className={operationActionButtonClass}
               value={historyPeriod}
               onChange={setHistoryPeriod}
             />
-            <CsvDownloadButton
+            <ExcelDownloadButton
+              className={operationActionButtonClass}
               disabled={!historyRows.length}
               onDownload={() =>
-                downloadCsv({
+                downloadExcel({
                   columns: [
                     { label: "Ngày nhập", value: (row) => formatDate(row.date) },
                     { label: "Kho", value: (row) => row.warehouse || "" },
@@ -307,7 +308,7 @@ export function ReceiptPage({
                     { label: "Số lượng", value: (row) => number(row.quantity) },
                     { label: "Đơn vị", value: "unit" },
                   ],
-                  filename: `lich-su-nhap-hang-${historyPeriod}-trang-${historyQuery.data?.page || historyPage}.csv`,
+                  filename: `lich-su-nhap-hang-${historyPeriod}-trang-${historyQuery.data?.page || historyPage}.xlsx`,
                   rows: historyRows,
                 })
               }

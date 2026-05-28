@@ -22,7 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/form";
-import { CsvDownloadButton } from "../components/csv-download-button";
+import { ExcelDownloadButton } from "../components/excel-download-button";
 import { DataTableCard } from "../components/data-table-card";
 import { EmptyPanel } from "../components/empty-panel";
 import { Pagination } from "../components/pagination";
@@ -36,7 +36,7 @@ import {
   resolveDispatchPrefs,
   writeDispatchPrefs,
 } from "../lib/dispatch-prefs";
-import { downloadCsv } from "../lib/csv-export";
+import { downloadExcel } from "../lib/excel-export";
 import { number } from "../lib/format";
 import { periodDescription, periodToDateRange } from "../lib/period-utils";
 import { DispatchTable } from "./dispatch-table";
@@ -349,19 +349,20 @@ export function DispatchPage({
           filters.period,
         )}
         actions={
-          <div className="grid w-full grid-cols-2 gap-2 sm:w-72">
+          <div className="grid w-full gap-2 sm:grid-cols-2">
             <PeriodSelect
-              className="w-full sm:w-full"
+              className={operationActionButtonClass}
               value={filters.period}
               onChange={(period) => {
                 setFilters({ ...filters, period });
                 setPage(1);
               }}
             />
-            <CsvDownloadButton
+            <ExcelDownloadButton
+              className={operationActionButtonClass}
               disabled={!dispatchRows.length}
               onDownload={() =>
-                downloadCsv({
+                downloadExcel({
                   columns: [
                     { label: "Ngày xuất", value: (row) => formatDate(row.date) },
                     { label: "Khách hàng", value: "customer" },
@@ -372,7 +373,7 @@ export function DispatchPage({
                     { label: "Số lượng", value: (row) => number(row.quantity) },
                     { label: "Đơn vị", value: (row) => row.unit || "đơn vị" },
                   ],
-                  filename: `lich-su-xuat-hang-${filters.period}-trang-${dispatchListQuery.data?.page || page}.csv`,
+                  filename: `lich-su-xuat-hang-${filters.period}-trang-${dispatchListQuery.data?.page || page}.xlsx`,
                   rows: dispatchRows,
                 })
               }

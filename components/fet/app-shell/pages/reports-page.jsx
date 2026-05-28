@@ -31,14 +31,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/form";
 import { EmptyRow, Td, Th } from "@/components/ui/table";
-import { CsvDownloadButton } from "../components/csv-download-button";
+import { ExcelDownloadButton } from "../components/excel-download-button";
 import { DataTable } from "../components/data-table";
 import { DataTableCard } from "../components/data-table-card";
 import { EmptyPanel } from "../components/empty-panel";
 import { Pagination } from "../components/pagination";
 import { useMediaQuery } from "../hooks/use-media-query";
-import { downloadCsv } from "../lib/csv-export";
-import { number } from "../lib/format";
+import { operationActionButtonClass } from "../lib/constants";
+import { downloadExcel } from "../lib/excel-export";
 import { paginate } from "../lib/pagination";
 import { DispatchTable } from "./dispatch-table";
 
@@ -185,29 +185,6 @@ export function ReportsPage({ activeRole, mutation, session, state }) {
       <DataTableCard
         title="Lịch sử xuất hàng"
         description="Dữ liệu phục vụ đối soát hóa đơn."
-        actions={
-          <div className="w-full sm:w-36">
-            <CsvDownloadButton
-              disabled={!dispatchHistoryRows.length}
-              onDownload={() =>
-                downloadCsv({
-                  columns: [
-                    { label: "Ngày xuất", value: (row) => formatDate(row.date) },
-                    { label: "Khách hàng", value: "customer" },
-                    { label: "Xe", value: "truck" },
-                    { label: "Tài xế", value: "driver" },
-                    { label: "Kho", value: (row) => row.warehouse || "" },
-                    { label: "Loại hàng", value: "sku" },
-                    { label: "Số lượng", value: (row) => number(row.quantity) },
-                    { label: "Đơn vị", value: (row) => row.unit || "đơn vị" },
-                  ],
-                  filename: `bao-cao-lich-su-xuat-hang-trang-${dispatchHistoryQuery.data?.page || historyPage}.csv`,
-                  rows: dispatchHistoryRows,
-                })
-              }
-            />
-          </div>
-        }
       >
         <DispatchTable rows={dispatchHistoryRows} />
         <Pagination
@@ -219,11 +196,11 @@ export function ReportsPage({ activeRole, mutation, session, state }) {
       <DataTableCard
         title="Lịch sử xuất hóa đơn"
         actions={
-          <div className="w-full sm:w-36">
-            <CsvDownloadButton
+          <div className={operationActionButtonClass}>
+            <ExcelDownloadButton
               disabled={!invoiceItems.length}
               onDownload={() =>
-                downloadCsv({
+                downloadExcel({
                   columns: [
                     { label: "Ngày", value: (row) => formatDate(row.date) },
                     { label: "Khách hàng", value: "customer" },
@@ -236,7 +213,7 @@ export function ReportsPage({ activeRole, mutation, session, state }) {
                     },
                     { label: "Trạng thái", value: (row) => row.status || "Hoàn thành" },
                   ],
-                  filename: `bao-cao-lich-su-xuat-hoa-don-trang-${closuresQuery.data?.page || invoicePage}.csv`,
+                  filename: `bao-cao-lich-su-xuat-hoa-don-trang-${closuresQuery.data?.page || invoicePage}.xlsx`,
                   rows: invoiceItems,
                 })
               }
