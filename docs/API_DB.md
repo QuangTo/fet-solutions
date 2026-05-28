@@ -126,6 +126,12 @@ List endpoints default `pageSize=50` when omitted (max 100). UI tables use `page
 
 `{ items, page, pageSize, total, pageCount }`
 
+Warehouse API notes:
+
+- `warehouses.code` is uppercased, limited to 9 characters, and unique per site.
+- `POST /receipts` and `POST /dispatches` accept `warehouseCode` or `warehouseId`.
+- If a receipt/dispatch write omits warehouse, the API uses the first active warehouse in the site.
+
 ## Client data loading
 
 | Screen | Primary API |
@@ -142,6 +148,7 @@ List endpoints default `pageSize=50` when omitted (max 100). UI tables use `page
 
 - Inventory is derived from `receipt_items - dispatch_items`; it is not manually edited.
 - Operational data is scoped by `site_id`; clients pass `x-site-id` or `?siteId=...`.
+- Receipt and dispatch rows store the selected `warehouse_id`; warehouse codes are unique only within the same site.
 - Tenant data endpoints require `x-user-id`; `POST /users/login`, `/health`, and `/ready` stay public.
 - Write actions check site billing status and may return `BILLING_REQUIRED`.
 - `POST /dispatches` checks available inventory inside a transaction before creating dispatch rows.

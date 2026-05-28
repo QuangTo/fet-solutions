@@ -24,6 +24,7 @@ import { Field, Input, Select } from "@/components/ui/form";
 import { EmptyRow, Td, Th } from "@/components/ui/table";
 import { DataTable } from "../components/data-table";
 import { DataTableCard } from "../components/data-table-card";
+import { EmptyPanel } from "../components/empty-panel";
 import { Pagination } from "../components/pagination";
 import { PeriodSelect } from "../components/period-select";
 import {
@@ -47,6 +48,7 @@ export function ReceiptPage({
     quantity: 100,
     sku: "",
     unit: "tấn",
+    warehouseCode: "",
   });
   const [summaryPage, setSummaryPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
@@ -71,6 +73,9 @@ export function ReceiptPage({
     summaryPage,
     10,
   );
+  const hasWarehouses = state.warehouseRecords.length > 0;
+  const selectedWarehouseCode =
+    form.warehouseCode || state.warehouseRecords[0]?.code || "";
 
   useEffect(() => {
     setForm((current) => ({ ...current, customer: selectedCustomer }));
@@ -84,6 +89,14 @@ export function ReceiptPage({
     setSummaryPage(1);
   }, [customer]);
 
+  useEffect(() => {
+    if (form.warehouseCode || !state.warehouseRecords[0]?.code) return;
+    setForm((current) => ({
+      ...current,
+      warehouseCode: state.warehouseRecords[0].code,
+    }));
+  }, [form.warehouseCode, state.warehouseRecords]);
+
   return (
     <div className="grid gap-4">
       <div className="grid items-stretch gap-4 xl:grid-cols-2">
@@ -95,109 +108,129 @@ export function ReceiptPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form
-              className="grid gap-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const customerName = form.customer.trim();
-                mutation.mutate({
-                  customerName,
-                  date: form.date,
-                  items: [
-                    {
-                      quantity: Number(form.quantity),
-                      sku: normalizeSku(form.sku),
-                      unit: form.unit.trim(),
-                    },
-                  ],
-                  receivedByName: session?.name || "Thủ kho mẫu",
-                });
-                setSelectedCustomer(customerName);
-                setForm((current) => ({
-                  ...current,
-                  quantity: 100,
-                  sku: "",
-                  unit: "tấn",
-                }));
-              }}
-            >
-              <Field>
-                Ngày nhập kho
-                <Input
-                  className="min-w-0"
-                  required
-                  type="date"
-                  value={form.date}
-                  onChange={(event) =>
-                    setForm({ ...form, date: event.target.value })
-                  }
-                />
-              </Field>
-              <Field>
-                Khách hàng
-                <Select
-                  required
-                  value={form.customer}
-                  onChange={(event) => {
-                    setForm({ ...form, customer: event.target.value });
-                    setSelectedCustomer(event.target.value);
-                  }}
-                >
-                  <option value="">Chọn khách hàng</option>
-                  {customers.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field>
-                Loại hàng
-                <Input
-                  placeholder="VD: Gạo ST25"
-                  required
-                  value={form.sku}
-                  onChange={(event) =>
-                    setForm({ ...form, sku: event.target.value })
-                  }
-                />
-              </Field>
-              <Field>
-                Số lượng
-                <Input
-                  min="0"
-                  required
-                  step="any"
-                  type="number"
-                  value={form.quantity}
-                  onChange={(event) =>
-                    setForm({ ...form, quantity: event.target.value })
-                  }
-                />
-              </Field>
-              <Field>
-                Đơn vị
-                <Input
-                  required
-                  value={form.unit}
-                  onChange={(event) =>
-                    setForm({ ...form, unit: event.target.value })
-                  }
-                />
-              </Field>
-              <div className={operationActionButtonShellClass}>
-                <Button
-                  className={operationActionButtonClass}
-                  disabled={mutation.isPending}
-                  type="submit"
-                >
-                  {mutation.isPending ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : null}
-                  Nhập hàng
-                </Button>
-              </div>
-            </form>
+            {hasWarehouses ? (
+              <form
+                className="grid gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const customerName = form.customer.trim();
+                  mutation.mutate({
+                    customerName,
+                    date: form.date,
+                    items: [
+                      {
+                        quantity: Number(form.quantity),
+                        sku: normalizeSku(form.sku),
+                        unit: form.unit.trim(),
+                      },
+                    ],
+                    receivedByName: session?.name || "Thủ kho mẫu",
+                    warehouseCode: selectedWarehouseCode,
+                  });
+                  setSelectedCustomer(customerName);
+                  setForm((current) => ({
+                    ...current,
+                    quantity: 100,
+                    sku: "",
+                    unit: "tấn",
+                  }));
+                }}
+              >
+                <Field>
+                  Ngày nhập kho
+                  <Input
+                    className="min-w-0"
+                    required
+                    type="date"
+                    value={form.date}
+                    onChange={(event) =>
+                      setForm({ ...form, date: event.target.value })
+                    }
+                  />
+                </Field>
+                <Field>
+                  Khách hàng
+                  <Select
+                    required
+                    value={form.customer}
+                    onChange={(event) => {
+                      setForm({ ...form, customer: event.target.value });
+                      setSelectedCustomer(event.target.value);
+                    }}
+                  >
+                    <option value="">Chọn khách hàng</option>
+                    {customers.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field>
+                  Kho
+                  <Select
+                    value={selectedWarehouseCode}
+                    onChange={(event) =>
+                      setForm({ ...form, warehouseCode: event.target.value })
+                    }
+                  >
+                    {state.warehouseRecords.map((warehouse) => (
+                      <option key={warehouse.id} value={warehouse.code}>
+                        {warehouse.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field>
+                  Loại hàng
+                  <Input
+                    placeholder="VD: Gạo ST25"
+                    required
+                    value={form.sku}
+                    onChange={(event) =>
+                      setForm({ ...form, sku: event.target.value })
+                    }
+                  />
+                </Field>
+                <Field>
+                  Số lượng
+                  <Input
+                    min="0"
+                    required
+                    step="any"
+                    type="number"
+                    value={form.quantity}
+                    onChange={(event) =>
+                      setForm({ ...form, quantity: event.target.value })
+                    }
+                  />
+                </Field>
+                <Field>
+                  Đơn vị
+                  <Input
+                    required
+                    value={form.unit}
+                    onChange={(event) =>
+                      setForm({ ...form, unit: event.target.value })
+                    }
+                  />
+                </Field>
+                <div className={operationActionButtonShellClass}>
+                  <Button
+                    className={operationActionButtonClass}
+                    disabled={mutation.isPending}
+                    type="submit"
+                  >
+                    {mutation.isPending ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : null}
+                    Nhập hàng
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <EmptyPanel text="Chưa có kho hoạt động. Admin cần tạo kho trong Quản lý trước khi nhập hàng." />
+            )}
           </CardContent>
         </Card>
         <DataTableCard
@@ -258,6 +291,7 @@ export function ReceiptPage({
           <thead>
             <tr>
               <Th>Ngày nhập</Th>
+              <Th>Kho</Th>
               <Th>Loại hàng</Th>
               <Th>Số lượng</Th>
               <Th>Đơn vị</Th>
@@ -268,6 +302,7 @@ export function ReceiptPage({
               historyRows.map((row) => (
                 <tr key={row.id}>
                   <Td data-label="Ngày nhập">{formatDate(row.date)}</Td>
+                  <Td data-label="Kho">{row.warehouse || "—"}</Td>
                   <Td data-label="Loại hàng">
                     <strong>{row.sku}</strong>
                   </Td>
@@ -276,7 +311,7 @@ export function ReceiptPage({
                 </tr>
               ))
             ) : (
-              <EmptyRow colSpan={4}>
+              <EmptyRow colSpan={5}>
                 {customer
                   ? historyQuery.isPending
                     ? "Đang tải lịch sử..."

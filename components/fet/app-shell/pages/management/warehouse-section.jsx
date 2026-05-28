@@ -58,6 +58,7 @@ function WarehouseForm({ initial, isPending, onCancel, onSubmit }) {
       <Field>
         Mã kho
         <Input
+          maxLength={9}
           placeholder="MAIN"
           required
           value={code}
@@ -190,6 +191,7 @@ export function WarehouseSection({
               <Field>
                 Mã kho
                 <Input
+                  maxLength={9}
                   placeholder="MAIN"
                   required
                   value={form.code}

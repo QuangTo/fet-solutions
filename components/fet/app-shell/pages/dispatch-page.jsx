@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/form";
 import { DataTableCard } from "../components/data-table-card";
+import { EmptyPanel } from "../components/empty-panel";
 import { Pagination } from "../components/pagination";
 import { PeriodSelect } from "../components/period-select";
 import {
@@ -59,6 +60,7 @@ export function DispatchPage({
       sku: "",
       truck: prefs.truck,
       unit: "",
+      warehouseCode: "",
     };
   });
   const [filters, setFilters] = useState({
@@ -74,6 +76,9 @@ export function DispatchPage({
   );
   const selectedStock =
     customerStock.find((row) => row.sku === form.sku) || customerStock[0];
+  const hasWarehouses = state.warehouseRecords.length > 0;
+  const selectedWarehouseCode =
+    form.warehouseCode || state.warehouseRecords[0]?.code || "";
 
   useEffect(() => {
     setForm((current) => ({ ...current, customer: selectedCustomer }));
@@ -112,6 +117,14 @@ export function DispatchPage({
     }));
   }, [selectedStock?.sku]);
 
+  useEffect(() => {
+    if (form.warehouseCode || !state.warehouseRecords[0]?.code) return;
+    setForm((current) => ({
+      ...current,
+      warehouseCode: state.warehouseRecords[0].code,
+    }));
+  }, [form.warehouseCode, state.warehouseRecords]);
+
   const customerId = state.customerIds[form.customer] || "";
   const listFilters = useMemo(() => {
     const base = {
@@ -144,169 +157,188 @@ export function DispatchPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form
-            className="grid gap-3 lg:grid-cols-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const customerName = form.customer.trim();
-              const stock = customerStock.find((row) => row.sku === form.sku);
-              writeDispatchPrefs({ driver: form.driver, truck: form.truck });
-              mutation.mutate({
-                customerName,
-                date: form.date,
-                driverName: form.driver,
-                items: [
-                  {
-                    quantity: Number(form.quantity),
-                    sku: normalizeSku(form.sku),
-                    unit: form.unit.trim() || stock?.unit || "đơn vị",
-                  },
-                ],
-                plate: form.truck,
-                warehouseName: session?.name || "Thủ kho mẫu",
-              });
-              setSelectedCustomer(customerName);
-              setFilters({ date: "", driver: "", period: "week", truck: "" });
-              setPage(1);
-            }}
-          >
-            <Field>
-              Ngày xuất
-              <Input
-                className="min-w-0"
-                required
-                type="date"
-                value={form.date}
-                onChange={(event) =>
-                  setForm({ ...form, date: event.target.value })
-                }
-              />
-            </Field>
-            <Field>
-              Khách hàng
-              <Select
-                required
-                value={form.customer}
-                onChange={(event) => {
-                  setSelectedCustomer(event.target.value);
-                  setForm({
-                    ...form,
-                    customer: event.target.value,
-                    quantity: "",
-                    sku: "",
-                    unit: "",
-                  });
-                }}
-              >
-                <option value="">Chọn khách hàng</option>
-                {allCustomers(state).map((customer) => (
-                  <option key={customer} value={customer}>
-                    {customer}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field>
-              Xe
-              <Select
-                required
-                value={form.truck}
-                onChange={(event) => {
-                  const truck = event.target.value;
-                  writeDispatchPrefs({ driver: form.driver, truck });
-                  setForm({ ...form, truck });
-                }}
-              >
-                <option value="">Chọn xe</option>
-                {state.vehicles.map((truck) => (
-                  <option key={truck} value={truck}>
-                    {truck}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field>
-              Tài xế
-              <Select
-                required
-                value={form.driver}
-                onChange={(event) => {
-                  const driver = event.target.value;
-                  writeDispatchPrefs({ driver, truck: form.truck });
-                  setForm({ ...form, driver });
-                }}
-              >
-                <option value="">Chọn tài xế</option>
-                {state.drivers.map((driver) => (
-                  <option key={driver} value={driver}>
-                    {driver}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field>
-              Loại hàng
-              <Select
-                required
-                value={form.sku}
-                onChange={(event) => {
-                  const next = customerStock.find(
-                    (row) => row.sku === event.target.value,
-                  );
-                  setForm({
-                    ...form,
-                    quantity: next?.remainingQuantity || "",
-                    sku: event.target.value,
-                    unit: next?.unit || "đơn vị",
-                  });
-                }}
-              >
-                <option value="">Chọn loại hàng</option>
-                {customerStock.map((row) => (
-                  <option key={`${row.customer}-${row.sku}`} value={row.sku}>
-                    {row.sku} - còn {number(row.remainingQuantity)} {row.unit}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field>
-              Số lượng
-              <Input
-                max={selectedStock?.remainingQuantity || undefined}
-                min="1"
-                required
-                type="number"
-                value={form.quantity}
-                onChange={(event) =>
-                  setForm({ ...form, quantity: event.target.value })
-                }
-              />
-            </Field>
-            <Field>
-              Đơn vị
-              <Input
-                required
-                value={form.unit}
-                onChange={(event) =>
-                  setForm({ ...form, unit: event.target.value })
-                }
-              />
-            </Field>
-            <div
-              className={cn(operationActionButtonShellClass, "lg:col-span-2")}
+          {hasWarehouses ? (
+            <form
+              className="grid gap-3 lg:grid-cols-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const customerName = form.customer.trim();
+                const stock = customerStock.find((row) => row.sku === form.sku);
+                writeDispatchPrefs({ driver: form.driver, truck: form.truck });
+                mutation.mutate({
+                  customerName,
+                  date: form.date,
+                  driverName: form.driver,
+                  items: [
+                    {
+                      quantity: Number(form.quantity),
+                      sku: normalizeSku(form.sku),
+                      unit: form.unit.trim() || stock?.unit || "đơn vị",
+                    },
+                  ],
+                  plate: form.truck,
+                  warehouseCode: selectedWarehouseCode,
+                });
+                setSelectedCustomer(customerName);
+                setFilters({ date: "", driver: "", period: "week", truck: "" });
+                setPage(1);
+              }}
             >
-              <Button
-                className={operationActionButtonClass}
-                disabled={mutation.isPending}
-                type="submit"
+              <Field>
+                Ngày xuất
+                <Input
+                  className="min-w-0"
+                  required
+                  type="date"
+                  value={form.date}
+                  onChange={(event) =>
+                    setForm({ ...form, date: event.target.value })
+                  }
+                />
+              </Field>
+              <Field>
+                Khách hàng
+                <Select
+                  required
+                  value={form.customer}
+                  onChange={(event) => {
+                    setSelectedCustomer(event.target.value);
+                    setForm({
+                      ...form,
+                      customer: event.target.value,
+                      quantity: "",
+                      sku: "",
+                      unit: "",
+                    });
+                  }}
+                >
+                  <option value="">Chọn khách hàng</option>
+                  {allCustomers(state).map((customer) => (
+                    <option key={customer} value={customer}>
+                      {customer}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field>
+                Xe
+                <Select
+                  required
+                  value={form.truck}
+                  onChange={(event) => {
+                    const truck = event.target.value;
+                    writeDispatchPrefs({ driver: form.driver, truck });
+                    setForm({ ...form, truck });
+                  }}
+                >
+                  <option value="">Chọn xe</option>
+                  {state.vehicles.map((truck) => (
+                    <option key={truck} value={truck}>
+                      {truck}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field>
+                Tài xế
+                <Select
+                  required
+                  value={form.driver}
+                  onChange={(event) => {
+                    const driver = event.target.value;
+                    writeDispatchPrefs({ driver, truck: form.truck });
+                    setForm({ ...form, driver });
+                  }}
+                >
+                  <option value="">Chọn tài xế</option>
+                  {state.drivers.map((driver) => (
+                    <option key={driver} value={driver}>
+                      {driver}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field>
+                Kho
+                <Select
+                  value={selectedWarehouseCode}
+                  onChange={(event) =>
+                    setForm({ ...form, warehouseCode: event.target.value })
+                  }
+                >
+                  {state.warehouseRecords.map((warehouse) => (
+                    <option key={warehouse.id} value={warehouse.code}>
+                      {warehouse.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field>
+                Loại hàng
+                <Select
+                  required
+                  value={form.sku}
+                  onChange={(event) => {
+                    const next = customerStock.find(
+                      (row) => row.sku === event.target.value,
+                    );
+                    setForm({
+                      ...form,
+                      quantity: next?.remainingQuantity || "",
+                      sku: event.target.value,
+                      unit: next?.unit || "đơn vị",
+                    });
+                  }}
+                >
+                  <option value="">Chọn loại hàng</option>
+                  {customerStock.map((row) => (
+                    <option key={`${row.customer}-${row.sku}`} value={row.sku}>
+                      {row.sku} - còn {number(row.remainingQuantity)} {row.unit}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field>
+                Số lượng
+                <Input
+                  max={selectedStock?.remainingQuantity || undefined}
+                  min="1"
+                  required
+                  type="number"
+                  value={form.quantity}
+                  onChange={(event) =>
+                    setForm({ ...form, quantity: event.target.value })
+                  }
+                />
+              </Field>
+              <Field>
+                Đơn vị
+                <Input
+                  required
+                  value={form.unit}
+                  onChange={(event) =>
+                    setForm({ ...form, unit: event.target.value })
+                  }
+                />
+              </Field>
+              <div
+                className={cn(operationActionButtonShellClass, "lg:col-span-2")}
               >
-                {mutation.isPending ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : null}
-                Xuất hàng
-              </Button>
-            </div>
-          </form>
+                <Button
+                  className={operationActionButtonClass}
+                  disabled={mutation.isPending}
+                  type="submit"
+                >
+                  {mutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  Xuất hàng
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <EmptyPanel text="Chưa có kho hoạt động. Admin cần tạo kho trong Quản lý trước khi xuất hàng." />
+          )}
         </CardContent>
       </Card>
       <DataTableCard
