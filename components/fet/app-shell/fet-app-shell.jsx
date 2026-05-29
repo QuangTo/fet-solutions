@@ -424,9 +424,12 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
   };
   const markPagesStale = (pageNames) => {
     pageNames.forEach((pageName) => {
+      // Mark stale but only refetch the page currently on screen; hidden
+      // pages already received an optimistic cache update and will refetch
+      // when navigated to. Avoids background refetch storms after mutations.
       queryClient.invalidateQueries({
         queryKey: ["page-data", pageName],
-        refetchType: "all",
+        refetchType: "active",
       });
     });
   };
