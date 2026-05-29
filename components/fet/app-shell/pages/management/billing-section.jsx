@@ -381,7 +381,15 @@ export function BillingSection({
                             <Td>{invoice.planName || invoice.planCode || "Chưa rõ"}</Td>
                             <Td>{money(invoice.amount, invoice.currency)}</Td>
                             <Td>
-                              <Badge tone={status.tone}>{status.label}</Badge>
+                              <Badge
+                                className={cn(
+                                  invoice.status === "pending" &&
+                                    "text-amber-900",
+                                )}
+                                tone={status.tone}
+                              >
+                                {status.label}
+                              </Badge>
                             </Td>
                           </tr>
                         );
@@ -417,7 +425,7 @@ export function BillingSection({
         >
           <div className="grid min-h-12 grid-cols-[2rem_1fr_2rem] items-center gap-2 border-b border-slate-200 bg-white px-3 sm:px-4">
             <span aria-hidden="true" />
-            <DialogTitle className="text-center text-base font-bold leading-tight text-slate-950 sm:text-xl">
+            <DialogTitle className="text-center text-base font-bold leading-tight text-slate-950">
               Thay đổi gói
             </DialogTitle>
             <DialogClose asChild>

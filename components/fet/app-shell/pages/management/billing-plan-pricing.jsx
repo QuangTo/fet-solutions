@@ -28,14 +28,21 @@ function planLimitItems(plan) {
 
 function IntervalToggle({ billingInterval, onChange }) {
   return (
-    <div className="inline-flex shrink-0 rounded-full border border-slate-200 bg-slate-100/80 p-[calc(var(--spacing)*0.9)]">
+    <div className="relative inline-grid shrink-0 grid-cols-2 rounded-full border border-slate-200 bg-slate-100/80 p-1">
+      <span
+        className={cn(
+          "absolute bottom-1 left-1 top-1 w-[calc(50%-0.25rem)] rounded-full bg-white shadow-sm transition-transform duration-200 ease-out",
+          billingInterval === "yearly" && "translate-x-full",
+        )}
+      />
       <button
         className={cn(
-          "rounded-full px-2 py-0.5 text-[11px] font-semibold transition sm:px-2.5 sm:text-sm",
+          "relative z-10 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors duration-200 sm:px-2.5 sm:text-sm",
           billingInterval === "monthly"
-            ? "bg-white text-slate-950 shadow-sm"
+            ? "text-slate-950"
             : "text-slate-500 hover:text-slate-800",
         )}
+        aria-pressed={billingInterval === "monthly"}
         type="button"
         onClick={() => onChange("monthly")}
       >
@@ -43,16 +50,24 @@ function IntervalToggle({ billingInterval, onChange }) {
       </button>
       <button
         className={cn(
-          "rounded-full px-2 py-0.5 text-[11px] font-semibold transition sm:px-2.5 sm:text-sm",
+          "relative z-10 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors duration-200 sm:px-2.5 sm:text-sm",
           billingInterval === "yearly"
-            ? "bg-white text-slate-950 shadow-sm"
+            ? "text-slate-950"
             : "text-slate-500 hover:text-slate-800",
         )}
+        aria-pressed={billingInterval === "yearly"}
         type="button"
         onClick={() => onChange("yearly")}
       >
         Hằng năm
-        <span className="ml-1 text-emerald-700">-{yearlyDiscountLabel()}</span>
+        <span
+          className={cn(
+            "ml-1 transition-colors duration-200",
+            billingInterval === "yearly" ? "text-emerald-700" : "text-slate-500",
+          )}
+        >
+          -{yearlyDiscountLabel()}
+        </span>
       </button>
     </div>
   );
