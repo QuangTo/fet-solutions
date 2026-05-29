@@ -5,8 +5,9 @@
 - Database: Supabase Postgres
 - API: Next.js App Router Route Handlers
 - Validation: Zod
-- API composition root: `app/api/v1/[...path]/route.js` (legacy `/api/*` mirrors the same handler)
-- API service and repository: `lib/server/*.js`
+- API routing: file-based Next.js Route Handlers, one folder per resource under `app/api/v1/<resource>/route.js`
+- Shared request wrapper: `lib/server/http.js` exposes `withApi(handler, { public, access, roles })` for auth, page-access, role checks, body/params parsing, and uniform error formatting
+- Services (orchestration): `lib/server/services/*.js`; data access (all SQL): `lib/server/repository.js`
 - Drizzle schema and database client: `lib/db.js`
 - SQL migrations: `drizzle/migrations/*.sql`
 - Drizzle config: `drizzle.config.js`
