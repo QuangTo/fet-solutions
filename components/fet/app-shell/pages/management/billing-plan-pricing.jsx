@@ -70,16 +70,11 @@ export function BillingPlanPricing({
 }) {
   return (
     <div className="grid gap-3 sm:gap-4">
-      <div className="grid justify-items-center gap-2 pb-0.5 sm:gap-3 sm:pb-1">
-        <h3 className="text-center text-base font-bold leading-tight text-slate-950 sm:text-xl">
-          Tối ưu gói
-        </h3>
-        <div>
-          <IntervalToggle
-            billingInterval={billingInterval}
-            onChange={onIntervalChange}
-          />
-        </div>
+      <div className="flex justify-center pb-0.5 sm:pb-1">
+        <IntervalToggle
+          billingInterval={billingInterval}
+          onChange={onIntervalChange}
+        />
       </div>
 
       <div className="grid gap-2 md:grid-cols-3 md:gap-3">

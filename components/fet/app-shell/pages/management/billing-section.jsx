@@ -6,6 +6,7 @@ import {
   LoaderCircle,
   ReceiptText,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { buildBillingPaymentView } from "@/lib/billing-payment-view";
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -409,10 +411,29 @@ export function BillingSection({
       />
 
       <Dialog open={planPickerOpen} onOpenChange={setPlanPickerOpen}>
-        <DialogContent className="max-h-[calc(100vh-32px)] w-[calc(100vw-32px)] max-w-4xl overflow-y-auto bg-slate-50 p-0">
-          <DialogTitle className="sr-only">Chọn gói</DialogTitle>
+        <DialogContent
+          className="max-h-[calc(100vh-32px)] w-[calc(100vw-32px)] max-w-4xl overflow-y-auto bg-slate-50 p-0"
+          hideClose
+        >
+          <div className="grid min-h-12 grid-cols-[2rem_1fr_2rem] items-center gap-2 border-b border-slate-200 bg-white px-3 sm:px-4">
+            <span aria-hidden="true" />
+            <DialogTitle className="text-center text-base font-bold leading-tight text-slate-950 sm:text-xl">
+              Thay đổi gói
+            </DialogTitle>
+            <DialogClose asChild>
+              <Button
+                aria-label="Đóng"
+                className="h-8 w-8"
+                size="icon"
+                type="button"
+                variant="ghost"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogClose>
+          </div>
           {plans.length ? (
-            <div className="p-2.5 pt-8 sm:p-5 sm:pt-10">
+            <div className="p-2.5 sm:p-5">
               <BillingPlanPricing
                 billingInterval={billingInterval}
                 checkoutPending={checkoutPending}

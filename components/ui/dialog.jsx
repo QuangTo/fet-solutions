@@ -8,7 +8,12 @@ import { Button } from "./button";
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 
-export function DialogContent({ children, className, ...props }) {
+export function DialogContent({
+  children,
+  className,
+  hideClose = false,
+  ...props
+}) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-slate-950/40" />
@@ -20,17 +25,19 @@ export function DialogContent({ children, className, ...props }) {
         {...props}
       >
         {children}
-        <DialogPrimitive.Close asChild>
-          <Button
-            aria-label="Đóng"
-            className="absolute right-2 top-2 h-8 w-8"
-            size="icon"
-            type="button"
-            variant="ghost"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </DialogPrimitive.Close>
+        {hideClose ? null : (
+          <DialogPrimitive.Close asChild>
+            <Button
+              aria-label="Đóng"
+              className="absolute right-2 top-2 h-8 w-8"
+              size="icon"
+              type="button"
+              variant="ghost"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogPrimitive.Close>
+        )}
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   );
