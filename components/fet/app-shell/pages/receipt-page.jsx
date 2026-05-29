@@ -290,17 +290,18 @@ export function ReceiptPage({
           historyPeriod,
         )}
         actions={
-          <div className="grid w-full gap-2 sm:grid-cols-2">
-            <PeriodSelect
-              className={operationActionButtonClass}
-              value={historyPeriod}
-              onChange={setHistoryPeriod}
-            />
-            <ExcelDownloadButton
-              className={operationActionButtonClass}
-              disabled={!historyRows.length}
-              onDownload={() =>
-                downloadExcel({
+          <div className="grid w-full grid-cols-2 gap-2">
+            <div className={operationActionButtonClass}>
+              <PeriodSelect
+                value={historyPeriod}
+                onChange={setHistoryPeriod}
+              />
+            </div>
+            <div className={operationActionButtonClass}>
+              <ExcelDownloadButton
+                disabled={!historyRows.length}
+                onDownload={() =>
+                  downloadExcel({
                   columns: [
                     { label: "Ngày nhập", value: (row) => formatDate(row.date) },
                     { label: "Kho", value: (row) => row.warehouse || "" },
@@ -313,6 +314,7 @@ export function ReceiptPage({
                 })
               }
             />
+            </div>
           </div>
         }
       >

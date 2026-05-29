@@ -44,6 +44,7 @@ import { Sidebar } from "./components/sidebar";
 import { Toast } from "./components/toast";
 import {
   LOGIN_PATH,
+  operationActionButtonClass,
   pagePaths,
   SELECTED_CUSTOMER_KEY,
   SESSION_KEY,
@@ -903,40 +904,33 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
             <h1 className="text-ui-title font-semibold tracking-tight text-zinc-900">
               {pageMeta.title}
             </h1>
-            {contentPage === "dashboard" ? (
-              <div className="mt-1.5 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-                <p className="max-w-3xl text-ui-sm leading-5 text-zinc-500">
-                  {pageMeta.subtitle}
-                </p>
-                <PeriodSelect
-                  value={dashboardPeriod}
-                  onChange={setDashboardPeriod}
-                />
-              </div>
-            ) : (
-              <p className="mt-1.5 max-w-3xl text-ui-sm leading-5 text-zinc-500">
-                {pageMeta.subtitle}
-              </p>
-            )}
+            <p className="mt-1.5 max-w-3xl text-ui-sm leading-5 text-zinc-500">
+              {pageMeta.subtitle}
+            </p>
           </div>
-          {contentPage !== "dashboard" ? (
-            isPageLoading ? (
-              <Skeleton className="h-7 w-28 justify-self-end self-end rounded-full" />
-            ) : (
-              <Badge
-                className="w-fit justify-self-end self-end"
-                tone={
-                  receiptQuery.isFetching || dispatchQuery.isFetching
-                    ? "amber"
-                    : "green"
-                }
-              >
-                {receiptQuery.isFetching || dispatchQuery.isFetching
-                  ? "Đang đồng bộ"
-                  : "Dữ liệu mới nhất"}
-              </Badge>
-            )
-          ) : null}
+          {contentPage === "dashboard" ? (
+            <div className={operationActionButtonClass}>
+              <PeriodSelect
+                value={dashboardPeriod}
+                onChange={setDashboardPeriod}
+              />
+            </div>
+          ) : isPageLoading ? (
+            <Skeleton className="h-7 w-28 justify-self-end self-end rounded-full" />
+          ) : (
+            <Badge
+              className="w-fit justify-self-end self-end"
+              tone={
+                receiptQuery.isFetching || dispatchQuery.isFetching
+                  ? "amber"
+                  : "green"
+              }
+            >
+              {receiptQuery.isFetching || dispatchQuery.isFetching
+                ? "Đang đồng bộ"
+                : "Dữ liệu mới nhất"}
+            </Badge>
+          )}
         </header>
 
         <div

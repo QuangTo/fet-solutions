@@ -126,12 +126,12 @@ export function ReportsPage({ activeRole, mutation, session, state }) {
             {rows.length ? (
               customerView.rows.map((row) => (
                 <article
-                  className="relative grid min-h-32 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50"
+                  className="relative grid min-h-32 gap-2 rounded-lg border border-slate-200 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50"
                   key={row.reportKey}
                 >
                   <button
                     aria-label={`Chọn khách hàng ${row.customer} để xem lịch sử xuất hàng`}
-                    className="absolute inset-0 z-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+                    className="absolute inset-0 z-0 rounded-lg bg-transparent transition-colors active:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
                     onClick={() => setSelected(row.reportKey)}
                     type="button"
                   />

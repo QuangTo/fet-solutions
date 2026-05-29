@@ -72,7 +72,7 @@ export function DashboardPage({ dashboard, onSelectCustomer, period }) {
             {metrics.customerSummaries.length ? (
               customerView.rows.map((summary) => (
                 <button
-                  className="grid min-h-32 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50"
+                  className="grid min-h-32 gap-2 rounded-lg border border-slate-200 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50 active:border-emerald-400 active:bg-emerald-50"
                   key={summary.customer}
                   onClick={() => onSelectCustomer(summary.customer)}
                   type="button"

@@ -349,20 +349,21 @@ export function DispatchPage({
           filters.period,
         )}
         actions={
-          <div className="grid w-full gap-2 sm:grid-cols-2">
-            <PeriodSelect
-              className={operationActionButtonClass}
-              value={filters.period}
-              onChange={(period) => {
-                setFilters({ ...filters, period });
-                setPage(1);
-              }}
-            />
-            <ExcelDownloadButton
-              className={operationActionButtonClass}
-              disabled={!dispatchRows.length}
-              onDownload={() =>
-                downloadExcel({
+          <div className="grid w-full grid-cols-2 gap-2">
+            <div className={operationActionButtonClass}>
+              <PeriodSelect
+                value={filters.period}
+                onChange={(period) => {
+                  setFilters({ ...filters, period });
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div className={operationActionButtonClass}>
+              <ExcelDownloadButton
+                disabled={!dispatchRows.length}
+                onDownload={() =>
+                  downloadExcel({
                   columns: [
                     { label: "Ngày xuất", value: (row) => formatDate(row.date) },
                     { label: "Khách hàng", value: "customer" },
@@ -378,6 +379,7 @@ export function DispatchPage({
                 })
               }
             />
+            </div>
           </div>
         }
         title="Lịch sử xuất hàng"
