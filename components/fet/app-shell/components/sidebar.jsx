@@ -18,6 +18,7 @@ export function Sidebar({
   billingLockPage = "dashboard",
   mobileNavOpen,
   navigate,
+  onPrefetchPage,
   onLogout,
   onPasswordChange,
   pageAccess,
@@ -73,6 +74,12 @@ export function Sidebar({
                 )}
                 key={pageName}
                 onClick={() => navigate(pageName)}
+                onFocus={() => {
+                  if (!menuLocked) onPrefetchPage?.(pageName);
+                }}
+                onMouseEnter={() => {
+                  if (!menuLocked) onPrefetchPage?.(pageName);
+                }}
                 type="button"
               >
                 <Icon

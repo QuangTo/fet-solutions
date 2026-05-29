@@ -351,28 +351,37 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
       isDispatchLoading ||
       isUsersLoading);
 
-  useEffect(() => {
-    if (!shellReady || !session?.id) return;
-    const role = normalizeRole(session.role);
-    queryClient.prefetchQuery(dashboardSummaryQueryOptions(session));
-    queryClient.prefetchQuery(pageQueryOptions("receipt", session));
-    queryClient.prefetchQuery(pageQueryOptions("dispatch", session));
-    queryClient.prefetchQuery(pageQueryOptions("master", session));
-    if (roleCanAccessPage(pageAccess, role, "bao-cao")) {
-      queryClient.prefetchQuery(accountingContextQueryOptions(session));
-    }
-    if (roleCanAccessPage(pageAccess, role, "quan-ly")) {
-      queryClient.prefetchQuery(usersListQueryOptions(session, 1));
-      if (canManageBilling(role)) {
-        queryClient.prefetchQuery(billingQueryOptions(session));
+  const prefetchPage = useCallback(
+    (pageName) => {
+      if (!session?.id) return;
+      const role = normalizeRole(session.role);
+      if (!roleCanAccessPage(pageAccess, role, pageName)) return;
+      switch (pageName) {
+        case "dashboard":
+          queryClient.prefetchQuery(dashboardSummaryQueryOptions(session));
+          break;
+        case "nhap-hang":
+          queryClient.prefetchQuery(pageQueryOptions("receipt", session));
+          break;
+        case "xuat-hang":
+          queryClient.prefetchQuery(pageQueryOptions("dispatch", session));
+          break;
+        case "bao-cao":
+          queryClient.prefetchQuery(accountingContextQueryOptions(session));
+          break;
+        case "quan-ly":
+          queryClient.prefetchQuery(pageQueryOptions("master", session));
+          queryClient.prefetchQuery(usersListQueryOptions(session, 1));
+          if (canManageBilling(role)) {
+            queryClient.prefetchQuery(billingQueryOptions(session));
+          }
+          break;
+        default:
+          break;
       }
-    }
-  }, [
-    pageAccess,
-    queryClient,
-    session,
-    shellReady,
-  ]);
+    },
+    [pageAccess, queryClient, session],
+  );
 
   const state = useMemo(
     () =>
@@ -886,6 +895,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         billingLockPage={billingLockPage}
         mobileNavOpen={mobileNavOpen}
         navigate={navigate}
+        onPrefetchPage={prefetchPage}
         pageAccess={pageAccess}
         session={session}
         siteBillingLocked={siteBillingLocked}
