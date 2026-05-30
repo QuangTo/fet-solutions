@@ -2,12 +2,11 @@ import http from "@/lib/server/http";
 import repo from "@/lib/server/repository";
 import billing from "@/lib/server/services/billing";
 import settings from "@/lib/server/services/settings";
-import rolesModule from "@/lib/server/roles";
+import { roles } from "@/lib/fet-config.js";
 
 export const dynamic = "force-dynamic";
 
 const { withApi } = http;
-const { roles } = rolesModule;
 
 export const GET = withApi(async ({ url, user }) => {
   const page = url.searchParams.get("page") || "shell";

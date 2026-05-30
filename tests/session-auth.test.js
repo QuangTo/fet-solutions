@@ -1,15 +1,11 @@
+import crypto from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createRequire } from "node:module";
-
-const require = createRequire(import.meta.url);
-const sessionAuth = require("../lib/server/session-auth.js");
-
-const {
+import {
   SESSION_COOKIE_NAME,
   readSessionCookie,
   signSession,
   verifySessionToken,
-} = sessionAuth;
+} from "../lib/server/session-auth.js";
 
 describe("session-auth", () => {
   beforeEach(() => {
@@ -55,7 +51,6 @@ describe("session-auth", () => {
         siteId: null,
       }),
     ).toString("base64url");
-    const crypto = require("node:crypto");
     const sig = crypto
       .createHmac("sha256", "test-secret-for-vitest")
       .update(body)
@@ -98,5 +93,4 @@ describe("session-auth", () => {
       Date.now = realNow;
     }
   });
-
 });

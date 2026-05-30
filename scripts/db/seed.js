@@ -1,8 +1,6 @@
 require("dotenv").config();
 
 const { Client } = require("pg");
-const { BILLING_PLANS } = require("../../lib/billing-plans.cjs");
-const { hashPassword } = require("../../lib/server/passwords");
 
 const ADMIN_PHONE = "123456789";
 const ADMIN_PASSWORD = "123456789";
@@ -18,6 +16,9 @@ async function seed() {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is required to seed.");
   }
+
+  const { BILLING_PLANS } = await import("../../lib/billing-plans.js");
+  const { hashPassword } = await import("../../lib/server/passwords.js");
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,

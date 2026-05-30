@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { createRequire } from "node:module";
-
-const require = createRequire(import.meta.url);
-const { signSession, SESSION_COOKIE_NAME } = require("../lib/server/session-auth.js");
-const { userFromRequest } = require("../lib/server/http.js");
+import { SESSION_COOKIE_NAME, signSession } from "../lib/server/session-auth.js";
+import { bodyJson, userFromRequest } from "../lib/server/http.js";
 
 describe("userFromRequest", () => {
   beforeEach(() => {
@@ -53,5 +50,37 @@ describe("userFromRequest", () => {
     const user = userFromRequest(request);
     expect(user.id).toBe("11111111-1111-1111-1111-111111111111");
     expect(user.role).toBe("admin");
+  });
+});
+
+describe("bodyJson", () => {
+  it("returns empty object for blank POST body", async () => {
+    const request = new Request("http://localhost/api/v1/receipts", {
+      method: "POST",
+      body: "   ",
+    });
+    await expect(bodyJson(request)).resolves.toEqual({});
+  });
+
+  it("rejects invalid JSON", async () => {
+    const request = new Request("http://localhost/api/v1/receipts", {
+      method: "POST",
+      body: "{not-json",
+    });
+    await expect(bodyJson(request)).rejects.toMatchObject({
+      code: "INVALID_JSON",
+      statusCode: 400,
+    });
+  });
+
+  it("rejects JSON arrays", async () => {
+    const request = new Request("http://localhost/api/v1/receipts", {
+      method: "POST",
+      body: "[]",
+    });
+    await expect(bodyJson(request)).rejects.toMatchObject({
+      code: "INVALID_JSON",
+      statusCode: 400,
+    });
   });
 });
