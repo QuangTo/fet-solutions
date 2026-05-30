@@ -148,6 +148,7 @@ export function BillingSection({
   const invoiceAwaitingReview =
     openInvoice?.status === "pending" ||
     pendingPayment?.status === "awaiting_review";
+  const canChangePlan = plans.length > 0 && !invoiceAwaitingReview;
   const showCheckoutButton = !invoiceAwaitingReview;
   const showPaymentInfoButton = Boolean(
     paymentView && openInvoice && bankTransfer.accountNumber,
@@ -289,7 +290,7 @@ export function BillingSection({
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap xl:justify-end">
-                  {plans.length ? (
+                  {canChangePlan ? (
                     <Button
                       className="w-full sm:w-auto"
                       type="button"
@@ -424,7 +425,10 @@ export function BillingSection({
         onConfirm={handleConfirmPayment}
       />
 
-      <Dialog open={planPickerOpen} onOpenChange={setPlanPickerOpen}>
+      <Dialog
+        open={planPickerOpen && canChangePlan}
+        onOpenChange={setPlanPickerOpen}
+      >
         <DialogContent
           className="max-h-[calc(100vh-32px)] w-[calc(100vw-32px)] max-w-4xl overflow-y-auto bg-slate-50 p-0"
           hideClose
