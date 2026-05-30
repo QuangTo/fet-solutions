@@ -117,9 +117,7 @@ export function ReportsPage({ activeRole, mutation, session, state }) {
       <Card>
         <CardHeader>
           <CardTitle>Khách hàng đủ điều kiện xuất hóa đơn</CardTitle>
-          <CardDescription>
-            Chỉ hiển thị khách hàng đã xuất hết hàng.
-          </CardDescription>
+         
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
