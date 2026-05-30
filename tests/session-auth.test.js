@@ -6,8 +6,6 @@ const sessionAuth = require("../lib/server/session-auth.js");
 
 const {
   SESSION_COOKIE_NAME,
-  applySessionHeaders,
-  isPublicApiPath,
   readSessionCookie,
   signSession,
   verifySessionToken,
@@ -82,14 +80,6 @@ describe("session-auth", () => {
     });
   });
 
-  it("classifies public API paths", () => {
-    expect(isPublicApiPath("/api/v1/health", "GET")).toBe(true);
-    expect(isPublicApiPath("/api/v1/users/login", "POST")).toBe(true);
-    expect(isPublicApiPath("/api/v1/users/logout", "POST")).toBe(true);
-    expect(isPublicApiPath("/api/v1/billing", "GET")).toBe(false);
-    expect(isPublicApiPath("/api/v1/users/login", "GET")).toBe(false);
-  });
-
   it("signSession extends exp on each call (sliding window)", () => {
     const user = {
       id: "11111111-1111-1111-1111-111111111111",
@@ -109,16 +99,4 @@ describe("session-auth", () => {
     }
   });
 
-  it("applySessionHeaders sets trusted internal markers", () => {
-    const headers = new Headers();
-    applySessionHeaders(headers, {
-      id: "11111111-1111-1111-1111-111111111111",
-      name: "Nguyen A",
-      role: "admin",
-      siteId: "22222222-2222-2222-2222-222222222222",
-    });
-    expect(headers.get("x-fet-session")).toBe("1");
-    expect(headers.get("x-user-id")).toBe("11111111-1111-1111-1111-111111111111");
-    expect(headers.get("x-site-id")).toBe("22222222-2222-2222-2222-222222222222");
-  });
 });

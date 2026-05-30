@@ -22,7 +22,7 @@ FET is a compact logistics SaaS for receiving customer goods, dispatching them b
 
 ## Auth and CI
 
-- API auth uses an httpOnly `fet_session` cookie signed with `SESSION_SECRET` (required in production). `middleware.js` guards `/api/v1/*` and FET app routes (`/tong-quan`, `/nhap-hang`, …): unauthenticated users redirect to `/dang-nhap` (cookie-only check). Successful API responses slide the session forward by 30 days. The UI uses `credentials: include` and keeps display state in `localStorage` only.
+- API auth uses an httpOnly `fet_session` cookie signed with `SESSION_SECRET` (required in production). Route handlers read the cookie in `lib/server/http.js` (`withApi`); successful responses slide the session by 30 days. The UI uses `credentials: include`, guards pages client-side, and keeps display state in `localStorage` only. No `middleware`/`proxy` file.
 - Run `npm test` and `npm run check` after JavaScript changes. GitHub Actions runs the same on `main`.
 
 ## Checks

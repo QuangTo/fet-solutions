@@ -50,11 +50,11 @@ Roles:
 
 ### Session authentication
 
-After `POST /api/v1/users/login`, the API sets an **httpOnly** cookie (`fet_session`). The browser must send it on every request (`credentials: include` from the app). `middleware.js` verifies the cookie on `/api/v1/*` (except public routes) and forwards trusted `x-user-*` headers to route handlers.
+After `POST /api/v1/users/login`, the API sets an **httpOnly** cookie (`fet_session`). The browser must send it on every request (`credentials: include` from the app). Each route uses `withApi` in `lib/server/http.js` to read and verify the cookie (no separate middleware/proxy layer).
 
 Sessions use a **sliding 30-day window**: each successful authenticated API response (2xx) re-issues the cookie with a new expiry 30 days ahead. Users who stay active remain signed in; accounts idle for 30+ days must log in again.
 
-Public routes (no cookie): `GET /health`, `GET /ready`, `POST /users/login`, `POST /users/logout`.
+Public routes (`withApi(..., { public: true })`): e.g. `GET /health`, `GET /ready`, `POST /users/login`, `POST /users/logout`.
 
 Set `SESSION_SECRET` in production (see `.env.example`). Optional dev-only header auth for curl: `FET_ALLOW_HEADER_AUTH=true` on the server (do not enable in production).
 
