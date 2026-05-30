@@ -772,6 +772,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         const checkout = await billingCheckoutMutation.mutateAsync({
           billingInterval: paymentRequest.billingInterval,
           planCode: paymentRequest.plan?.code,
+          transferContent: paymentRequest.bankTransfer.transferContent,
         });
         if (checkout?.payment?.id) {
           return await billingConfirmMutation.mutateAsync(checkout.payment.id);

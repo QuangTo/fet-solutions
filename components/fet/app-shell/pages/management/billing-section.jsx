@@ -10,7 +10,11 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { buildBillingPaymentView } from "@/lib/billing-payment-view";
-import { resolveDueDates } from "@/lib/billing-pricing";
+import {
+  buildPaymentPreview,
+  buildTransferContent,
+  resolveDueDates,
+} from "@/lib/billing-pricing";
 import { trialDaysRemaining } from "@/lib/billing-utils";
 import { formatDate } from "@/lib/fet-domain";
 import { cn } from "@/lib/utils";
@@ -151,6 +155,9 @@ export function BillingSection({
   const handleCheckout = (payload = {}) => {
     const nextPlanCode = payload.planCode || selectedPlanCode;
     const nextInterval = payload.billingInterval || billingInterval;
+    const nextPlan =
+      plans.find((plan) => plan.code === nextPlanCode) || selectedPlan;
+
     if (payload.planCode) setSelectedPlanCode(payload.planCode);
     if (payload.billingInterval) setBillingInterval(payload.billingInterval);
     setPlanPickerOpen(false);
@@ -163,11 +170,27 @@ export function BillingSection({
       return;
     }
 
-    setPaymentPreview(null);
-    onCheckout?.({
-      billingInterval: nextInterval,
+    const previewTransferContent = buildTransferContent({
+      paymentId: window.crypto?.randomUUID?.() || String(Date.now()),
       planCode: nextPlanCode,
+      siteCode: billing?.siteCode,
     });
+
+    setPaymentPreview({
+      billingInterval: nextInterval,
+      bankTransfer: buildPaymentPreview({
+        bankTransfer,
+        billingInterval: nextInterval,
+        contactPhone: billing?.contactPhone,
+        plan: nextPlan,
+        siteCode: billing?.siteCode,
+        transferContent: previewTransferContent,
+      }),
+      invoice: null,
+      payment: null,
+      plan: nextPlan,
+    });
+    setPaymentDialogOpen(true);
   };
 
   const handlePayNow = () => {
