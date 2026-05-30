@@ -48,13 +48,22 @@ Roles:
 - `accountant`: Tổng quan, Báo cáo
 - `admin`: toàn bộ hệ thống
 
-Headers for authenticated calls:
+### Session authentication
+
+After `POST /api/v1/users/login`, the API sets an **httpOnly** cookie (`fet_session`). The browser must send it on every request (`credentials: include` from the app). `middleware.js` verifies the cookie on `/api/v1/*` (except public routes) and forwards trusted `x-user-*` headers to route handlers.
+
+Public routes (no cookie): `GET /health`, `GET /ready`, `POST /users/login`, `POST /users/logout`.
+
+Set `SESSION_SECRET` in production (see `.env.example`). Optional dev-only header auth for curl: `FET_ALLOW_HEADER_AUTH=true` on the server (do not enable in production).
 
 ```sh
-x-user-id: user uuid after login
-x-user-role: warehouse
-x-user-name: Nguyen A
-x-site-id: site uuid from login response
+# Login (stores cookie in jar)
+curl -c /tmp/fet-cookies.txt -X POST http://127.0.0.1:3000/api/v1/users/login \
+  -H 'content-type: application/json' \
+  -d '{"phone":"123456789","password":"123456789"}'
+
+# Authenticated call
+curl -b /tmp/fet-cookies.txt http://127.0.0.1:3000/api/v1/health
 ```
 
 The API accepts old `accounting` values and normalizes them to `accountant`.

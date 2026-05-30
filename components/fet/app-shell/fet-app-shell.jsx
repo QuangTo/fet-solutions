@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   accountingContextQueryOptions,
   apiRequest,
+  logoutRequest,
   appContextPageFor,
   billingQueryOptions,
   dashboardSummaryQueryOptions,
@@ -902,7 +903,12 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         pageAccess={pageAccess}
         session={session}
         siteBillingLocked={siteBillingLocked}
-        onLogout={() => {
+        onLogout={async () => {
+          try {
+            await logoutRequest();
+          } catch {
+            // Clear local session even if the API call fails.
+          }
           window.localStorage.removeItem(SESSION_KEY);
           setSession(null);
           setMobileNavOpen(false);

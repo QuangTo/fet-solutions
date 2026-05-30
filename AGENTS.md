@@ -20,6 +20,11 @@ FET is a compact logistics SaaS for receiving customer goods, dispatching them b
 - Editing management data should sync existing references where that keeps historical screens coherent.
 - Invoice approval requires a confirmation dialog and writes to `invoiceApprovals`.
 
+## Auth and CI
+
+- API auth uses an httpOnly `fet_session` cookie signed with `SESSION_SECRET` (required in production). `middleware.js` guards `/api/v1/*`; the UI uses `credentials: include` and keeps display state in `localStorage` only.
+- Run `npm test` and `npm run check` after JavaScript changes. GitHub Actions runs the same on `main`.
+
 ## Checks
 
 - Run `npm run check` after JavaScript changes.

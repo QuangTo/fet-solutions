@@ -10,10 +10,13 @@
     "db:seed": "node scripts/db/seed.js",
     "db:generate": "drizzle-kit generate",
     "build": "next build --webpack",
-    "check": "node --check next.config.mjs && node --check postcss.config.mjs && node --check drizzle.config.js && find lib/server scripts -name '*.js' -print0 | xargs -0 -n1 node --check && npm run build"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "node --check next.config.mjs && node --check middleware.js && node --check postcss.config.mjs && node --check drizzle.config.js && find lib/server scripts -name '*.js' -print0 | xargs -0 -n1 node --check && npm test && npm run build"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.10"
+    "drizzle-kit": "^0.31.10",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
