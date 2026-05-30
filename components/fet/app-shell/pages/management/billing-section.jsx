@@ -369,7 +369,7 @@ export function BillingSection({
                             <Td>
                               <Badge
                                 className={cn(
-                                  invoice.status === "pending" &&
+                                  status.tone === "amber" &&
                                     "text-amber-900",
                                 )}
                                 tone={status.tone}
