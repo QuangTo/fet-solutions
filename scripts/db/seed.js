@@ -168,7 +168,7 @@ async function seed() {
     await client.query("commit");
     console.log("Seeded empty site (no ops data, no billing history).");
     console.log(
-      "Billing: trial ended 5d ago, grace ended 2d ago (site locked). Pay in Quản lý to unlock.",
+      "Billing: trial ended 5d ago (site locked). Pay in Quản lý to unlock.",
     );
     console.log(`Admin login — phone: ${ADMIN_PHONE}, password: ${ADMIN_PASSWORD}`);
     console.log(

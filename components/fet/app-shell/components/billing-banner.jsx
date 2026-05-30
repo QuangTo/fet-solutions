@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CreditCard, X } from "lucide-react";
 import {
+  billingBannerDismissIsPermanent,
   billingBannerDismissStorageKey,
   isBillingBannerDismissed,
   writeBillingBannerDismissedAt,
@@ -24,6 +25,13 @@ const toneClasses = {
   red: "border-red-200 bg-red-50 text-red-950",
 };
 
+const dismissButtonClasses = {
+  amber:
+    "text-amber-900/70 hover:bg-amber-100 hover:text-amber-950",
+  blue: "text-sky-900/70 hover:bg-sky-100 hover:text-sky-950",
+  red: "text-red-900/70 hover:bg-red-100 hover:text-red-950",
+};
+
 export function BillingBanner({
   activeRole,
   billing,
@@ -34,6 +42,7 @@ export function BillingBanner({
     [billing],
   );
   const canDismiss = billingBannerCanDismiss(billing);
+  const dismissPermanent = billingBannerDismissIsPermanent(billing);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -41,8 +50,10 @@ export function BillingBanner({
       setDismissed(false);
       return;
     }
-    setDismissed(isBillingBannerDismissed(dismissKey));
-  }, [canDismiss, dismissKey]);
+    setDismissed(
+      isBillingBannerDismissed(dismissKey, { permanent: dismissPermanent }),
+    );
+  }, [canDismiss, dismissKey, dismissPermanent]);
 
   const message = billingBannerMessage(billing);
   if (!canManageBilling(activeRole)) return null;
@@ -84,8 +95,15 @@ export function BillingBanner({
         ) : null}
         {canDismiss ? (
           <button
-            aria-label="Đóng thông báo (hiện lại sau 24 giờ)"
-            className="grid h-8 w-8 place-items-center rounded-md text-amber-900/70 transition hover:bg-amber-100 hover:text-amber-950"
+            aria-label={
+              dismissPermanent
+                ? "Đóng thông báo"
+                : "Đóng thông báo (hiện lại sau 24 giờ)"
+            }
+            className={cn(
+              "grid h-8 w-8 shrink-0 place-items-center rounded-md transition",
+              dismissButtonClasses[tone] || dismissButtonClasses.amber,
+            )}
             onClick={() => {
               writeBillingBannerDismissedAt(dismissKey);
               setDismissed(true);
