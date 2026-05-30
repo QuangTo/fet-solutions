@@ -10,10 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { buildBillingPaymentView } from "@/lib/billing-payment-view";
-import {
-  buildPaymentPreview,
-  resolveDueDates,
-} from "@/lib/billing-pricing";
+import { resolveDueDates } from "@/lib/billing-pricing";
 import { trialDaysRemaining } from "@/lib/billing-utils";
 import { formatDate } from "@/lib/fet-domain";
 import { cn } from "@/lib/utils";
@@ -154,9 +151,6 @@ export function BillingSection({
   const handleCheckout = (payload = {}) => {
     const nextPlanCode = payload.planCode || selectedPlanCode;
     const nextInterval = payload.billingInterval || billingInterval;
-    const nextPlan =
-      plans.find((plan) => plan.code === nextPlanCode) || selectedPlan;
-
     if (payload.planCode) setSelectedPlanCode(payload.planCode);
     if (payload.billingInterval) setBillingInterval(payload.billingInterval);
     setPlanPickerOpen(false);
@@ -169,19 +163,11 @@ export function BillingSection({
       return;
     }
 
-    setPaymentPreview({
+    setPaymentPreview(null);
+    onCheckout?.({
       billingInterval: nextInterval,
-      bankTransfer: buildPaymentPreview({
-        bankTransfer,
-        billingInterval: nextInterval,
-        contactPhone: billing?.contactPhone,
-        plan: nextPlan,
-      }),
-      invoice: null,
-      payment: null,
-      plan: nextPlan,
+      planCode: nextPlanCode,
     });
-    setPaymentDialogOpen(true);
   };
 
   const handlePayNow = () => {

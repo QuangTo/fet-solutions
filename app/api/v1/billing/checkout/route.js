@@ -31,7 +31,6 @@ export const POST = withApi(
         planName: checkout.plan?.name,
         currency: checkout.plan?.currency,
         contactPhone: user.phone,
-        transferContent: parsed.transferContent,
       },
     );
     return json({ ...checkout, bankTransfer }, 201);
