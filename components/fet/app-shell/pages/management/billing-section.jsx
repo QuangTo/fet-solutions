@@ -350,7 +350,12 @@ export function BillingSection({
                   <tbody>
                     {invoices.length ? (
                       invoicePagination.rows.map((invoice) => {
-                        const status = invoiceCopy(invoice.status);
+                        const rejected =
+                          invoice.paymentStatus === "failed" ||
+                          Boolean(invoice.paymentMeta?.rejectedAt);
+                        const status = rejected
+                          ? { label: "Đã từ chối", tone: "red" }
+                          : invoiceCopy(invoice.status);
                         return (
                           <tr key={invoice.id}>
                             <Td>
