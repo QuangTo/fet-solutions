@@ -90,6 +90,25 @@ describe("session-auth", () => {
     expect(isPublicApiPath("/api/v1/users/login", "GET")).toBe(false);
   });
 
+  it("signSession extends exp on each call (sliding window)", () => {
+    const user = {
+      id: "11111111-1111-1111-1111-111111111111",
+      name: "A",
+      role: "warehouse",
+      siteId: null,
+    };
+    const first = verifySessionToken(signSession(user));
+    const later = Date.now() + 5_000;
+    const realNow = Date.now;
+    Date.now = () => later;
+    try {
+      const second = verifySessionToken(signSession(user));
+      expect(second.exp).toBeGreaterThan(first.exp);
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
   it("applySessionHeaders sets trusted internal markers", () => {
     const headers = new Headers();
     applySessionHeaders(headers, {
