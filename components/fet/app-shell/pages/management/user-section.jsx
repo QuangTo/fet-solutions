@@ -123,6 +123,15 @@ export function UserSection({
                   );
                   return;
                 }
+                if (
+                  users.some(
+                    (user) =>
+                      user.phone?.trim() === form.phone.trim(),
+                  )
+                ) {
+                  onToast?.("Số điện thoại đã được sử dụng.", "error");
+                  return;
+                }
                 mutation.mutate(
                   {
                     body: {
