@@ -13,31 +13,57 @@ export const dynamic = "force-dynamic";
 
 const { bodyJson, json } = http;
 
+async function bestEffortTelegram(action) {
+  try {
+    await action();
+  } catch (error) {
+    console.error("Telegram response update failed", error);
+  }
+}
+
+async function finishCallback(callbackQuery, text, showAlert = false) {
+  await bestEffortTelegram(() =>
+    answerCallback(callbackQuery.id, text, showAlert),
+  );
+}
+
+async function finishPaymentMessage(callbackQuery, text) {
+  await bestEffortTelegram(() => editBillingCallbackMessage(callbackQuery, text));
+}
+
 async function handleBillingCallback(callbackQuery) {
   const parsed = parseBillingCallbackData(callbackQuery?.data);
   if (!parsed) return;
 
   if (!callbackFromAllowedChat(callbackQuery)) {
-    await answerCallback(callbackQuery.id, "Chat này không có quyền duyệt.", true);
+    await finishCallback(callbackQuery, "Chat này không có quyền duyệt.", true);
     return;
   }
 
   const user = telegramUser(callbackQuery);
-  if (parsed.action === "approve") {
-    await repo.approveBillingPayment(parsed.paymentId, user);
-    await answerCallback(callbackQuery.id, "Đã xác nhận thanh toán.");
-    await editBillingCallbackMessage(
+  const approve = parsed.action === "approve";
+
+  try {
+    if (approve) {
+      await repo.approveBillingPayment(parsed.paymentId, user);
+    } else {
+      await repo.rejectBillingPayment(parsed.paymentId, user, "Telegram reject");
+    }
+  } catch (error) {
+    if (error.code !== "INVALID_STATE") throw error;
+    await finishCallback(callbackQuery, "Giao dịch này đã được xử lý.");
+    await finishPaymentMessage(
       callbackQuery,
-      `Đã xác nhận thanh toán.\nPayment ID: ${parsed.paymentId}`,
+      `Giao dịch đã được xử lý.\nPayment ID: ${parsed.paymentId}`,
     );
     return;
   }
 
-  await repo.rejectBillingPayment(parsed.paymentId, user, "Telegram reject");
-  await answerCallback(callbackQuery.id, "Đã từ chối thanh toán.");
-  await editBillingCallbackMessage(
+  const label = approve ? "Đã xác nhận thanh toán." : "Đã từ chối thanh toán.";
+  await finishCallback(callbackQuery, label);
+  await finishPaymentMessage(
     callbackQuery,
-    `Đã từ chối thanh toán.\nPayment ID: ${parsed.paymentId}`,
+    `${label}\nPayment ID: ${parsed.paymentId}`,
   );
 }
 
