@@ -66,6 +66,7 @@ export function BillingSection({
   const [selectedPlanCode, setSelectedPlanCode] = useState(currentPlanCode);
   const [invoicePage, setInvoicePage] = useState(1);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentDialogLoading, setPaymentDialogLoading] = useState(false);
   const [paymentPreview, setPaymentPreview] = useState(null);
   const [confirmedPayment, setConfirmedPayment] = useState(null);
   const [planPickerOpen, setPlanPickerOpen] = useState(false);
@@ -97,7 +98,10 @@ export function BillingSection({
   }, [currentPlanCode]);
 
   useEffect(() => {
-    if (checkout) setPaymentDialogOpen(true);
+    if (checkout) {
+      setPaymentDialogLoading(false);
+      setPaymentDialogOpen(true);
+    }
   }, [checkout]);
 
   const selectedPlan =
@@ -176,21 +180,26 @@ export function BillingSection({
       siteCode: billing?.siteCode,
     });
 
-    setPaymentPreview({
-      billingInterval: nextInterval,
-      bankTransfer: buildPaymentPreview({
-        bankTransfer,
-        billingInterval: nextInterval,
-        contactPhone: billing?.contactPhone,
-        plan: nextPlan,
-        siteCode: billing?.siteCode,
-        transferContent: previewTransferContent,
-      }),
-      invoice: null,
-      payment: null,
-      plan: nextPlan,
-    });
     setPaymentDialogOpen(true);
+    setPaymentDialogLoading(true);
+
+    window.setTimeout(() => {
+      setPaymentPreview({
+        billingInterval: nextInterval,
+        bankTransfer: buildPaymentPreview({
+          bankTransfer,
+          billingInterval: nextInterval,
+          contactPhone: billing?.contactPhone,
+          plan: nextPlan,
+          siteCode: billing?.siteCode,
+          transferContent: previewTransferContent,
+        }),
+        invoice: null,
+        payment: null,
+        plan: nextPlan,
+      });
+      setPaymentDialogLoading(false);
+    }, 180);
   };
 
   const handlePayNow = () => {
@@ -207,6 +216,7 @@ export function BillingSection({
 
   const handleClosePayment = () => {
     setPaymentDialogOpen(false);
+    setPaymentDialogLoading(false);
     setPaymentPreview(null);
     setConfirmedPayment(null);
     onCloseCheckout?.();
@@ -407,7 +417,8 @@ export function BillingSection({
 
       <BillingPayDialog
         confirmPending={confirmPending || checkoutPending}
-        open={paymentDialogOpen && Boolean(paymentView)}
+        loading={paymentDialogLoading}
+        open={paymentDialogOpen && (paymentDialogLoading || Boolean(paymentView))}
         paymentView={paymentView}
         onClose={handleClosePayment}
         onConfirm={handleConfirmPayment}

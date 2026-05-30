@@ -4,6 +4,7 @@ import { AlertCircle, Copy, LoaderCircle, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogClose,
@@ -76,18 +77,52 @@ function QrBlock({ alt, label, src }) {
   );
 }
 
+function BillingPaySkeleton() {
+  return (
+    <div className="grid gap-3 px-4 py-3">
+      <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2.5">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="mt-2 h-6 w-32" />
+      </div>
+      <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2">
+        {[0, 1, 2].map((item) => (
+          <div
+            className="flex items-center gap-2 border-b border-slate-100 py-2 last:border-b-0"
+            key={item}
+          >
+            <Skeleton className="h-4 w-24 shrink-0" />
+            <Skeleton className="h-4 flex-1" />
+            <Skeleton className="h-7 w-7 shrink-0" />
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2.5">
+        <Skeleton className="h-3 w-36 bg-amber-200/80" />
+        <Skeleton className="mt-2 h-5 w-full bg-amber-200/80" />
+      </div>
+      <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3 py-3">
+        <div className="flex justify-center">
+          <Skeleton className="h-32 w-32 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function BillingPayDialog({
   confirmPending,
+  loading = false,
   onClose,
   onConfirm,
   open,
   paymentView,
 }) {
-  if (!paymentView) return null;
+  if (!paymentView && !loading) return null;
 
-  const { bankTransfer, invoice, payment } = paymentView;
+  const { bankTransfer, invoice, payment } = paymentView || {};
   const paymentStatus = payment ? paymentCopy(payment.status) : null;
-  const canConfirm = bankTransfer?.isPreview || payment?.status === "pending";
+  const canConfirm =
+    !loading && (bankTransfer?.isPreview || payment?.status === "pending");
   const amount = money(
     invoice?.amount || bankTransfer?.amount,
     invoice?.currency,
@@ -125,88 +160,92 @@ export function BillingPayDialog({
           </DialogClose>
         </div>
 
-        <div className="grid gap-3 px-4 py-3">
-          <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2.5">
-            <p className={billingMutedClass}>Số tiền</p>
-            <p className="mt-0.5 text-ui-base font-bold leading-snug text-slate-950">
-              {amount}
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3">
-            <DetailRow label="Ngân hàng" value={bankTransfer?.bankName || ""} />
-            <DetailRow
-              label="Số tài khoản"
-              value={bankTransfer?.accountNumber || ""}
-            />
-            <DetailRow
-              label="Chủ tài khoản"
-              value={bankTransfer?.accountName || ""}
-            />
-          </div>
-
-          <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2.5">
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold uppercase leading-4 tracking-wide text-amber-800">
-                  Nội dung chuyển khoản
-                </p>
-                <p className="mt-1 break-all text-[13px] font-semibold leading-5 text-amber-950 sm:text-sm">
-                  {bankTransfer?.transferContent || "—"}
-                </p>
-              </div>
-              {bankTransfer?.transferContent ? (
-                <CopyButton
-                  label="Nội dung chuyển khoản"
-                  value={bankTransfer.transferContent}
-                />
-              ) : null}
+        {loading ? (
+          <BillingPaySkeleton />
+        ) : (
+          <div className="grid gap-3 px-4 py-3">
+            <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2.5">
+              <p className={billingMutedClass}>Số tiền</p>
+              <p className="mt-0.5 text-ui-base font-bold leading-snug text-slate-950">
+                {amount}
+              </p>
             </div>
-          </div>
 
-          {hasQr ? (
-            <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3 py-3">
+            <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3">
+              <DetailRow label="Ngân hàng" value={bankTransfer?.bankName || ""} />
+              <DetailRow
+                label="Số tài khoản"
+                value={bankTransfer?.accountNumber || ""}
+              />
+              <DetailRow
+                label="Chủ tài khoản"
+                value={bankTransfer?.accountName || ""}
+              />
+            </div>
+
+            <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2.5">
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold uppercase leading-4 tracking-wide text-amber-800">
+                    Nội dung chuyển khoản
+                  </p>
+                  <p className="mt-1 break-all text-[13px] font-semibold leading-5 text-amber-950 sm:text-sm">
+                    {bankTransfer?.transferContent || "—"}
+                  </p>
+                </div>
+                {bankTransfer?.transferContent ? (
+                  <CopyButton
+                    label="Nội dung chuyển khoản"
+                    value={bankTransfer.transferContent}
+                  />
+                ) : null}
+              </div>
+            </div>
+
+            {hasQr ? (
+              <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3 py-3">
+                <div
+                  className={cn(
+                    "flex justify-center",
+                    bankTransfer?.qrImageUrl &&
+                      bankTransfer?.momoQrImageUrl &&
+                      "gap-4 sm:gap-6",
+                  )}
+                >
+                  {bankTransfer?.qrImageUrl ? (
+                    <QrBlock
+                      alt="QR chuyển khoản ngân hàng"
+                      label={
+                        bankTransfer?.momoQrImageUrl ? "Ngân hàng" : undefined
+                      }
+                      src={bankTransfer.qrImageUrl}
+                    />
+                  ) : null}
+                  {bankTransfer?.momoQrImageUrl ? (
+                    <QrBlock
+                      alt="QR MoMo"
+                      label={bankTransfer?.qrImageUrl ? "MoMo" : undefined}
+                      src={bankTransfer.momoQrImageUrl}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {paymentStatus && payment?.status === "awaiting_review" ? (
               <div
                 className={cn(
-                  "flex justify-center",
-                  bankTransfer?.qrImageUrl &&
-                    bankTransfer?.momoQrImageUrl &&
-                    "gap-4 sm:gap-6",
+                  "flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-[13px] font-semibold text-amber-950 sm:text-sm",
                 )}
               >
-                {bankTransfer?.qrImageUrl ? (
-                  <QrBlock
-                    alt="QR chuyển khoản ngân hàng"
-                    label={
-                      bankTransfer?.momoQrImageUrl ? "Ngân hàng" : undefined
-                    }
-                    src={bankTransfer.qrImageUrl}
-                  />
-                ) : null}
-                {bankTransfer?.momoQrImageUrl ? (
-                  <QrBlock
-                    alt="QR MoMo"
-                    label={bankTransfer?.qrImageUrl ? "MoMo" : undefined}
-                    src={bankTransfer.momoQrImageUrl}
-                  />
-                ) : null}
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Đã ghi nhận chuyển khoản. Hóa đơn đang chờ admin duyệt.
+                </span>
               </div>
-            </div>
-          ) : null}
-
-          {paymentStatus && payment?.status === "awaiting_review" ? (
-            <div
-              className={cn(
-                "flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-[13px] font-semibold text-amber-950 sm:text-sm",
-              )}
-            >
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
-                Đã ghi nhận chuyển khoản. Hóa đơn đang chờ admin duyệt.
-              </span>
-            </div>
-          ) : null}
-        </div>
+            ) : null}
+          </div>
+        )}
 
         <div className="flex flex-col-reverse gap-2 border-t border-slate-200/70 px-4 py-3 sm:flex-row sm:justify-end">
           <Button
