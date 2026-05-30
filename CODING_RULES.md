@@ -35,7 +35,7 @@
 ## Cấu trúc frontend
 
 - App dùng Next.js App Router trong `app/`; không thêm lại Vite, `index.html` tĩnh hoặc `public/pages/*.html`.
-- Các route như `/receipt`, `/dispatch`, `/management`, `/reports`, `/settings` nằm trong `app/<route>/page.jsx`.
+- Các route như `/nhap-hang`, `/xuat-hang`, `/quan-ly`, `/bao-cao`, `/dashboard`, `/settings` nằm trong `app/(fet)/<route>/page.jsx`; URL ↔ pageId map ở `lib/fet-config.cjs` (`pagePaths`).
 - Shared logistics shell và page UI nằm trong `components/fet/`; primitives nằm trong `components/ui/`.
 - CSS entry là `app/globals.css`.
 - Khi thêm page lớn, dùng lazy loading kèm skeleton.
