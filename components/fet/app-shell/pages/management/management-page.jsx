@@ -13,14 +13,12 @@ import { WarehouseSection } from "./warehouse-section";
 
 export function ManagementPage({
   activeRole,
-  approvePending,
   billing,
   billingOpenRequest = 0,
   checkout,
   checkoutPending,
   confirmPending,
   mutation,
-  onApprovePayment,
   onBillingCheckout,
   onCloseCheckout,
   onConfirmPayment,
@@ -79,14 +77,11 @@ export function ManagementPage({
       <div className="grid gap-3">
         <div className="scroll-mt-24" ref={billingSectionRef}>
           <BillingSection
-            activeRole={activeRole}
-            approvePending={approvePending}
             billing={billing}
             checkout={checkout}
             checkoutPending={checkoutPending}
             confirmPending={confirmPending}
             isActive
-            onApprove={onApprovePayment}
             onCheckout={onBillingCheckout}
             onCloseCheckout={onCloseCheckout}
             onConfirmPayment={onConfirmPayment}
@@ -159,14 +154,11 @@ export function ManagementPage({
       {showBilling ? (
         <div className="scroll-mt-24" ref={billingSectionRef}>
           <BillingSection
-            activeRole={activeRole}
-            approvePending={approvePending}
             billing={billing}
             checkout={checkout}
             checkoutPending={checkoutPending}
             confirmPending={confirmPending}
             isActive={activeList === "billing"}
-            onApprove={onApprovePayment}
             onCheckout={onBillingCheckout}
             onCloseCheckout={onCloseCheckout}
             onConfirmPayment={onConfirmPayment}

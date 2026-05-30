@@ -40,14 +40,11 @@ import { BillingPlanPricing } from "./billing-plan-pricing";
 import { billingBodyClass, billingValueClass } from "./billing-typography";
 
 export function BillingSection({
-  activeRole,
-  approvePending,
   billing,
   checkout,
   checkoutPending,
   confirmPending,
   isActive,
-  onApprove,
   onCheckout,
   onConfirmPayment,
   onCloseCheckout,
@@ -150,8 +147,6 @@ export function BillingSection({
   const showPaymentInfoButton = Boolean(
     paymentView && openInvoice && bankTransfer.accountNumber,
   );
-  const showApproveButton =
-    activeRole === "admin" && pendingPayment?.status === "awaiting_review";
   const paymentDueLabel = dueDates.paymentDueDate
     ? formatDate(dueDates.paymentDueDate)
     : "Chưa có hóa đơn cần thanh toán";
@@ -313,20 +308,6 @@ export function BillingSection({
                       {openInvoice?.status === "open"
                         ? "Thanh toán ngay"
                         : "Thông tin thanh toán"}
-                    </Button>
-                  ) : null}
-                  {showApproveButton ? (
-                    <Button
-                      className="w-full sm:w-auto"
-                      disabled={approvePending}
-                      type="button"
-                      variant="secondary"
-                      onClick={() => onApprove(pendingPayment.id)}
-                    >
-                      {approvePending ? (
-                        <LoaderCircle className="h-4 w-4 animate-spin" />
-                      ) : null}
-                      Xác nhận thanh toán
                     </Button>
                   ) : null}
                 </div>

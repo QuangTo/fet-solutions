@@ -750,21 +750,6 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
       showToast("Đã ghi nhận chuyển khoản. Hóa đơn đang chờ admin duyệt.");
     },
   });
-  const billingApproveMutation = useMutation({
-    ...mutationOptions,
-    mutationFn: (paymentId) =>
-      apiRequest(
-        `/billing/payments/${paymentId}/approve`,
-        { method: "PATCH" },
-        session,
-      ),
-    onSuccess: () => {
-      setBillingCheckout(null);
-      invalidateBilling();
-      showToast("Đã xác nhận thanh toán");
-    },
-  });
-
   const openBillingManagement = () => {
     setBillingOpenRequest((count) => count + 1);
     navigate("quan-ly");
@@ -798,10 +783,6 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     }
     return null;
   };
-  const handleApprovePayment = (paymentId) => {
-    billingApproveMutation.mutate(paymentId);
-  };
-
   const saveSession = (nextSession) => {
     const normalized = {
       ...nextSession,
@@ -1037,7 +1018,6 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
           {!isPageLoading && contentPage === "quan-ly" ? (
             <ManagementPage
               activeRole={activeRole}
-              approvePending={billingApproveMutation.isPending}
               billing={billingQuery.data}
               billingOpenRequest={billingOpenRequest}
               sitePaywallLocked={siteBillingLocked}
@@ -1052,7 +1032,6 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
               usersPageCount={usersQuery.data?.pageCount || 1}
               usersTotal={usersQuery.data?.total || 0}
               onUsersPageChange={setUsersPage}
-              onApprovePayment={handleApprovePayment}
               onBillingCheckout={handleBillingCheckout}
               onCloseCheckout={() => setBillingCheckout(null)}
               onConfirmPayment={handleConfirmPayment}
