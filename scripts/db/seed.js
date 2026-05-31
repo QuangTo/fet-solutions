@@ -61,7 +61,7 @@ async function seed() {
             updated_at = now()
         returning id
       `,
-      ["FET Default Organization", "default"],
+      ["FES Default Organization", "default"],
     );
     const site = await client.query(
       `

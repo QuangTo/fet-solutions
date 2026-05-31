@@ -46,7 +46,7 @@ export function Sidebar({
         >
           <FetBrandMark size="nav" />
           <span className="truncate text-ui-nav font-normal text-zinc-600">
-            Quản lý vận tải
+            Quản lý Logistics
           </span>
         </button>
       </div>

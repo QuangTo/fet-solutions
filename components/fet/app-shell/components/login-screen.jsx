@@ -1,14 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { LoaderCircle } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppFooter } from "./app-footer";
@@ -99,7 +95,7 @@ export function LoginScreen({ onLogin }) {
           <div className="mb-4 grid justify-items-center gap-3">
             <FetBrandMark size="md" />
             <CardTitle className="text-xl font-normal text-zinc-800 sm:text-2xl">
-              Quản lý vận tải
+              Hệ thống quản lý Logistics
             </CardTitle>
           </div>
         </CardHeader>
@@ -147,8 +143,11 @@ export function LoginScreen({ onLogin }) {
             {message ? (
               <p className="text-ui-sm font-medium text-red-600">{message}</p>
             ) : null}
-            <Button disabled={isPending} type="submit">
-              Đăng nhập
+            <Button aria-busy={isPending} disabled={isPending} type="submit">
+              {isPending ? (
+                <LoaderCircle aria-hidden className="h-4 w-4 animate-spin" />
+              ) : null}
+              {isPending ? "Đang đăng nhập" : "Đăng nhập"}
             </Button>
           </form>
         </CardContent>

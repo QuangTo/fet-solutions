@@ -2,7 +2,7 @@
 
 ## Product Shape
 
-FET is a compact logistics SaaS for receiving customer goods, dispatching them by truck, and helping accounting close invoices when customer inventory reaches zero. Keep the app operational and data-dense, not marketing-like.
+FES is a compact logistics SaaS for receiving customer goods, dispatching them by truck, and helping accounting close invoices when customer inventory reaches zero. Keep the app operational and data-dense, not marketing-like.
 
 ## Frontend Principles
 
@@ -22,7 +22,7 @@ FET is a compact logistics SaaS for receiving customer goods, dispatching them b
 
 ## Auth and CI
 
-- API auth uses an httpOnly `fet_session` cookie signed with `SESSION_SECRET` (required in production). Route handlers read the cookie in `lib/server/http.js` (`withApi`); successful responses slide the session by 30 days. The UI uses `credentials: include`, guards pages client-side, and keeps display state in `localStorage` only. No `middleware`/`proxy` file.
+- API auth uses an httpOnly `fes_session` cookie signed with `SESSION_SECRET` (required in production). Route handlers read the cookie in `lib/server/http.js` (`withApi`); successful responses slide the session by 30 days. The UI uses `credentials: include`, guards pages client-side, and keeps display state in `localStorage` only. No `middleware`/`proxy` file.
 - Run `npm test` and `npm run check` after JavaScript changes. GitHub Actions runs the same on `main`.
 
 ## Checks

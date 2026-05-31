@@ -92,7 +92,7 @@ create table if not exists payments (
 );
 
 insert into organizations (name, slug)
-values ('FET Default Organization', 'default')
+values ('FES Default Organization', 'default')
 on conflict (slug) do update
 set updated_at = now()
 returning id;

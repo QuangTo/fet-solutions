@@ -1,4 +1,4 @@
-# FET - Quy tắc viết mã
+# FES - Quy tắc viết mã
 
 ## Nguyên tắc chung
 

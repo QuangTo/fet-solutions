@@ -1,8 +1,8 @@
-# FET - Tổng hợp nghiệp vụ
+# FES - Tổng hợp nghiệp vụ
 
 ## Mục tiêu
 
-FET là SaaS nhỏ cho doanh nghiệp vận tải quản lý hàng nhận từ khách hàng, nhập kho, xuất hàng lên xe và đối soát điều kiện chốt hóa đơn. Excel vẫn nên được hỗ trợ ở dạng nhập/xuất dữ liệu, nhưng nguồn dữ liệu chuẩn nên nằm trong hệ thống.
+FES là SaaS nhỏ cho doanh nghiệp vận tải quản lý hàng nhận từ khách hàng, nhập kho, xuất hàng lên xe và đối soát điều kiện chốt hóa đơn. Excel vẫn nên được hỗ trợ ở dạng nhập/xuất dữ liệu, nhưng nguồn dữ liệu chuẩn nên nằm trong hệ thống.
 
 ## Vai trò
 

@@ -50,22 +50,22 @@ Roles:
 
 ### Session authentication
 
-After `POST /api/v1/users/login`, the API sets an **httpOnly** cookie (`fet_session`). The browser must send it on every request (`credentials: include` from the app). Each route uses `withApi` in `lib/server/http.js` to read and verify the cookie (no separate middleware/proxy layer).
+After `POST /api/v1/users/login`, the API sets an **httpOnly** cookie (`fes_session`). The browser must send it on every request (`credentials: include` from the app). Each route uses `withApi` in `lib/server/http.js` to read and verify the cookie (no separate middleware/proxy layer).
 
 Sessions use a **sliding 30-day window**: each successful authenticated API response (2xx) re-issues the cookie with a new expiry 30 days ahead. Users who stay active remain signed in; accounts idle for 30+ days must log in again.
 
 Public routes (`withApi(..., { public: true })`): e.g. `GET /health`, `GET /ready`, `POST /users/login`, `POST /users/logout`.
 
-Set `SESSION_SECRET` in production (see `.env.example`). Optional dev-only header auth for curl: `FET_ALLOW_HEADER_AUTH=true` on the server (do not enable in production).
+Set `SESSION_SECRET` in production (see `.env.example`). Optional dev-only header auth for curl: `FES_ALLOW_HEADER_AUTH=true` on the server (do not enable in production).
 
 ```sh
 # Login (stores cookie in jar)
-curl -c /tmp/fet-cookies.txt -X POST http://127.0.0.1:3000/api/v1/users/login \
+curl -c /tmp/fes-cookies.txt -X POST http://127.0.0.1:3000/api/v1/users/login \
   -H 'content-type: application/json' \
   -d '{"phone":"123456789","password":"123456789"}'
 
 # Authenticated call
-curl -b /tmp/fet-cookies.txt http://127.0.0.1:3000/api/v1/health
+curl -b /tmp/fes-cookies.txt http://127.0.0.1:3000/api/v1/health
 ```
 
 The API accepts old `accounting` values and normalizes them to `accountant`.
