@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff, KeyRound, LogOut, UserRound } from "lucide-react";
+import { Eye, EyeOff, KeyRound, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { normalizeRole, roles } from "@/lib/fet-domain";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import { Field, Input } from "@/components/ui/form";
 
 export function AccountDialog({
   isPending,
-  onLogout,
   onOpenChange,
   onPasswordChange,
   open,
@@ -45,8 +44,8 @@ export function AccountDialog({
               <UserRound className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <DialogTitle className="text-lg font-black text-slate-950">
-                Tài khoản
+              <DialogTitle className="text-sm font-bold text-slate-950">
+                Đổi mật khẩu
               </DialogTitle>
               <DialogDescription className="truncate text-sm font-semibold text-slate-500">
                 {session.name} · {roles[normalizeRole(session.role)]}
@@ -129,24 +128,11 @@ export function AccountDialog({
               {message}
             </p>
           ) : null}
-          <div className="flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-4">
-            <Button onClick={onLogout} type="button" variant="secondary">
-              <LogOut className="h-4 w-4" />
-              Đăng xuất
+          <div className="flex justify-center border-t border-slate-100 pt-4">
+            <Button className="text-sm" disabled={isPending} type="submit">
+              <KeyRound className="h-4 w-4" />
+              Đổi mật khẩu
             </Button>
-            <div className="flex gap-2">
-              {/* <Button
-                onClick={() => onOpenChange(false)}
-                type="button"
-                variant="secondary"
-              >
-                Đóng
-              </Button> */}
-              <Button disabled={isPending} type="submit">
-                <KeyRound className="h-4 w-4" />
-                Đổi mật khẩu
-              </Button>
-            </div>
           </div>
         </form>
       </DialogContent>

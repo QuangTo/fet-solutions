@@ -1,6 +1,8 @@
 import {
   FileCheck2,
   LayoutDashboard,
+  LogOut,
+  MessageCircle,
   PackagePlus,
   Settings2,
   SlidersHorizontal,
@@ -13,10 +15,14 @@ export { loginPath as LOGIN_PATH, pageOrder, pagePaths };
 export const SESSION_KEY = "fet-logistics-session";
 export const DISPATCH_PREFS_KEY = "fet-dispatch-prefs";
 export const SELECTED_CUSTOMER_KEY = "fet-selected-customer";
+export const SUPPORT_CHAT_URL =
+  process.env.NEXT_PUBLIC_SUPPORT_CHAT_URL || "https://t.me/dosh_010";
 
 export const iconMap = {
   FileCheck2,
   LayoutDashboard,
+  LogOut,
+  MessageCircle,
   PackagePlus,
   Settings2,
   SlidersHorizontal,

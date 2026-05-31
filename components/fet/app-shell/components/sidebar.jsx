@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { pages, roleCanAccessPage } from "@/lib/fet-domain";
 import { cn } from "@/lib/utils";
-import { iconMap, pageOrder } from "../lib/constants";
+import { iconMap, pageOrder, SUPPORT_CHAT_URL } from "../lib/constants";
 import { AccountDialog } from "./account-dialog";
 import { AppFooter } from "./app-footer";
 import { FetBrandMark } from "./fet-brand-mark";
@@ -30,6 +30,13 @@ export function Sidebar({
   const visiblePages = pageOrder.filter((pageName) =>
     roleCanAccessPage(pageAccess, activeRole, pageName),
   );
+  const userName = session.name || "Người dùng";
+  const LogOutIcon = iconMap.LogOut;
+  const SupportIcon = iconMap.MessageCircle;
+
+  function openSupportChat() {
+    window.open(SUPPORT_CHAT_URL, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <aside
@@ -98,24 +105,43 @@ export function Sidebar({
       <button
         className="flex shrink-0 items-center gap-2.5 border-t border-zinc-200 px-3 py-2.5 text-left transition-colors hover:bg-zinc-100"
         onClick={() => setAccountOpen(true)}
+        title={`Xin chào ${userName}`}
         type="button"
       >
         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-zinc-200 text-ui-xs font-semibold text-zinc-700">
-          {userInitial(session.name)}
+          {userInitial(userName)}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-ui-sm font-medium text-zinc-900">
-            Xin chào {session.name}
+            Xin chào {userName}
           </span>
         </span>
       </button>
+
+      <div className="grid shrink-0 gap-1 border-t border-zinc-200 px-2 py-2">
+        <button
+          className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-ui-nav font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+          onClick={openSupportChat}
+          type="button"
+        >
+          <SupportIcon className="h-4 w-4 shrink-0 text-zinc-500" />
+          <span className="truncate">Chat support</span>
+        </button>
+        <button
+          className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-ui-nav font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
+          onClick={onLogout}
+          type="button"
+        >
+          <LogOutIcon className="h-4 w-4 shrink-0" />
+          <span className="truncate">Đăng xuất</span>
+        </button>
+      </div>
 
       <AppFooter className="border-t border-zinc-200/80" />
 
       <AccountDialog
         isPending={passwordPending}
         open={accountOpen}
-        onLogout={onLogout}
         onOpenChange={setAccountOpen}
         onPasswordChange={onPasswordChange}
         session={session}
