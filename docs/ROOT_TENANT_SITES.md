@@ -152,15 +152,53 @@ cong-ty-minh-long
 
 ## Next Implementation Steps
 
-1. Add a Tenant Admin screen for FES admin users.
-2. Create `POST /api/v1/sites` for creating a site, organization, first admin
-   membership, subscription, and default warehouse in one transaction.
-3. Add server-side reserved slug validation.
-4. Add a site switcher for users that belong to multiple sites.
-5. Add archive and deletion workflows with dry-run counts before any hard
+1. Expand `/site-admin` with detail pages for billing invoices, payments, and
+   audit history.
+2. Add a site switcher for users that belong to multiple sites.
+3. Add archive and deletion workflows with dry-run counts before any hard
    purge.
-6. Add tests for cross-tenant isolation: a session for site A must never read or
+4. Add tests for cross-tenant isolation: a session for site A must never read or
    write site B data.
+
+## Site Admin
+
+Platform-level site management lives at:
+
+```txt
+https://fes.vercel.app/site-admin
+```
+
+This UI is intentionally separate from tenant admin pages such as
+`/demo/quan-ly` and `/vantaianhquoc/quan-ly`. Tenant `admin` users manage
+logistics data inside one site. Platform admins manage all SaaS tenants.
+
+Migration `017_platform_admin.sql` adds:
+
+```txt
+users.is_platform_admin
+```
+
+The account with phone `123456789` is marked as platform admin. Server APIs
+under `/api/v1/platform/*` verify `users.is_platform_admin = true` from the
+database before returning or mutating tenant data.
+
+Root platform admin login:
+
+```txt
+username = quangto
+password = 123123
+```
+
+Tenant users can continue to log in with their phone numbers. The login field
+accepts either a phone number or the root admin username.
+
+Initial platform APIs:
+
+```txt
+GET   /api/v1/platform/sites
+POST  /api/v1/platform/sites
+PATCH /api/v1/platform/sites/:siteId
+```
 
 ## Deletion Safety Direction
 

@@ -5,6 +5,9 @@ const { Client } = require("pg");
 const ADMIN_PHONE = "123456789";
 const ADMIN_PASSWORD = "123456789";
 const ADMIN_NAME = "Admin";
+const ROOT_ADMIN_LOGIN = "quangto";
+const ROOT_ADMIN_PASSWORD = "123123";
+const ROOT_ADMIN_NAME = "Root Admin";
 const WAREHOUSE_PHONE = "0900111222";
 const WAREHOUSE_PASSWORD = "0900111222";
 const WAREHOUSE_NAME = "Thủ kho mẫu";
@@ -171,8 +174,8 @@ async function seed() {
 
     const adminUser = await client.query(
       `
-        insert into users (display_name, phone, password_hash, role)
-        values ($1, $2, $3, $4)
+        insert into users (display_name, phone, password_hash, role, is_platform_admin)
+        values ($1, $2, $3, $4, true)
         returning id
       `,
       [ADMIN_NAME, ADMIN_PHONE, hashPassword(ADMIN_PASSWORD), "admin"],
@@ -184,6 +187,30 @@ async function seed() {
     await client.query(
       "insert into site_memberships (site_id, user_id, role) values ($1, $2, $3)",
       [customerSiteId, adminUser.rows[0].id, "admin"],
+    );
+
+    const rootAdminUser = await client.query(
+      `
+        insert into users (
+          display_name,
+          phone,
+          password_hash,
+          role,
+          is_platform_admin
+        )
+        values ($1, $2, $3, $4, true)
+        returning id
+      `,
+      [
+        ROOT_ADMIN_NAME,
+        ROOT_ADMIN_LOGIN,
+        hashPassword(ROOT_ADMIN_PASSWORD),
+        "admin",
+      ],
+    );
+    await client.query(
+      "insert into site_memberships (site_id, user_id, role) values ($1, $2, $3)",
+      [siteId, rootAdminUser.rows[0].id, "admin"],
     );
 
     const warehouseUser = await client.query(
@@ -260,6 +287,9 @@ async function seed() {
       "Billing: trial ended 5d ago (site locked). Pay in Quản lý to unlock.",
     );
     console.log(`Admin login — phone: ${ADMIN_PHONE}, password: ${ADMIN_PASSWORD}`);
+    console.log(
+      `Root admin — login: ${ROOT_ADMIN_LOGIN}, password: ${ROOT_ADMIN_PASSWORD}`,
+    );
     console.log(`Customer site — /${CUSTOMER_SITE_SLUG}, admin phone: ${ADMIN_PHONE}`);
     console.log(
       `Warehouse login — phone: ${WAREHOUSE_PHONE}, password: ${WAREHOUSE_PASSWORD}`,

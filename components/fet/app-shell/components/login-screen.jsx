@@ -124,11 +124,10 @@ export function LoginScreen({ onLogin, siteSlug = "" }) {
             }}
           >
             <Field>
-              Số điện thoại
+              Tài khoản
               <Input
-                autoComplete="tel"
-                inputMode="tel"
-                placeholder="090..."
+                autoComplete="username"
+                placeholder="090... hoặc username"
                 required
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
