@@ -50,6 +50,44 @@ function dateText(value) {
   return date.toLocaleDateString("vi-VN");
 }
 
+function dateTimeText(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.toString();
+  return date.toLocaleString("vi-VN", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+function paymentReviewCopy(payment) {
+  if (payment?.status === "succeeded") {
+    return {
+      at: payment.meta?.approvedAt || payment.paidAt || payment.createdAt,
+      by: payment.meta?.approvedBy || "Platform admin",
+      label: "Đã duyệt",
+      tone: "green",
+    };
+  }
+  if (payment?.status === "failed") {
+    return {
+      at: payment.meta?.rejectedAt || payment.createdAt,
+      by: payment.meta?.rejectedBy || "Platform admin",
+      label: "Từ chối",
+      tone: "red",
+    };
+  }
+  return {
+    at: payment?.paidAt || payment?.createdAt,
+    by: "Platform admin",
+    label: payment?.status || "Chưa rõ",
+    tone: "default",
+  };
+}
+
 function SiteAdminShell({ children, onLogout }) {
   return (
     <main className="app-shell min-h-screen bg-zinc-50 text-zinc-950" data-density="compact">
@@ -99,6 +137,7 @@ export default function SiteAdminPage() {
   const billing = billingQuery.data || {};
   const billingSummary = billing.summary || {};
   const pendingPayments = billing.pendingPayments || [];
+  const recentPayments = billing.recentPayments || [];
   const monthlyRevenue = billing.monthlyRevenue || [];
   const totals = useMemo(
     () => ({
@@ -275,97 +314,154 @@ export default function SiteAdminPage() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <Card className="min-w-0">
-          <CardHeader className="flex flex-row items-center justify-between gap-3">
-            <CardTitle>Thanh toán chờ duyệt</CardTitle>
-            <Button
-              disabled={billingQuery.isFetching}
-              onClick={() => billingQuery.refetch()}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Làm mới
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Site</Th>
-                  <Th>Số tiền</Th>
-                  <Th>Gói</Th>
-                  <Th>Nội dung CK</Th>
-                  <Th>Ngày gửi</Th>
-                  <Th>Thao tác</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingPayments.length ? (
-                  pendingPayments.map((payment) => (
-                    <tr key={payment.id}>
-                      <Td>
-                        <div className="grid gap-0.5">
-                          <span className="font-semibold text-zinc-900">
-                            {payment.siteName}
-                          </span>
-                          <span className="text-ui-xs text-zinc-500">
-                            /{payment.siteSlug}
-                          </span>
-                        </div>
-                      </Td>
-                      <Td>{money(payment.amount, payment.currency)}</Td>
-                      <Td>
-                        <Badge tone="amber">
-                          {payment.meta?.planCode || "plus"} ·{" "}
-                          {payment.meta?.billingInterval || "monthly"}
-                        </Badge>
-                      </Td>
-                      <Td>{payment.meta?.transferContent || payment.id}</Td>
-                      <Td>{dateText(payment.createdAt)}</Td>
-                      <Td>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            disabled={paymentMutation.isPending}
-                            onClick={() =>
-                              paymentMutation.mutate({
-                                action: "approve",
-                                paymentId: payment.id,
-                              })
-                            }
-                            size="sm"
-                            type="button"
-                          >
-                            <Check className="h-4 w-4" />
-                            Duyệt
-                          </Button>
-                          <Button
-                            disabled={paymentMutation.isPending}
-                            onClick={() =>
-                              paymentMutation.mutate({
-                                action: "reject",
-                                paymentId: payment.id,
-                              })
-                            }
-                            size="sm"
-                            type="button"
-                            variant="destructive"
-                          >
-                            <X className="h-4 w-4" />
-                            Từ chối
-                          </Button>
-                        </div>
-                      </Td>
-                    </tr>
-                  ))
-                ) : (
-                  <EmptyRow colSpan={6}>Không có thanh toán chờ duyệt.</EmptyRow>
-                )}
-              </tbody>
-            </Table>
-          </CardContent>
-        </Card>
+        <div className="grid min-w-0 gap-4">
+          <Card className="min-w-0">
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <CardTitle>Thanh toán chờ duyệt</CardTitle>
+              <Button
+                disabled={billingQuery.isFetching}
+                onClick={() => billingQuery.refetch()}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Làm mới
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Site</Th>
+                    <Th>Số tiền</Th>
+                    <Th>Gói</Th>
+                    <Th>Nội dung CK</Th>
+                    <Th>Ngày gửi</Th>
+                    <Th>Thao tác</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingPayments.length ? (
+                    pendingPayments.map((payment) => (
+                      <tr key={payment.id}>
+                        <Td>
+                          <div className="grid gap-0.5">
+                            <span className="font-semibold text-zinc-900">
+                              {payment.siteName}
+                            </span>
+                            <span className="text-ui-xs text-zinc-500">
+                              /{payment.siteSlug}
+                            </span>
+                          </div>
+                        </Td>
+                        <Td>{money(payment.amount, payment.currency)}</Td>
+                        <Td>
+                          <Badge tone="amber">
+                            {payment.meta?.planCode || "plus"} ·{" "}
+                            {payment.meta?.billingInterval || "monthly"}
+                          </Badge>
+                        </Td>
+                        <Td>{payment.meta?.transferContent || payment.id}</Td>
+                        <Td>{dateText(payment.createdAt)}</Td>
+                        <Td>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              disabled={paymentMutation.isPending}
+                              onClick={() =>
+                                paymentMutation.mutate({
+                                  action: "approve",
+                                  paymentId: payment.id,
+                                })
+                              }
+                              size="sm"
+                              type="button"
+                            >
+                              <Check className="h-4 w-4" />
+                              Duyệt
+                            </Button>
+                            <Button
+                              disabled={paymentMutation.isPending}
+                              onClick={() =>
+                                paymentMutation.mutate({
+                                  action: "reject",
+                                  paymentId: payment.id,
+                                })
+                              }
+                              size="sm"
+                              type="button"
+                              variant="destructive"
+                            >
+                              <X className="h-4 w-4" />
+                              Từ chối
+                            </Button>
+                          </div>
+                        </Td>
+                      </tr>
+                    ))
+                  ) : (
+                    <EmptyRow colSpan={6}>Không có thanh toán chờ duyệt.</EmptyRow>
+                  )}
+                </tbody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card className="min-w-0">
+            <CardHeader>
+              <CardTitle>Lịch sử duyệt thanh toán</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Site</Th>
+                    <Th>Số tiền</Th>
+                    <Th>Gói</Th>
+                    <Th>Trạng thái</Th>
+                    <Th>Thời gian</Th>
+                    <Th>Người xử lý</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentPayments.length ? (
+                    recentPayments.map((payment) => {
+                      const review = paymentReviewCopy(payment);
+                      return (
+                        <tr key={payment.id}>
+                          <Td>
+                            <div className="grid gap-0.5">
+                              <span className="font-semibold text-zinc-900">
+                                {payment.siteName}
+                              </span>
+                              <span className="text-ui-xs text-zinc-500">
+                                /{payment.siteSlug}
+                              </span>
+                            </div>
+                          </Td>
+                          <Td>{money(payment.amount, payment.currency)}</Td>
+                          <Td>
+                            <Badge tone="default">
+                              {payment.meta?.planCode || "plus"} ·{" "}
+                              {payment.meta?.billingInterval || "monthly"}
+                            </Badge>
+                          </Td>
+                          <Td>
+                            <Badge tone={review.tone}>{review.label}</Badge>
+                          </Td>
+                          <Td>{dateTimeText(review.at)}</Td>
+                          <Td>{review.by}</Td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <EmptyRow colSpan={6}>Chưa có lịch sử duyệt thanh toán.</EmptyRow>
+                  )}
+                </tbody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardHeader>
