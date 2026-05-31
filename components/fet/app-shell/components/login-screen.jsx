@@ -82,7 +82,7 @@ export function SessionBootstrapScreen() {
   );
 }
 
-export function LoginScreen({ onLogin }) {
+export function LoginScreen({ onLogin, siteSlug = "" }) {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -108,7 +108,11 @@ export function LoginScreen({ onLogin }) {
               setIsPending(true);
               try {
                 const user = await apiRequest("/users/login", {
-                  body: JSON.stringify({ password, phone: phone.trim() }),
+                  body: JSON.stringify({
+                    password,
+                    phone: phone.trim(),
+                    ...(siteSlug ? { siteSlug } : {}),
+                  }),
                   method: "POST",
                 });
                 onLogin(user);

@@ -11,6 +11,8 @@ const WAREHOUSE_NAME = "Thủ kho mẫu";
 const ACCOUNTANT_PHONE = "0900333444";
 const ACCOUNTANT_PASSWORD = "0900333444";
 const ACCOUNTANT_NAME = "Kế toán mẫu";
+const CUSTOMER_SITE_NAME = "Van Tai Anh Quoc";
+const CUSTOMER_SITE_SLUG = "vantaianhquoc";
 
 async function seed() {
   if (!process.env.DATABASE_URL) {
@@ -69,13 +71,15 @@ async function seed() {
           organization_id,
           name,
           code,
+          public_slug,
           billing_status,
           trial_started_at,
           trial_ends_at
         )
-        values ($1, $2, $3, $4, now() - interval '40 days', now() - interval '5 days')
+        values ($1, $2, $3, $4, $5, now() - interval '40 days', now() - interval '5 days')
         on conflict (organization_id, code) do update
         set name = excluded.name,
+            public_slug = excluded.public_slug,
             status = 'active',
             billing_status = 'trialing',
             trial_started_at = now() - interval '40 days',
@@ -83,9 +87,53 @@ async function seed() {
             updated_at = now()
         returning id
       `,
-      [organization.rows[0].id, "Default Site", "default", "trialing"],
+      [organization.rows[0].id, "Demo Site", "default", "demo", "trialing"],
     );
     const siteId = site.rows[0].id;
+
+    const customerOrganization = await client.query(
+      `
+        insert into organizations (name, slug)
+        values ($1, $2)
+        on conflict (slug) do update
+        set name = excluded.name,
+            status = 'active',
+            updated_at = now()
+        returning id
+      `,
+      [CUSTOMER_SITE_NAME, CUSTOMER_SITE_SLUG],
+    );
+    const customerSite = await client.query(
+      `
+        insert into sites (
+          organization_id,
+          name,
+          code,
+          public_slug,
+          billing_status,
+          trial_started_at,
+          trial_ends_at
+        )
+        values ($1, $2, $3, $4, $5, now(), now() + interval '30 days')
+        on conflict (organization_id, code) do update
+        set name = excluded.name,
+            public_slug = excluded.public_slug,
+            status = 'active',
+            billing_status = 'trialing',
+            trial_started_at = now(),
+            trial_ends_at = now() + interval '30 days',
+            updated_at = now()
+        returning id
+      `,
+      [
+        customerOrganization.rows[0].id,
+        CUSTOMER_SITE_NAME,
+        "main",
+        CUSTOMER_SITE_SLUG,
+        "trialing",
+      ],
+    );
+    const customerSiteId = customerSite.rows[0].id;
 
     await client.query(
       `
@@ -133,6 +181,10 @@ async function seed() {
       "insert into site_memberships (site_id, user_id, role) values ($1, $2, $3)",
       [siteId, adminUser.rows[0].id, "admin"],
     );
+    await client.query(
+      "insert into site_memberships (site_id, user_id, role) values ($1, $2, $3)",
+      [customerSiteId, adminUser.rows[0].id, "admin"],
+    );
 
     const warehouseUser = await client.query(
       `
@@ -165,12 +217,50 @@ async function seed() {
       [siteId, accountantUser.rows[0].id, "accountant"],
     );
 
+    await client.query(
+      `
+        insert into warehouses (site_id, name, code)
+        values
+          ($1, 'Kho chinh', 'MAIN'),
+          ($2, 'Kho chinh', 'MAIN')
+        on conflict do nothing
+      `,
+      [siteId, customerSiteId],
+    );
+
+    await client.query(
+      `
+        insert into subscriptions (
+          site_id,
+          plan_id,
+          status,
+          current_period_start,
+          current_period_end,
+          trial_ends_at,
+          provider
+        )
+        select
+          $1,
+          p.id,
+          'trialing',
+          now(),
+          now() + interval '30 days',
+          now() + interval '30 days',
+          'manual_qr'
+        from plans p
+        where p.code = 'plus'
+        on conflict do nothing
+      `,
+      [customerSiteId],
+    );
+
     await client.query("commit");
     console.log("Seeded empty site (no ops data, no billing history).");
     console.log(
       "Billing: trial ended 5d ago (site locked). Pay in Quản lý to unlock.",
     );
     console.log(`Admin login — phone: ${ADMIN_PHONE}, password: ${ADMIN_PASSWORD}`);
+    console.log(`Customer site — /${CUSTOMER_SITE_SLUG}, admin phone: ${ADMIN_PHONE}`);
     console.log(
       `Warehouse login — phone: ${WAREHOUSE_PHONE}, password: ${WAREHOUSE_PASSWORD}`,
     );

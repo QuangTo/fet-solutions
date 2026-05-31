@@ -52,6 +52,11 @@ import {
 } from "./lib/constants";
 import { readStoredSession } from "./lib/session";
 import {
+  normalizeRouteBase,
+  routePath,
+  stripRouteBase,
+} from "./lib/routing";
+import {
   addMasterRecord,
   applyDispatchInventory,
   applyReceiptInventory,
@@ -70,10 +75,28 @@ import { ReceiptPage } from "./pages/receipt-page";
 import { ReportsPage } from "./pages/reports-page";
 import { SettingsPage } from "./pages/settings-page";
 
-export default function FetAppShell({ initialPage = "dashboard" }) {
+export default function FetAppShell({
+  initialPage = "dashboard",
+  routeBase = "",
+  siteSlug = "",
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const normalizedRouteBase = useMemo(
+    () => normalizeRouteBase(routeBase),
+    [routeBase],
+  );
+  const scopedPath = useCallback(
+    (path) => routePath(normalizedRouteBase, path),
+    [normalizedRouteBase],
+  );
+  const relativePathname = useMemo(
+    () => stripRouteBase(pathname, normalizedRouteBase),
+    [pathname, normalizedRouteBase],
+  );
+  const loginPath = scopedPath(LOGIN_PATH);
+  const sessionStorageKey = siteSlug ? `${SESSION_KEY}:${siteSlug}` : SESSION_KEY;
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [activePage, setActivePage] = useState(initialPage);
@@ -90,9 +113,9 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
   const [usersPage, setUsersPage] = useState(1);
 
   useEffect(() => {
-    setSession(readStoredSession());
+    setSession(readStoredSession(sessionStorageKey));
     setAuthReady(true);
-  }, []);
+  }, [sessionStorageKey]);
 
   useEffect(() => {
     setActivePage(initialPage);
@@ -152,8 +175,8 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
         }
       }
 
-      const nextPath = pagePaths[targetPage] || pagePaths.dashboard;
-      if (pagePaths[activePage] !== nextPath) {
+      const nextPath = scopedPath(pagePaths[targetPage] || pagePaths.dashboard);
+      if (scopedPath(pagePaths[activePage] || pagePaths.dashboard) !== nextPath) {
         router.replace(nextPath);
       }
       setActivePage(targetPage);
@@ -164,6 +187,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
       canManageBillingSection,
       pageAccess,
       router,
+      scopedPath,
       siteBillingLocked,
     ],
   );
@@ -179,36 +203,36 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
 
   useEffect(() => {
     if (!authReady) return;
-    if (!session && pathname !== LOGIN_PATH) {
-      router.replace(LOGIN_PATH);
+    if (!session && relativePathname !== LOGIN_PATH) {
+      router.replace(loginPath);
     }
-  }, [authReady, session, pathname, router]);
+  }, [authReady, loginPath, relativePathname, router, session]);
 
   useEffect(() => {
     if (!authReady || !session) return;
-    if (pathname === LOGIN_PATH) {
-      router.replace(pagePaths.dashboard);
+    if (relativePathname === LOGIN_PATH) {
+      router.replace(scopedPath(pagePaths.dashboard));
     }
-  }, [authReady, session, pathname, router]);
+  }, [authReady, relativePathname, router, scopedPath, session]);
 
   useEffect(() => {
     if (!session || !shellContextQuery.isSuccess) return;
     const role = normalizeRole(session.role);
     if (roleCanAccessPage(pageAccess, role, activePage)) return;
-    router.replace(pagePaths.dashboard);
-  }, [session, activePage, pageAccess, router, shellContextQuery.isSuccess]);
+    router.replace(scopedPath(pagePaths.dashboard));
+  }, [session, activePage, pageAccess, router, scopedPath, shellContextQuery.isSuccess]);
 
   const hasSession = Boolean(session);
   const shellReady = hasSession && shellContextQuery.isSuccess;
 
   useEffect(() => {
     if (!shellReady || !siteBillingLocked) return;
-    const fromUrl = pageIdFromPathname[pathname] || "dashboard";
+    const fromUrl = pageIdFromPathname[relativePathname] || "dashboard";
     const targetPage = billingLockEnforcePage(fromUrl, canManageBillingSection);
     if (targetPage === "quan-ly" && fromUrl !== "quan-ly") {
       setBillingOpenRequest((count) => count + 1);
     }
-    const targetPath = pagePaths[targetPage] || pagePaths.dashboard;
+    const targetPath = scopedPath(pagePaths[targetPage] || pagePaths.dashboard);
     if (pathname !== targetPath) {
       router.replace(targetPath);
     }
@@ -219,7 +243,9 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
     activePage,
     canManageBillingSection,
     pathname,
+    relativePathname,
     router,
+    scopedPath,
     shellReady,
     siteBillingLocked,
   ]);
@@ -788,10 +814,10 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
       ...nextSession,
       role: normalizeRole(nextSession.role),
     };
-    window.localStorage.setItem(SESSION_KEY, JSON.stringify(normalized));
+    window.localStorage.setItem(sessionStorageKey, JSON.stringify(normalized));
     setSession(normalized);
     setActivePage("dashboard");
-    router.replace(pagePaths.dashboard);
+    router.replace(scopedPath(pagePaths.dashboard));
   };
 
   const applyUiSettings = async () => {
@@ -834,7 +860,7 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
   };
 
   if (!authReady) return <SessionBootstrapScreen />;
-  if (!session) return <LoginScreen onLogin={saveSession} />;
+  if (!session) return <LoginScreen onLogin={saveSession} siteSlug={siteSlug} />;
 
   const pageMeta = pages[contentPage];
 
@@ -890,10 +916,10 @@ export default function FetAppShell({ initialPage = "dashboard" }) {
           } catch {
             // Clear local session even if the API call fails.
           }
-          window.localStorage.removeItem(SESSION_KEY);
+          window.localStorage.removeItem(sessionStorageKey);
           setSession(null);
           setMobileNavOpen(false);
-          router.replace(LOGIN_PATH);
+          router.replace(loginPath);
         }}
         onPasswordChange={(payload) => passwordMutation.mutateAsync(payload)}
         passwordPending={passwordMutation.isPending}
