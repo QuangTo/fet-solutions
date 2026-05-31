@@ -178,9 +178,9 @@ Migration `017_platform_admin.sql` adds:
 users.is_platform_admin
 ```
 
-The account with phone `123456789` is marked as platform admin. Server APIs
-under `/api/v1/platform/*` verify `users.is_platform_admin = true` from the
-database before returning or mutating tenant data.
+Server APIs under `/api/v1/platform/*` verify
+`users.is_platform_admin = true` from the database before returning or mutating
+tenant data.
 
 Root platform admin login:
 
@@ -191,6 +191,8 @@ password = 123123
 
 Tenant users can continue to log in with their phone numbers. The login field
 accepts either a phone number or the root admin username.
+
+The customer admin account `123456789` is not a platform admin.
 
 Initial platform APIs:
 

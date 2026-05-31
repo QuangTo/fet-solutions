@@ -175,7 +175,7 @@ async function seed() {
     const adminUser = await client.query(
       `
         insert into users (display_name, phone, password_hash, role, is_platform_admin)
-        values ($1, $2, $3, $4, true)
+        values ($1, $2, $3, $4, false)
         returning id
       `,
       [ADMIN_NAME, ADMIN_PHONE, hashPassword(ADMIN_PASSWORD), "admin"],

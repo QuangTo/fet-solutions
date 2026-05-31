@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, LoaderCircle, Plus, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { ApiError } from "@/lib/api";
+import { logoutRequest } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,15 +50,22 @@ function dateText(value) {
   return date.toLocaleDateString("vi-VN");
 }
 
-function SiteAdminShell({ children }) {
+function SiteAdminShell({ children, onLogout }) {
   return (
     <main className="app-shell min-h-screen bg-zinc-50 text-zinc-950" data-density="compact">
       <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-4 sm:px-6 lg:px-8">
-          <p className="text-ui-xs font-semibold uppercase tracking-wide text-zinc-500">
-            FES Platform
-          </p>
-          <h1 className="text-ui-title font-semibold tracking-tight">Site Admin</h1>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <div className="grid gap-1">
+            <p className="text-ui-xs font-semibold uppercase tracking-wide text-zinc-500">
+              FES Platform
+            </p>
+            <h1 className="text-ui-title font-semibold tracking-tight">Site Admin</h1>
+          </div>
+          {onLogout ? (
+            <Button onClick={onLogout} type="button" variant="outline">
+              Đăng xuất
+            </Button>
+          ) : null}
         </div>
       </header>
       <div className="mx-auto grid max-w-7xl gap-4 px-4 py-5 sm:px-6 lg:px-8">
@@ -70,10 +78,12 @@ function SiteAdminShell({ children }) {
 export default function SiteAdminPage() {
   const queryClient = useQueryClient();
   const [authVersion, setAuthVersion] = useState(0);
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [form, setForm] = useState(initialForm);
   const [message, setMessage] = useState("");
 
   const sitesQuery = useQuery({
+    enabled: adminUnlocked,
     queryFn: () => apiRequest("/platform/sites"),
     queryKey: ["platform-sites", authVersion],
     retry: false,
@@ -116,6 +126,21 @@ export default function SiteAdminPage() {
     },
   });
 
+  if (!adminUnlocked) {
+    return (
+      <LoginScreen
+        siteSlug="demo"
+        onLogin={(user) => {
+          if (!user?.isPlatformAdmin) {
+            throw new Error("Tài khoản này không có quyền Site Admin.");
+          }
+          setAdminUnlocked(true);
+          setAuthVersion((value) => value + 1);
+        }}
+      />
+    );
+  }
+
   if (sitesQuery.isPending) return <SessionBootstrapScreen />;
 
   if (sitesQuery.error instanceof ApiError && sitesQuery.error.status === 401) {
@@ -123,6 +148,9 @@ export default function SiteAdminPage() {
       <LoginScreen
         siteSlug="demo"
         onLogin={() => {
+          if (!user?.isPlatformAdmin) {
+            throw new Error("Tài khoản này không có quyền Site Admin.");
+          }
           setAuthVersion((value) => value + 1);
           queryClient.invalidateQueries({ queryKey: ["platform-sites"] });
         }}
@@ -132,7 +160,13 @@ export default function SiteAdminPage() {
 
   if (sitesQuery.error instanceof ApiError && sitesQuery.error.status === 403) {
     return (
-      <SiteAdminShell>
+      <SiteAdminShell
+        onLogout={async () => {
+          await logoutRequest().catch(() => null);
+          setAdminUnlocked(false);
+          queryClient.removeQueries({ queryKey: ["platform-sites"] });
+        }}
+      >
         <Card>
           <CardHeader>
             <CardTitle>Không có quyền</CardTitle>
@@ -148,7 +182,13 @@ export default function SiteAdminPage() {
   }
 
   return (
-    <SiteAdminShell>
+    <SiteAdminShell
+      onLogout={async () => {
+        await logoutRequest().catch(() => null);
+        setAdminUnlocked(false);
+        queryClient.removeQueries({ queryKey: ["platform-sites"] });
+      }}
+    >
       <section className="grid gap-3 md:grid-cols-3">
         <Card>
           <CardHeader>
