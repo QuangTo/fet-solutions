@@ -1,6 +1,13 @@
 "use client";
 
-import { AlertCircle, Copy, LoaderCircle, X } from "lucide-react";
+import {
+  AlertCircle,
+  Copy,
+  Download,
+  LoaderCircle,
+  Share2,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,11 +27,55 @@ import {
 } from "./billing-typography";
 
 async function copyText(value) {
-  if (!value) return;
-  await navigator.clipboard.writeText(value);
+  if (!value) return false;
+  const text = String(value);
+
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    return document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
-function CopyButton({ label, value }) {
+function extensionFromType(type = "") {
+  if (type.includes("svg")) return "svg";
+  if (type.includes("jpeg")) return "jpg";
+  if (type.includes("webp")) return "webp";
+  return "png";
+}
+
+function slug(value = "qr") {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+async function fetchQrFile(src, label) {
+  const response = await fetch(src);
+  if (!response.ok) throw new Error("Không thể tải mã QR.");
+  const blob = await response.blob();
+  const extension = extensionFromType(blob.type);
+  return new File([blob], `fes-${slug(label)}-qr.${extension}`, {
+    type: blob.type || "image/png",
+  });
+}
+
+function CopyButton({ label, onToast, value }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -32,9 +83,15 @@ function CopyButton({ label, value }) {
       className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
       type="button"
       onClick={async () => {
-        await copyText(value);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1500);
+        try {
+          const didCopy = await copyText(value);
+          if (!didCopy) throw new Error("Copy failed.");
+          setCopied(true);
+          onToast?.("Đã sao chép.");
+          window.setTimeout(() => setCopied(false), 1500);
+        } catch (_error) {
+          onToast?.("Không thể sao chép.", "error");
+        }
       }}
     >
       <Copy className="h-4 w-4" />
@@ -43,7 +100,7 @@ function CopyButton({ label, value }) {
   );
 }
 
-function DetailRow({ label, value }) {
+function DetailRow({ label, onToast, value }) {
   if (!value) return null;
   return (
     <div className="flex items-center gap-2 border-b border-slate-100 py-2 last:border-b-0">
@@ -53,16 +110,89 @@ function DetailRow({ label, value }) {
       <span className="min-w-0 flex-1 break-words text-[13px] font-semibold leading-5 text-slate-950 sm:text-sm">
         {value}
       </span>
-      <CopyButton label={label} value={value} />
+      <CopyButton label={label} value={value} onToast={onToast} />
     </div>
   );
 }
 
-function QrBlock({ alt, label, src }) {
+function QrBlock({ alt, label = "Mã QR", onToast, src }) {
+  const [isSharing, setIsSharing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const shareQr = async () => {
+    if (!src) return;
+    setIsSharing(true);
+    try {
+      if (navigator.share) {
+        try {
+          const file = await fetchQrFile(src, label);
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              text: "Mã QR chuyển khoản",
+              title: label,
+            });
+            return;
+          }
+        } catch (_error) {
+          // Fallback to sharing the URL below.
+        }
+
+        await navigator.share({
+          text: "Mã QR chuyển khoản",
+          title: label,
+          url: src,
+        });
+        return;
+      }
+
+      const didCopy = await copyText(src);
+      if (!didCopy) throw new Error("Copy failed.");
+      onToast?.("Đã sao chép.");
+    } catch (_error) {
+      onToast?.("Không thể chia sẻ mã QR.", "error");
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const saveQr = async () => {
+    if (!src) return;
+    setIsSaving(true);
+    try {
+      let url = src;
+      let objectUrl = "";
+      let filename = `fes-${slug(label)}-qr.png`;
+      try {
+        const file = await fetchQrFile(src, label);
+        objectUrl = URL.createObjectURL(file);
+        url = objectUrl;
+        filename = file.name;
+      } catch (_error) {
+        // Cross-origin QR providers may block blob fetches; open the image URL
+        // so mobile browsers still offer their native save/share affordances.
+      }
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.rel = "noopener";
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      onToast?.("Đã lưu mã QR.");
+    } catch (_error) {
+      onToast?.("Không thể lưu mã QR.", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="text-center">
+    <div className="grid justify-items-center gap-2 text-center">
       {label ? (
-        <p className={cn("mb-1.5", billingLabelClass)}>{label}</p>
+        <p className={billingLabelClass}>{label}</p>
       ) : null}
       <div className="inline-block rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
         <img
@@ -72,6 +202,36 @@ function QrBlock({ alt, label, src }) {
           src={src}
           width={128}
         />
+      </div>
+      <div className="grid w-full max-w-64 grid-cols-2 gap-1.5">
+        <Button
+          className="h-8 min-w-0 px-2 text-[11px] font-semibold sm:text-xs"
+          disabled={isSharing}
+          type="button"
+          variant="outline"
+          onClick={shareQr}
+        >
+          {isSharing ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <Share2 className="h-4 w-4" />
+          )}
+          Chia sẻ mã QR
+        </Button>
+        <Button
+          className="h-8 min-w-0 px-2 text-[11px] font-semibold sm:text-xs"
+          disabled={isSaving}
+          type="button"
+          variant="outline"
+          onClick={saveQr}
+        >
+          {isSaving ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
+          Lưu ảnh
+        </Button>
       </div>
     </div>
   );
@@ -114,6 +274,7 @@ export function BillingPayDialog({
   loading = false,
   onClose,
   onConfirm,
+  onToast,
   open,
   paymentView,
 }) {
@@ -172,14 +333,20 @@ export function BillingPayDialog({
             </div>
 
             <div className="rounded-lg border border-slate-200/80 bg-white/90 px-3">
-              <DetailRow label="Ngân hàng" value={bankTransfer?.bankName || ""} />
+              <DetailRow
+                label="Ngân hàng"
+                value={bankTransfer?.bankName || ""}
+                onToast={onToast}
+              />
               <DetailRow
                 label="Số tài khoản"
                 value={bankTransfer?.accountNumber || ""}
+                onToast={onToast}
               />
               <DetailRow
                 label="Chủ tài khoản"
                 value={bankTransfer?.accountName || ""}
+                onToast={onToast}
               />
             </div>
 
@@ -197,6 +364,7 @@ export function BillingPayDialog({
                   <CopyButton
                     label="Nội dung chuyển khoản"
                     value={bankTransfer.transferContent}
+                    onToast={onToast}
                   />
                 ) : null}
               </div>
@@ -219,6 +387,7 @@ export function BillingPayDialog({
                         bankTransfer?.momoQrImageUrl ? "Ngân hàng" : undefined
                       }
                       src={bankTransfer.qrImageUrl}
+                      onToast={onToast}
                     />
                   ) : null}
                   {bankTransfer?.momoQrImageUrl ? (
@@ -226,6 +395,7 @@ export function BillingPayDialog({
                       alt="QR MoMo"
                       label={bankTransfer?.qrImageUrl ? "MoMo" : undefined}
                       src={bankTransfer.momoQrImageUrl}
+                      onToast={onToast}
                     />
                   ) : null}
                 </div>

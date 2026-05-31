@@ -49,6 +49,7 @@ export function BillingSection({
   onCheckout,
   onConfirmPayment,
   onCloseCheckout,
+  onToast,
   onToggle,
 }) {
   const subscription = billing?.subscription || {};
@@ -423,6 +424,7 @@ export function BillingSection({
         paymentView={paymentView}
         onClose={handleClosePayment}
         onConfirm={handleConfirmPayment}
+        onToast={onToast}
       />
 
       <Dialog

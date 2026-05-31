@@ -85,6 +85,7 @@ export function ManagementPage({
             onCheckout={onBillingCheckout}
             onCloseCheckout={onCloseCheckout}
             onConfirmPayment={onConfirmPayment}
+            onToast={onToast}
             onToggle={() => {}}
           />
         </div>
@@ -162,6 +163,7 @@ export function ManagementPage({
             onCheckout={onBillingCheckout}
             onCloseCheckout={onCloseCheckout}
             onConfirmPayment={onConfirmPayment}
+            onToast={onToast}
             onToggle={() => toggleList("billing")}
           />
         </div>
