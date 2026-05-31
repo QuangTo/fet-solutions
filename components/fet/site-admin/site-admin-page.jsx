@@ -2,7 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, LoaderCircle, Plus, RefreshCw } from "lucide-react";
+import {
+  Check,
+  ExternalLink,
+  LoaderCircle,
+  Plus,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { ApiError } from "@/lib/api";
 import { logoutRequest } from "@/lib/api";
@@ -12,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Field, Input, Select } from "@/components/ui/form";
 import { EmptyRow, Table, Td, Th } from "@/components/ui/table";
 import { LoginScreen, SessionBootstrapScreen } from "../app-shell/components/login-screen";
+import { money } from "../app-shell/lib/format";
 
 const SITE_STATUS_OPTIONS = ["active", "suspended", "archived"];
 const BILLING_STATUS_OPTIONS = ["trialing", "active", "past_due", "suspended", "canceled"];
@@ -21,19 +29,11 @@ const initialForm = {
   billingStatus: "trialing",
   name: "",
   planCode: "plus",
-  slug: "",
   trialDays: "30",
 };
 
-function slugify(value = "") {
-  return value
-    .toString()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
+function wordCount(value = "") {
+  return value.trim().split(/\s+/).filter(Boolean).length;
 }
 
 function statusTone(value = "") {
@@ -88,8 +88,18 @@ export default function SiteAdminPage() {
     queryKey: ["platform-sites", authVersion],
     retry: false,
   });
+  const billingQuery = useQuery({
+    enabled: adminUnlocked,
+    queryFn: () => apiRequest("/platform/billing"),
+    queryKey: ["platform-billing", authVersion],
+    retry: false,
+  });
 
   const sites = sitesQuery.data || [];
+  const billing = billingQuery.data || {};
+  const billingSummary = billing.summary || {};
+  const pendingPayments = billing.pendingPayments || [];
+  const monthlyRevenue = billing.monthlyRevenue || [];
   const totals = useMemo(
     () => ({
       active: sites.filter((site) => site.status === "active").length,
@@ -110,6 +120,7 @@ export default function SiteAdminPage() {
       setForm(initialForm);
       setMessage("");
       queryClient.invalidateQueries({ queryKey: ["platform-sites"] });
+      queryClient.invalidateQueries({ queryKey: ["platform-billing"] });
     },
   });
 
@@ -122,6 +133,21 @@ export default function SiteAdminPage() {
     onError: (error) => setMessage(error.message || "Không cập nhật được site."),
     onSuccess: () => {
       setMessage("");
+      queryClient.invalidateQueries({ queryKey: ["platform-sites"] });
+      queryClient.invalidateQueries({ queryKey: ["platform-billing"] });
+    },
+  });
+
+  const paymentMutation = useMutation({
+    mutationFn: ({ action, paymentId }) =>
+      apiRequest(`/platform/payments/${paymentId}/${action}`, {
+        body: action === "reject" ? JSON.stringify({ reason: "Site admin reject" }) : undefined,
+        method: "PATCH",
+      }),
+    onError: (error) => setMessage(error.message || "Không xử lý được thanh toán."),
+    onSuccess: () => {
+      setMessage("");
+      queryClient.invalidateQueries({ queryKey: ["platform-billing"] });
       queryClient.invalidateQueries({ queryKey: ["platform-sites"] });
     },
   });
@@ -141,13 +167,13 @@ export default function SiteAdminPage() {
     );
   }
 
-  if (sitesQuery.isPending) return <SessionBootstrapScreen />;
+  if (sitesQuery.isPending || billingQuery.isPending) return <SessionBootstrapScreen />;
 
   if (sitesQuery.error instanceof ApiError && sitesQuery.error.status === 401) {
     return (
       <LoginScreen
         siteSlug="demo"
-        onLogin={() => {
+        onLogin={(user) => {
           if (!user?.isPlatformAdmin) {
             throw new Error("Tài khoản này không có quyền Site Admin.");
           }
@@ -165,6 +191,7 @@ export default function SiteAdminPage() {
           await logoutRequest().catch(() => null);
           setAdminUnlocked(false);
           queryClient.removeQueries({ queryKey: ["platform-sites"] });
+          queryClient.removeQueries({ queryKey: ["platform-billing"] });
         }}
       >
         <Card>
@@ -187,9 +214,10 @@ export default function SiteAdminPage() {
         await logoutRequest().catch(() => null);
         setAdminUnlocked(false);
         queryClient.removeQueries({ queryKey: ["platform-sites"] });
+        queryClient.removeQueries({ queryKey: ["platform-billing"] });
       }}
     >
-      <section className="grid gap-3 md:grid-cols-3">
+      <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Card>
           <CardHeader>
             <CardTitle>Tổng site</CardTitle>
@@ -212,6 +240,160 @@ export default function SiteAdminPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold">{totals.trialing}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Chờ duyệt</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">
+              {billingSummary.pendingReviewCount || 0}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Tháng này</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg font-semibold">
+              {money(billingSummary.currentMonthPaid || 0)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Tổng đã thu</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg font-semibold">
+              {money(billingSummary.totalPaid || 0)}
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Card className="min-w-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle>Thanh toán chờ duyệt</CardTitle>
+            <Button
+              disabled={billingQuery.isFetching}
+              onClick={() => billingQuery.refetch()}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Làm mới
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Site</Th>
+                  <Th>Số tiền</Th>
+                  <Th>Gói</Th>
+                  <Th>Nội dung CK</Th>
+                  <Th>Ngày gửi</Th>
+                  <Th>Thao tác</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingPayments.length ? (
+                  pendingPayments.map((payment) => (
+                    <tr key={payment.id}>
+                      <Td>
+                        <div className="grid gap-0.5">
+                          <span className="font-semibold text-zinc-900">
+                            {payment.siteName}
+                          </span>
+                          <span className="text-ui-xs text-zinc-500">
+                            /{payment.siteSlug}
+                          </span>
+                        </div>
+                      </Td>
+                      <Td>{money(payment.amount, payment.currency)}</Td>
+                      <Td>
+                        <Badge tone="amber">
+                          {payment.meta?.planCode || "plus"} ·{" "}
+                          {payment.meta?.billingInterval || "monthly"}
+                        </Badge>
+                      </Td>
+                      <Td>{payment.meta?.transferContent || payment.id}</Td>
+                      <Td>{dateText(payment.createdAt)}</Td>
+                      <Td>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            disabled={paymentMutation.isPending}
+                            onClick={() =>
+                              paymentMutation.mutate({
+                                action: "approve",
+                                paymentId: payment.id,
+                              })
+                            }
+                            size="sm"
+                            type="button"
+                          >
+                            <Check className="h-4 w-4" />
+                            Duyệt
+                          </Button>
+                          <Button
+                            disabled={paymentMutation.isPending}
+                            onClick={() =>
+                              paymentMutation.mutate({
+                                action: "reject",
+                                paymentId: payment.id,
+                              })
+                            }
+                            size="sm"
+                            type="button"
+                            variant="destructive"
+                          >
+                            <X className="h-4 w-4" />
+                            Từ chối
+                          </Button>
+                        </div>
+                      </Td>
+                    </tr>
+                  ))
+                ) : (
+                  <EmptyRow colSpan={6}>Không có thanh toán chờ duyệt.</EmptyRow>
+                )}
+              </tbody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Doanh thu theo tháng</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Tháng</Th>
+                  <Th>Số tiền</Th>
+                  <Th>GD</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyRevenue.length ? (
+                  monthlyRevenue.map((row) => (
+                    <tr key={row.month}>
+                      <Td>{row.month}</Td>
+                      <Td>{money(row.amount)}</Td>
+                      <Td>{row.count}</Td>
+                    </tr>
+                  ))
+                ) : (
+                  <EmptyRow colSpan={3}>Chưa có giao dịch đã thanh toán.</EmptyRow>
+                )}
+              </tbody>
+            </Table>
           </CardContent>
         </Card>
       </section>
@@ -335,6 +517,10 @@ export default function SiteAdminPage() {
               className="grid gap-3"
               onSubmit={(event) => {
                 event.preventDefault();
+                if (wordCount(form.name) > 15) {
+                  setMessage("Tên site tối đa 15 từ.");
+                  return;
+                }
                 createMutation.mutate({
                   ...form,
                   trialDays: Number(form.trialDays || 0),
@@ -342,30 +528,14 @@ export default function SiteAdminPage() {
               }}
             >
               <Field>
-                Tên site
+                Tên site (tối đa 15 từ)
                 <Input
                   required
                   value={form.name}
-                  onChange={(event) => {
-                    const name = event.target.value;
-                    setForm((current) => ({
-                      ...current,
-                      name,
-                      slug: current.slug ? current.slug : slugify(name),
-                    }));
-                  }}
-                />
-              </Field>
-              <Field>
-                Slug
-                <Input
-                  pattern="[a-z0-9]+(-[a-z0-9]+)*"
-                  required
-                  value={form.slug}
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
-                      slug: slugify(event.target.value),
+                      name: event.target.value,
                     }))
                   }
                 />

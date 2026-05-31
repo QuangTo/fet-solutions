@@ -200,7 +200,18 @@ Initial platform APIs:
 GET   /api/v1/platform/sites
 POST  /api/v1/platform/sites
 PATCH /api/v1/platform/sites/:siteId
+GET   /api/v1/platform/billing
+PATCH /api/v1/platform/payments/:id/approve
+PATCH /api/v1/platform/payments/:id/reject
 ```
+
+`/site-admin` also handles billing review:
+
+- Lists payments that customer sites already confirmed as transferred.
+- Approves a payment using the same billing service as Telegram approval.
+- Rejects a payment using the same billing service as Telegram rejection.
+- Reports current-month paid amount, total paid amount, and monthly paid
+  revenue for the last 12 months.
 
 ## Deletion Safety Direction
 
