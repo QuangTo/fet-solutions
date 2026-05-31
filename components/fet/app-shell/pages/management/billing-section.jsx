@@ -28,6 +28,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyRow, Td, Th } from "@/components/ui/table";
@@ -97,6 +98,17 @@ export function BillingSection({
   useEffect(() => {
     setSelectedPlanCode((current) => current || currentPlanCode || "plus");
   }, [currentPlanCode]);
+
+  useEffect(() => {
+    if (!planPickerOpen) return;
+    const preferredUpgrade =
+      currentPlanCode === "plus"
+        ? plans.find((plan) => plan.code === "pro")?.code
+        : null;
+    setSelectedPlanCode(
+      preferredUpgrade || currentPlanCode || plans[0]?.code || "plus",
+    );
+  }, [currentPlanCode, planPickerOpen, plans]);
 
   useEffect(() => {
     if (checkout) {
@@ -432,18 +444,21 @@ export function BillingSection({
         onOpenChange={setPlanPickerOpen}
       >
         <DialogContent
-          className="max-h-[calc(100vh-32px)] w-[calc(100vw-32px)] max-w-4xl overflow-y-auto bg-slate-50 p-0"
+          className="max-h-[calc(100vh-32px)] w-[calc(100vw-32px)] max-w-4xl gap-0 overflow-hidden rounded-xl border-0 bg-[#faf8ff] p-0 shadow-[0_20px_60px_rgba(19,27,46,0.18)]"
           hideClose
         >
-          <div className="grid min-h-12 grid-cols-[2rem_1fr_2rem] items-center gap-2 border-b border-slate-200 bg-white px-3 sm:px-4">
+          <div className="grid h-12 grid-cols-[2rem_1fr_2rem] items-center gap-2 bg-[#faf8ff] px-3 sm:px-4">
             <span aria-hidden="true" />
-            <DialogTitle className="text-center text-base font-bold leading-tight text-slate-950">
+            <DialogTitle className="text-center text-base font-bold leading-tight text-[#263149]">
               Thay đổi gói
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Chọn chu kỳ thanh toán và gói dịch vụ phù hợp.
+            </DialogDescription>
             <DialogClose asChild>
               <Button
                 aria-label="Đóng"
-                className="h-8 w-8"
+                className="h-8 w-8 rounded-full text-[#00a669] hover:bg-[#f2f3ff]"
                 size="icon"
                 type="button"
                 variant="ghost"
@@ -453,17 +468,19 @@ export function BillingSection({
             </DialogClose>
           </div>
           {plans.length ? (
-            <div className="p-2.5 sm:p-5">
-              <BillingPlanPricing
-                billingInterval={billingInterval}
-                checkoutPending={checkoutPending}
-                currentPlanCode={currentPlanCode}
-                plans={plans}
-                selectedPlanCode={selectedPlanCode}
-                onCheckout={handleCheckout}
-                onIntervalChange={setBillingInterval}
-                onSelectPlan={setSelectedPlanCode}
-              />
+            <div className="max-h-[calc(100vh-80px)] overflow-y-auto px-2.5 pb-3 sm:px-5 sm:pb-5">
+              <div className="overflow-hidden rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+                <BillingPlanPricing
+                  billingInterval={billingInterval}
+                  checkoutPending={checkoutPending}
+                  currentPlanCode={currentPlanCode}
+                  plans={plans}
+                  selectedPlanCode={selectedPlanCode}
+                  onCheckout={handleCheckout}
+                  onIntervalChange={setBillingInterval}
+                  onSelectPlan={setSelectedPlanCode}
+                />
+              </div>
             </div>
           ) : null}
         </DialogContent>
