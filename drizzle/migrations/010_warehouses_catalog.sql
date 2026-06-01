@@ -1,3 +1,6 @@
+-- IMPORTANT: warehouse schema only.
+-- Warehouses are operational data and should be created by each site admin.
+
 create table if not exists warehouses (
   id uuid primary key default gen_random_uuid(),
   site_id uuid not null references sites(id),
@@ -12,12 +15,3 @@ create table if not exists warehouses (
 create index if not exists warehouses_site_active_idx
   on warehouses (site_id)
   where is_active = true;
-
-insert into warehouses (site_id, name, code)
-select s.id, 'Kho chính', 'MAIN'
-from sites s
-where not exists (
-  select 1
-  from warehouses w
-  where w.site_id = s.id and w.code = 'MAIN'
-);

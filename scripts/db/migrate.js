@@ -1,5 +1,9 @@
 require("dotenv").config();
 
+// IMPORTANT: This is the production/staging schema migration runner.
+// It applies every SQL file in drizzle/migrations exactly once and should be
+// kept. Do not use it for sample/demo data resets.
+
 const fs = require("node:fs");
 const path = require("node:path");
 const { Client } = require("pg");

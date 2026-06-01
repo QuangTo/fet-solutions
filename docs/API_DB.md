@@ -23,13 +23,9 @@
 npm run db:migrate
 ```
 
-Reset and seed sample data:
-
-```sh
-npm run db:seed
-```
-
-`db:seed` truncates MVP business tables and recreates only org/site, catalog plan row, and one admin user (`123456789` / `123456789`). Site billing starts as **trialing** (30 days) with no subscriptions, invoices, or payments. Operational tables start empty for empty-state UI testing.
+There is intentionally no `db:seed` script. Do not keep sample/demo data reset
+scripts in this project; create operational test data from `/site-admin` when
+needed.
 
 5. Start the app:
 
@@ -62,7 +58,7 @@ Set `SESSION_SECRET` in production (see `.env.example`). Optional dev-only heade
 # Login (stores cookie in jar)
 curl -c /tmp/fes-cookies.txt -X POST http://127.0.0.1:3000/api/v1/users/login \
   -H 'content-type: application/json' \
-  -d '{"phone":"123456789","password":"123456789"}'
+  -d '{"phone":"0373665129","password":"123123"}'
 
 # Authenticated call
 curl -b /tmp/fes-cookies.txt http://127.0.0.1:3000/api/v1/health
@@ -175,5 +171,5 @@ Warehouse API notes:
 ```sh
 curl -X POST http://127.0.0.1:3000/api/v1/users/login \
   -H 'content-type: application/json' \
-  -d '{"phone":"123456789","password":"123456789"}'
+  -d '{"phone":"0373665129","password":"123123"}'
 ```

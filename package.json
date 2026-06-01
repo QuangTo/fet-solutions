@@ -7,7 +7,6 @@
     "start": "next start -H 127.0.0.1",
     "preview": "next start -H 127.0.0.1",
     "db:migrate": "node scripts/db/migrate.js",
-    "db:seed": "node scripts/db/seed.js",
     "db:generate": "drizzle-kit generate",
     "build": "next build --webpack",
     "test": "vitest run",

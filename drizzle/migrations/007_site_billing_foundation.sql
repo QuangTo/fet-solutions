@@ -1,3 +1,7 @@
+-- IMPORTANT: multi-tenant billing schema only.
+-- Sites, memberships, and operational data must be created from /site-admin.
+-- Do not seed a default/demo site in migrations.
+
 create table if not exists organizations (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -91,34 +95,6 @@ create table if not exists payments (
   updated_at timestamptz not null default now()
 );
 
-insert into organizations (name, slug)
-values ('FES Default Organization', 'default')
-on conflict (slug) do update
-set updated_at = now()
-returning id;
-
-insert into sites (organization_id, name, code, billing_status)
-select id, 'Default Site', 'default', 'trialing'
-from organizations
-where slug = 'default'
-on conflict (organization_id, code) do update
-set updated_at = now();
-
-insert into plans (code, name, price_monthly, currency, max_users, max_vehicles)
-values ('starter', 'Starter', 0, 'VND', 20, 20)
-on conflict (code) do update
-set updated_at = now();
-
-insert into subscriptions (site_id, plan_id, status, trial_ends_at)
-select s.id, p.id, 'trialing', s.trial_ends_at
-from sites s
-join organizations o on o.id = s.organization_id and o.slug = 'default'
-left join plans p on p.code = 'starter'
-where s.code = 'default'
-  and not exists (
-    select 1 from subscriptions existing where existing.site_id = s.id
-  );
-
 alter table customers add column if not exists site_id uuid references sites(id);
 alter table vehicles add column if not exists site_id uuid references sites(id);
 alter table drivers add column if not exists site_id uuid references sites(id);
@@ -126,14 +102,6 @@ alter table receipts add column if not exists site_id uuid references sites(id);
 alter table dispatches add column if not exists site_id uuid references sites(id);
 alter table invoice_approvals add column if not exists site_id uuid references sites(id);
 alter table audit_logs add column if not exists site_id uuid references sites(id);
-
-update customers set site_id = (select s.id from sites s join organizations o on o.id = s.organization_id where o.slug = 'default' and s.code = 'default' limit 1) where site_id is null;
-update vehicles set site_id = (select s.id from sites s join organizations o on o.id = s.organization_id where o.slug = 'default' and s.code = 'default' limit 1) where site_id is null;
-update drivers set site_id = (select s.id from sites s join organizations o on o.id = s.organization_id where o.slug = 'default' and s.code = 'default' limit 1) where site_id is null;
-update receipts set site_id = (select s.id from sites s join organizations o on o.id = s.organization_id where o.slug = 'default' and s.code = 'default' limit 1) where site_id is null;
-update dispatches set site_id = (select s.id from sites s join organizations o on o.id = s.organization_id where o.slug = 'default' and s.code = 'default' limit 1) where site_id is null;
-update invoice_approvals set site_id = (select s.id from sites s join organizations o on o.id = s.organization_id where o.slug = 'default' and s.code = 'default' limit 1) where site_id is null;
-update audit_logs set site_id = (select s.id from sites s join organizations o on o.id = s.organization_id where o.slug = 'default' and s.code = 'default' limit 1) where site_id is null;
 
 alter table customers alter column site_id set not null;
 alter table vehicles alter column site_id set not null;
@@ -167,18 +135,3 @@ create index if not exists drivers_site_active_idx on drivers (site_id, is_activ
 create index if not exists receipts_site_customer_date_idx on receipts (site_id, customer_id, received_date desc, created_at desc);
 create index if not exists dispatches_site_customer_date_idx on dispatches (site_id, customer_id, dispatch_date desc, created_at desc);
 create index if not exists invoice_approvals_site_customer_closed_idx on invoice_approvals (site_id, customer_id, period_closed_at desc);
-
-insert into site_memberships (site_id, user_id, role)
-select s.id, u.id, u.role::text
-from users u
-cross join (
-  select s.id
-  from sites s
-  join organizations o on o.id = s.organization_id
-  where o.slug = 'default' and s.code = 'default'
-  limit 1
-) s
-on conflict (site_id, user_id) do update
-set role = excluded.role,
-    is_active = true,
-    updated_at = now();

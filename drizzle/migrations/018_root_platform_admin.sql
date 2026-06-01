@@ -1,3 +1,7 @@
+-- IMPORTANT: this is the only root platform admin bootstrap.
+-- Keep exactly one root admin credential here unless ownership changes.
+-- Login: 0373665129 / 123123
+
 create extension if not exists pgcrypto;
 
 update users

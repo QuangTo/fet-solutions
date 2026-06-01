@@ -1,3 +1,6 @@
+-- IMPORTANT: product billing plan catalog.
+-- These rows are application configuration, not demo/customer data.
+
 update plans
 set is_active = false,
     updated_at = now()
@@ -33,18 +36,3 @@ where plus_plan.code = 'plus'
         and s.billing_status = 'trialing'
     )
   );
-
-update billing_invoices bi
-set amount = 299000,
-    updated_at = now()
-from plans p
-where bi.provider_invoice_id = 'MOCK-PAID-001'
-  and p.code = 'plus';
-
-update payments pay
-set amount = 299000,
-    updated_at = now()
-from billing_invoices bi
-where pay.provider_payment_id = 'MOCK-QR-001'
-  and bi.id = pay.invoice_id
-  and bi.provider_invoice_id = 'MOCK-PAID-001';

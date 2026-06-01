@@ -1,3 +1,6 @@
+-- IMPORTANT: current product billing plan catalog.
+-- Keep this in migrations so a clean database has selectable plans.
+
 insert into plans (code, name, price_monthly, currency, max_users, max_vehicles)
 values
   ('plus', 'Plus', 199000, 'VND', 5, 5),
