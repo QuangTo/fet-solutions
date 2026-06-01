@@ -311,7 +311,7 @@ export function BillingPayDialog({
           <DialogClose asChild>
             <Button
               aria-label="Đóng"
-              className="h-8 w-8"
+              className="h-8 w-8 rounded-full text-[#00a669] hover:bg-[#f2f3ff]"
               size="icon"
               type="button"
               variant="ghost"
