@@ -25,7 +25,7 @@ const SITE_STATUS_OPTIONS = ["active", "suspended", "archived"];
 const BILLING_STATUS_OPTIONS = ["trialing", "active", "past_due", "suspended", "canceled"];
 
 const initialForm = {
-  adminPhone: "123456789",
+  adminPhone: "0373665129",
   billingStatus: "trialing",
   name: "",
   planCode: "plus",
@@ -194,7 +194,6 @@ export default function SiteAdminPage() {
   if (!adminUnlocked) {
     return (
       <LoginScreen
-        siteSlug="demo"
         onLogin={(user) => {
           if (!user?.isPlatformAdmin) {
             throw new Error("Tài khoản này không có quyền Site Admin.");
@@ -211,7 +210,6 @@ export default function SiteAdminPage() {
   if (sitesQuery.error instanceof ApiError && sitesQuery.error.status === 401) {
     return (
       <LoginScreen
-        siteSlug="demo"
         onLogin={(user) => {
           if (!user?.isPlatformAdmin) {
             throw new Error("Tài khoản này không có quyền Site Admin.");
