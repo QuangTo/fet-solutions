@@ -12,9 +12,10 @@ import { composeState, loginPath, pageOrder, pagePaths } from "@/lib/fet-domain"
 
 export { loginPath as LOGIN_PATH, pageOrder, pagePaths };
 
-export const SESSION_KEY = "fet-logistics-session";
-export const DISPATCH_PREFS_KEY = "fet-dispatch-prefs";
-export const SELECTED_CUSTOMER_KEY = "fet-selected-customer";
+export const LEGACY_SESSION_KEY = "fet-logistics-session";
+export const SESSION_KEY = "lms-logistics-session";
+export const DISPATCH_PREFS_KEY = "lms-dispatch-prefs";
+export const SELECTED_CUSTOMER_KEY = "lms-selected-customer";
 export const SUPPORT_CHAT_URL =
   process.env.NEXT_PUBLIC_SUPPORT_CHAT_URL || "https://t.me/dosh_010";
 

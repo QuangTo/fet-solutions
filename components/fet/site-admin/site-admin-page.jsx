@@ -95,7 +95,7 @@ function SiteAdminShell({ children, onLogout }) {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="grid gap-1">
             <p className="text-ui-xs font-semibold uppercase tracking-wide text-zinc-500">
-              FES Platform
+              LMS Platform
             </p>
             <h1 className="text-ui-title font-semibold tracking-tight">Site Admin</h1>
           </div>

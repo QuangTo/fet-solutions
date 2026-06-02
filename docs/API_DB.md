@@ -52,16 +52,16 @@ Sessions use a **sliding 30-day window**: each successful authenticated API resp
 
 Public routes (`withApi(..., { public: true })`): e.g. `GET /health`, `GET /ready`, `POST /users/login`, `POST /users/logout`.
 
-Set `SESSION_SECRET` in production (see `.env.example`). Optional dev-only header auth for curl: `FES_ALLOW_HEADER_AUTH=true` on the server (do not enable in production).
+Set `SESSION_SECRET` in production (see `.env.example`). Optional dev-only header auth for curl: `LMS_ALLOW_HEADER_AUTH=true` on the server (do not enable in production).
 
 ```sh
 # Login (stores cookie in jar)
-curl -c /tmp/fes-cookies.txt -X POST http://127.0.0.1:3000/api/v1/users/login \
+curl -c /tmp/lms-cookies.txt -X POST http://127.0.0.1:3000/api/v1/users/login \
   -H 'content-type: application/json' \
   -d '{"phone":"0373665129","password":"123123"}'
 
 # Authenticated call
-curl -b /tmp/fes-cookies.txt http://127.0.0.1:3000/api/v1/health
+curl -b /tmp/lms-cookies.txt http://127.0.0.1:3000/api/v1/health
 ```
 
 The API accepts old `accounting` values and normalizes them to `accountant`.

@@ -30,7 +30,7 @@ export function FetBrandMark({ className, size = "sm" }) {
         x="16"
         y="22"
       >
-        FES
+        LMS
       </text>
     </svg>
   );

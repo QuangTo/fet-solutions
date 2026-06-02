@@ -70,7 +70,7 @@ async function fetchQrFile(src, label) {
   if (!response.ok) throw new Error("Không thể tải mã QR.");
   const blob = await response.blob();
   const extension = extensionFromType(blob.type);
-  return new File([blob], `fes-${slug(label)}-qr.${extension}`, {
+  return new File([blob], `lms-${slug(label)}-qr.${extension}`, {
     type: blob.type || "image/png",
   });
 }
@@ -167,7 +167,7 @@ function QrBlock({ alt, label = "Mã QR", onToast, src }) {
     try {
       let url = src;
       let objectUrl = "";
-      let filename = `fes-${slug(label)}-qr.png`;
+      let filename = `lms-${slug(label)}-qr.png`;
       try {
         const file = await fetchQrFile(src, label);
         objectUrl = URL.createObjectURL(file);

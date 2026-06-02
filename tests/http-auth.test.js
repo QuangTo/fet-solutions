@@ -5,7 +5,7 @@ import { bodyJson, userFromRequest } from "../lib/server/http.js";
 describe("userFromRequest", () => {
   beforeEach(() => {
     process.env.SESSION_SECRET = "test-secret-for-vitest";
-    delete process.env.FES_ALLOW_HEADER_AUTH;
+    delete process.env.LMS_ALLOW_HEADER_AUTH;
   });
 
   it("resolves user from a signed session cookie", () => {
@@ -37,8 +37,8 @@ describe("userFromRequest", () => {
     expect(userFromRequest(request).id).toBeNull();
   });
 
-  it("allows header auth when FES_ALLOW_HEADER_AUTH is enabled", () => {
-    process.env.FES_ALLOW_HEADER_AUTH = "true";
+  it("allows header auth when LMS_ALLOW_HEADER_AUTH is enabled", () => {
+    process.env.LMS_ALLOW_HEADER_AUTH = "true";
     const request = new Request("http://localhost/api/v1/inventory", {
       headers: {
         "x-user-id": "11111111-1111-1111-1111-111111111111",

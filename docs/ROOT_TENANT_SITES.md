@@ -2,18 +2,18 @@
 
 ## Current Root Tenant Rollout
 
-FES currently keeps a minimal root tenant route for the app shell:
+LMS currently keeps a minimal root tenant route for the app shell:
 
 ```txt
-https://fes.vercel.app/
-https://fes.vercel.app/demo
-https://fes.vercel.app/demo/dang-nhap
-https://fes.vercel.app/demo/tong-quan
-https://fes.vercel.app/demo/nhap-hang
-https://fes.vercel.app/demo/xuat-hang
-https://fes.vercel.app/demo/bao-cao
-https://fes.vercel.app/demo/quan-ly
-https://fes.vercel.app/demo/cai-dat
+https://lms.vercel.app/
+https://lms.vercel.app/demo
+https://lms.vercel.app/demo/dang-nhap
+https://lms.vercel.app/demo/tong-quan
+https://lms.vercel.app/demo/nhap-hang
+https://lms.vercel.app/demo/xuat-hang
+https://lms.vercel.app/demo/bao-cao
+https://lms.vercel.app/demo/quan-ly
+https://lms.vercel.app/demo/cai-dat
 ```
 
 The bare root `/` redirects to `/demo`.
@@ -37,7 +37,7 @@ No customer/demo operational users or sample logistics data are seeded.
 Platform-level site management lives at:
 
 ```txt
-https://fes.vercel.app/site-admin
+https://lms.vercel.app/site-admin
 ```
 
 The only seeded/root platform admin is:

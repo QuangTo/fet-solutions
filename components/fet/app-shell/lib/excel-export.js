@@ -14,7 +14,7 @@ function safeFilename(value) {
     .replace(/\.xlsx$/i, "")
     .replace(/[^a-z0-9_.-]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return `${base || "fet-export"}.xlsx`;
+  return `${base || "lms-export"}.xlsx`;
 }
 
 function safeSheetName(value = "Du lieu") {
