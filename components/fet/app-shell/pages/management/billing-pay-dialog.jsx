@@ -8,7 +8,7 @@ import {
   Share2,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -116,8 +116,13 @@ function DetailRow({ label, onToast, value }) {
 }
 
 function QrBlock({ alt, label = "Mã QR", onToast, src }) {
+  const [imageStatus, setImageStatus] = useState(src ? "loading" : "error");
   const [isSharing, setIsSharing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setImageStatus(src ? "loading" : "error");
+  }, [src]);
 
   const shareQr = async () => {
     if (!src) return;
@@ -195,13 +200,30 @@ function QrBlock({ alt, label = "Mã QR", onToast, src }) {
         <p className={billingLabelClass}>{label}</p>
       ) : null}
       <div className="inline-block rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
-        <img
-          alt={alt}
-          className="h-28 w-28 object-contain sm:h-32 sm:w-32"
-          height={128}
-          src={src}
-          width={128}
-        />
+        <div className="grid h-28 w-28 place-items-center sm:h-32 sm:w-32">
+          {imageStatus === "loading" ? (
+            <Skeleton className="h-full w-full rounded-md" />
+          ) : null}
+          {imageStatus === "error" ? (
+            <div className="grid h-full w-full place-items-center rounded-md border border-red-100 bg-red-50 px-2 text-center text-[11px] font-semibold leading-4 text-red-700">
+              Không tải được QR
+            </div>
+          ) : null}
+          {src ? (
+            <img
+              alt={alt}
+              className={cn(
+                "h-full w-full object-contain",
+                imageStatus !== "loaded" && "hidden",
+              )}
+              height={128}
+              src={src}
+              width={128}
+              onError={() => setImageStatus("error")}
+              onLoad={() => setImageStatus("loaded")}
+            />
+          ) : null}
+        </div>
       </div>
       <div className="grid w-full max-w-64 grid-cols-2 gap-1.5">
         <Button
