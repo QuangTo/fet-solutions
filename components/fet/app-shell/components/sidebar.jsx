@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { pages, roleCanAccessPage } from "@/lib/fet-domain";
+import { ChevronDown, KeyRound } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  normalizeRole,
+  pages,
+  roleCanAccessPage,
+  roles,
+} from "@/lib/fet-domain";
 import { cn } from "@/lib/utils";
 import { iconMap, pageOrder, SUPPORT_CHAT_URL } from "../lib/constants";
 import { AccountDialog } from "./account-dialog";
@@ -27,16 +33,50 @@ export function Sidebar({
   siteBillingLocked = false,
 }) {
   const [accountOpen, setAccountOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
   const visiblePages = pageOrder.filter((pageName) =>
     roleCanAccessPage(pageAccess, activeRole, pageName),
   );
   const userName = session.name || "Người dùng";
+  const userRole = roles[normalizeRole(session.role)] || "Người dùng";
   const LogOutIcon = iconMap.LogOut;
   const SupportIcon = iconMap.MessageCircle;
 
   function openSupportChat() {
+    setUserMenuOpen(false);
     window.open(SUPPORT_CHAT_URL, "_blank", "noopener,noreferrer");
   }
+
+  function openAccountDialog() {
+    setUserMenuOpen(false);
+    setAccountOpen(true);
+  }
+
+  function handleLogout() {
+    setUserMenuOpen(false);
+    onLogout();
+  }
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+
+    function handlePointerDown(event) {
+      if (userMenuRef.current?.contains(event.target)) return;
+      setUserMenuOpen(false);
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") setUserMenuOpen(false);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [userMenuOpen]);
 
   return (
     <aside
@@ -102,38 +142,64 @@ export function Sidebar({
         </div>
       </nav>
 
-      <button
-        className="flex shrink-0 items-center gap-2.5 border-t border-zinc-200 px-3 py-2.5 text-left transition-colors hover:bg-zinc-100"
-        onClick={() => setAccountOpen(true)}
-        title={`Xin chào ${userName}`}
-        type="button"
-      >
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-zinc-200 text-ui-xs font-semibold text-zinc-700">
-          {userInitial(userName)}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-ui-sm font-medium text-zinc-900">
-            Xin chào {userName}
-          </span>
-        </span>
-      </button>
+      <div className="relative shrink-0 p-2" ref={userMenuRef}>
+        {userMenuOpen ? (
+          <div
+            className="absolute bottom-full left-2 right-2 z-10 mb-2 grid gap-1 rounded-md border border-zinc-200 bg-white p-1 shadow-lg shadow-zinc-900/10"
+            id="sidebar-user-actions"
+          >
+            <button
+              className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-ui-nav font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+              onClick={openAccountDialog}
+              type="button"
+            >
+              <KeyRound className="h-4 w-4 shrink-0 text-zinc-500" />
+              <span className="truncate">Đổi mật khẩu</span>
+            </button>
+            <button
+              className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-ui-nav font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+              onClick={openSupportChat}
+              type="button"
+            >
+              <SupportIcon className="h-4 w-4 shrink-0 text-zinc-500" />
+              <span className="truncate">Chat support</span>
+            </button>
+            <button
+              className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-ui-nav font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
+              onClick={handleLogout}
+              type="button"
+            >
+              <LogOutIcon className="h-4 w-4 shrink-0" />
+              <span className="truncate">Đăng xuất</span>
+            </button>
+          </div>
+        ) : null}
 
-      <div className="grid shrink-0 gap-1 border-t border-zinc-200 px-2 py-2">
         <button
-          className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-ui-nav font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
-          onClick={openSupportChat}
+          aria-controls="sidebar-user-actions"
+          aria-expanded={userMenuOpen}
+          className="flex min-h-14 w-full items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-left shadow-sm shadow-zinc-900/5 transition-colors hover:border-zinc-300 hover:bg-white"
+          onClick={() => setUserMenuOpen((open) => !open)}
+          title={`Xin chào ${userName}`}
           type="button"
         >
-          <SupportIcon className="h-4 w-4 shrink-0 text-zinc-500" />
-          <span className="truncate">Chat support</span>
-        </button>
-        <button
-          className="flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-ui-nav font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
-          onClick={onLogout}
-          type="button"
-        >
-          <LogOutIcon className="h-4 w-4 shrink-0" />
-          <span className="truncate">Đăng xuất</span>
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-zinc-200 text-ui-xs font-semibold text-zinc-700">
+            {userInitial(userName)}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-ui-sm font-semibold text-zinc-900">
+              {userName}
+            </span>
+            <span className="block truncate text-ui-xs font-medium text-zinc-500">
+              {userRole}
+            </span>
+          </span>
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 shrink-0 text-zinc-500 transition-transform",
+              userMenuOpen && "rotate-180",
+            )}
+          />
         </button>
       </div>
 
