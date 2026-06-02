@@ -1051,6 +1051,7 @@ export default function FetAppShell({
               checkoutPending={billingCheckoutMutation.isPending}
               confirmPending={billingConfirmMutation.isPending}
               mutation={masterMutation}
+              session={session}
               state={state}
               userMutation={userMutation}
               users={usersQuery.data?.items || []}

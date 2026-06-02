@@ -37,6 +37,7 @@ import { digitsOnly } from "../../lib/format";
 import { EditUserForm } from "./edit-user-form";
 
 export function UserSection({
+  currentUserId,
   isActive,
   mutation,
   onToast,
@@ -239,58 +240,66 @@ export function UserSection({
               </thead>
               <tbody>
                 {filteredUsers.length ? (
-                  filteredUsers.map((user) => (
-                    <tr key={user.id}>
-                      <Td>
-                        <div className="flex min-w-0 items-center gap-3">
-                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-slate-100 text-slate-600">
-                            <UserRound className="h-4 w-4" />
+                  filteredUsers.map((user) => {
+                    const isCurrentUser = user.id === currentUserId;
+                    return (
+                      <tr key={user.id}>
+                        <Td>
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-slate-100 text-slate-600">
+                              <UserRound className="h-4 w-4" />
+                            </span>
+                            <strong className="min-w-0 truncate text-slate-900">
+                              {user.name}
+                            </strong>
+                          </div>
+                        </Td>
+                        <Td className="whitespace-nowrap">
+                          <span className="inline-flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-slate-400" />
+                            {user.phone || "Chưa có"}
                           </span>
-                          <strong className="min-w-0 truncate text-slate-900">
-                            {user.name}
-                          </strong>
-                        </div>
-                      </Td>
-                      <Td className="whitespace-nowrap">
-                        <span className="inline-flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-slate-400" />
-                          {user.phone || "Chưa có"}
-                        </span>
-                      </Td>
-                      <Td className="whitespace-nowrap">
-                        <Badge tone="green">
-                          {roles[normalizeRole(user.role)] || user.role}
-                        </Badge>
-                      </Td>
-                      <Td className="whitespace-nowrap">
-                        {formatDate(user.updatedAt || user.createdAt)}
-                      </Td>
-                      <Td className="text-right">
-                        <div className="inline-flex justify-end gap-2">
-                          <Button
-                            aria-label={`Sửa ${user.name}`}
-                            size="icon"
-                            title="Sửa"
-                            type="button"
-                            variant="outline"
-                            onClick={() => setEditing(user)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            aria-label={`Xóa ${user.name}`}
-                            size="icon"
-                            title="Xóa"
-                            type="button"
-                            variant="destructive"
-                            onClick={() => setDeleting(user)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </Td>
-                    </tr>
-                  ))
+                        </Td>
+                        <Td className="whitespace-nowrap">
+                          <Badge tone="green">
+                            {roles[normalizeRole(user.role)] || user.role}
+                          </Badge>
+                        </Td>
+                        <Td className="whitespace-nowrap">
+                          {formatDate(user.updatedAt || user.createdAt)}
+                        </Td>
+                        <Td className="text-right">
+                          <div className="inline-flex justify-end gap-2">
+                            <Button
+                              aria-label={`Sửa ${user.name}`}
+                              size="icon"
+                              title="Sửa"
+                              type="button"
+                              variant="outline"
+                              onClick={() => setEditing(user)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              aria-label={`Xóa ${user.name}`}
+                              disabled={isCurrentUser}
+                              size="icon"
+                              title={
+                                isCurrentUser
+                                  ? "Không thể xóa tài khoản đang đăng nhập"
+                                  : "Xóa"
+                              }
+                              type="button"
+                              variant="destructive"
+                              onClick={() => setDeleting(user)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </Td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <EmptyRow colSpan={5}>
                     {users.length

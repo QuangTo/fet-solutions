@@ -20,6 +20,12 @@ export const PATCH = withApi(
 
 export const DELETE = withApi(
   async ({ params, user }) => {
+    if (params.id === user.id) {
+      const error = new Error("Không thể xóa tài khoản đang đăng nhập.");
+      error.code = "SELF_DELETE_NOT_ALLOWED";
+      error.statusCode = 409;
+      throw error;
+    }
     await repo.assertSiteCanWrite(user.siteId);
     const item = await repo.deactivateSiteUser(params.id, user.siteId);
     return item ? noContent() : json({ error: "NOT_FOUND" }, 404);

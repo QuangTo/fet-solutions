@@ -23,6 +23,7 @@ export function ManagementPage({
   onCloseCheckout,
   onConfirmPayment,
   onToast,
+  session,
   state,
   userMutation,
   users,
@@ -97,6 +98,7 @@ export function ManagementPage({
     <div className="grid gap-3">
       {activeRole === "admin" ? (
         <UserSection
+          currentUserId={session?.id}
           isActive={activeList === "users"}
           mutation={userMutation}
           onToast={onToast}
