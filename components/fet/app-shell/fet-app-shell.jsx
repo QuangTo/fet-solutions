@@ -478,6 +478,24 @@ export default function FetAppShell({
       showToast(parseApiError(error), "error");
     },
   };
+  const updateStoredSession = useCallback(
+    (nextSession) => {
+      const normalized = {
+        ...nextSession,
+        role: normalizeRole(nextSession.role),
+      };
+      window.localStorage.setItem(sessionStorageKey, JSON.stringify(normalized));
+      setSession(normalized);
+      return normalized;
+    },
+    [sessionStorageKey],
+  );
+  const clearLocalSession = useCallback(() => {
+    window.localStorage.removeItem(sessionStorageKey);
+    setSession(null);
+    setMobileNavOpen(false);
+    router.replace(loginPath);
+  }, [loginPath, router, sessionStorageKey]);
   const receiptMutation = useMutation({
     ...mutationOptions,
     mutationFn: (payload) =>
@@ -645,6 +663,14 @@ export default function FetAppShell({
       ),
     onSuccess: () => showToast("Đã đổi mật khẩu"),
   });
+  const passwordPromptDismissMutation = useMutation({
+    ...mutationOptions,
+    mutationFn: () =>
+      apiRequest("/users/me/password-prompt", { method: "PATCH" }, session),
+    onSuccess: (nextSession) => {
+      if (nextSession?.id) updateStoredSession(nextSession);
+    },
+  });
   const invoiceMutation = useMutation({
     ...mutationOptions,
     mutationFn: (payload) =>
@@ -810,12 +836,7 @@ export default function FetAppShell({
     return null;
   };
   const saveSession = (nextSession) => {
-    const normalized = {
-      ...nextSession,
-      role: normalizeRole(nextSession.role),
-    };
-    window.localStorage.setItem(sessionStorageKey, JSON.stringify(normalized));
-    setSession(normalized);
+    updateStoredSession(nextSession);
     setActivePage("dashboard");
     router.replace(scopedPath(pagePaths.dashboard));
   };
@@ -916,12 +937,23 @@ export default function FetAppShell({
           } catch {
             // Clear local session even if the API call fails.
           }
-          window.localStorage.removeItem(sessionStorageKey);
-          setSession(null);
-          setMobileNavOpen(false);
-          router.replace(loginPath);
+          clearLocalSession();
         }}
-        onPasswordChange={(payload) => passwordMutation.mutateAsync(payload)}
+        onPasswordChange={async (payload) => {
+          const shouldLogout = Boolean(session?.passwordChangeRequired);
+          await passwordMutation.mutateAsync(payload);
+          if (!shouldLogout) return;
+          try {
+            await logoutRequest();
+          } catch {
+            // Clear local session even if the API call fails.
+          }
+          clearLocalSession();
+        }}
+        onPasswordPromptDismiss={() => {
+          if (!session?.passwordChangeRequired) return;
+          passwordPromptDismissMutation.mutate();
+        }}
         passwordPending={passwordMutation.isPending}
       />
       <section className="min-w-0 px-4 pb-8 pt-16 sm:px-6 lg:px-7 lg:pt-6">

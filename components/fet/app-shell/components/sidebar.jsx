@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, KeyRound } from "lucide-react";
+import { ChevronDown, KeyRound, UserRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   normalizeRole,
@@ -14,10 +14,6 @@ import { AccountDialog } from "./account-dialog";
 import { AppFooter } from "./app-footer";
 import { FetBrandMark } from "./fet-brand-mark";
 
-function userInitial(name = "") {
-  return name.trim().charAt(0).toUpperCase() || "?";
-}
-
 export function Sidebar({
   activePage,
   activeRole,
@@ -27,6 +23,7 @@ export function Sidebar({
   onPrefetchPage,
   onLogout,
   onPasswordChange,
+  onPasswordPromptDismiss,
   pageAccess,
   passwordPending,
   session,
@@ -58,6 +55,13 @@ export function Sidebar({
     onLogout();
   }
 
+  function handleAccountOpenChange(open) {
+    if (!open && session.passwordChangeRequired) {
+      onPasswordPromptDismiss?.();
+    }
+    setAccountOpen(open);
+  }
+
   useEffect(() => {
     if (!userMenuOpen) return;
 
@@ -78,6 +82,12 @@ export function Sidebar({
     };
   }, [userMenuOpen]);
 
+  useEffect(() => {
+    if (session.passwordChangeRequired) {
+      setAccountOpen(true);
+    }
+  }, [session.passwordChangeRequired]);
+
   return (
     <aside
       className={cn(
@@ -93,7 +103,7 @@ export function Sidebar({
         >
           <FetBrandMark size="nav" />
           <span className="truncate text-ui-nav font-normal text-zinc-600">
-            Quản lý Logistics
+            Quản lý logistics
           </span>
         </button>
       </div>
@@ -117,7 +127,8 @@ export function Sidebar({
                   isActive
                     ? "bg-zinc-200/70 text-zinc-900"
                     : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
-                  menuLocked && "cursor-not-allowed opacity-40 hover:bg-transparent",
+                  menuLocked &&
+                    "cursor-not-allowed opacity-40 hover:bg-transparent",
                 )}
                 key={pageName}
                 onClick={() => navigate(pageName)}
@@ -183,8 +194,8 @@ export function Sidebar({
           title={`Xin chào ${userName}`}
           type="button"
         >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-zinc-200 text-ui-xs font-semibold text-zinc-700">
-            {userInitial(userName)}
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-zinc-200 text-zinc-700">
+            <UserRound className="h-4 w-4" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-ui-sm font-semibold text-zinc-900">
@@ -208,7 +219,8 @@ export function Sidebar({
       <AccountDialog
         isPending={passwordPending}
         open={accountOpen}
-        onOpenChange={setAccountOpen}
+        passwordChangeRequired={session.passwordChangeRequired}
+        onOpenChange={handleAccountOpenChange}
         onPasswordChange={onPasswordChange}
         session={session}
       />

@@ -21,6 +21,7 @@ function userRow(overrides = {}) {
     isActive: true,
     isPlatformAdmin: false,
     name: "Tai xe A",
+    passwordChangeRequired: true,
     phone: "123456789",
     role: "driver",
     updatedAt: "2026-06-02T00:00:00.000Z",
@@ -74,6 +75,7 @@ describe("createUser", () => {
       }),
     ).resolves.toMatchObject({
       id: "user-1",
+      passwordChangeRequired: true,
       phone: "123456789",
       siteId: "site-1",
     });
@@ -108,5 +110,33 @@ describe("createUser", () => {
       code: "USER_PHONE_EXISTS",
       statusCode: 409,
     });
+  });
+
+  it("clears the first-login password prompt when dismissed", async () => {
+    const { repo, users } = await loadUsers(async (sql) => {
+      const normalized = sql.replace(/\s+/g, " ").trim().toLowerCase();
+      if (
+        normalized.includes("update users set password_change_required = false")
+      ) {
+        return userRow({ passwordChangeRequired: false });
+      }
+      if (normalized.includes("from site_memberships sm join sites")) {
+        return siteRow();
+      }
+      throw new Error(`Unexpected query: ${normalized}`);
+    });
+
+    await expect(
+      users.dismissPasswordChangePrompt("user-1"),
+    ).resolves.toMatchObject({
+      id: "user-1",
+      passwordChangeRequired: false,
+      siteId: "site-1",
+    });
+
+    expect(repo.queryOne).toHaveBeenCalledWith(
+      expect.stringContaining("password_change_required = false"),
+      ["user-1"],
+    );
   });
 });

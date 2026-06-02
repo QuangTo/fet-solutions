@@ -17,6 +17,7 @@ export function AccountDialog({
   onOpenChange,
   onPasswordChange,
   open,
+  passwordChangeRequired = false,
   session,
 }) {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -45,10 +46,12 @@ export function AccountDialog({
             </span>
             <div className="min-w-0">
               <DialogTitle className="text-sm font-bold text-slate-950">
-                Đổi mật khẩu
+                {passwordChangeRequired ? "Đổi mật khẩu lần đầu" : "Đổi mật khẩu"}
               </DialogTitle>
               <DialogDescription className="truncate text-sm font-semibold text-slate-500">
-                {session.name} · {roles[normalizeRole(session.role)]}
+                {passwordChangeRequired
+                  ? "Tài khoản mới cần đổi mật khẩu trước khi tiếp tục."
+                  : `${session.name} · ${roles[normalizeRole(session.role)]}`}
               </DialogDescription>
             </div>
           </div>
@@ -62,7 +65,9 @@ export function AccountDialog({
               await onPasswordChange({ currentPassword, newPassword });
               setCurrentPassword("");
               setNewPassword("");
-              onOpenChange(false);
+              if (!passwordChangeRequired) {
+                onOpenChange(false);
+              }
             } catch (error) {
               setMessage(error.message);
             }

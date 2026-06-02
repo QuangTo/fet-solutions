@@ -95,7 +95,7 @@ export function LoginScreen({ onLogin, siteSlug = "" }) {
           <div className="mb-4 grid justify-items-center gap-3">
             <FetBrandMark size="md" />
             <CardTitle className="text-xl font-normal text-zinc-800 sm:text-2xl">
-              Hệ thống quản lý Logistics
+              Hệ thống quản lý logistics
             </CardTitle>
           </div>
         </CardHeader>
@@ -126,8 +126,8 @@ export function LoginScreen({ onLogin, siteSlug = "" }) {
             <Field>
               Tài khoản
               <Input
-                autoComplete="username"
-                placeholder="090... hoặc username"
+                autoComplete="tel"
+                placeholder="0900..."
                 required
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
@@ -146,7 +146,12 @@ export function LoginScreen({ onLogin, siteSlug = "" }) {
             {message ? (
               <p className="text-ui-sm font-medium text-red-600">{message}</p>
             ) : null}
-            <Button aria-busy={isPending} disabled={isPending} type="submit">
+            <Button
+              aria-busy={isPending}
+              className="mt-2 w-full"
+              disabled={isPending}
+              type="submit"
+            >
               {isPending ? (
                 <LoaderCircle aria-hidden className="h-4 w-4 animate-spin" />
               ) : null}

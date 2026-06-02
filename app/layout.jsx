@@ -2,7 +2,7 @@ import "./globals.css";
 import { AppProviders } from "./providers";
 
 export const metadata = {
-  title: "LMS",
+  title: "LMS-Quản lý logistics",
   description: "Quản lý nhập hàng, xuất hàng và chốt hóa đơn.",
 };
 

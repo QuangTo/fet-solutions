@@ -19,7 +19,7 @@ export function FetBrandMark({ className, size = "sm" }) {
       viewBox="0 0 32 32"
       width={pixels}
     >
-      <rect fill="#18181b" height="32" rx="6" width="32" />
+      <rect fill="#059669" height="32" rx="6" width="32" />
       <text
         fill="#ffffff"
         fontFamily="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
