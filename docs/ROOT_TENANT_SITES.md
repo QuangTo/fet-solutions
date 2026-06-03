@@ -2,7 +2,8 @@
 
 ## Current Root Tenant Rollout
 
-LMS currently keeps a minimal root tenant route for the app shell:
+LMS currently keeps the bare root for the public landing page and exposes
+tenant app shells by public slug:
 
 ```txt
 https://lms.vercel.app/
@@ -16,7 +17,9 @@ https://lms.vercel.app/demo/quan-ly
 https://lms.vercel.app/demo/cai-dat
 ```
 
-The bare root `/` redirects to `/demo`.
+The bare root `/` renders the landing page. Demo access is explicit at
+`/demo`, and root app paths such as `/tong-quan` intentionally return 404
+instead of redirecting into the demo sub-site path.
 
 ## Database Source Of Truth
 
