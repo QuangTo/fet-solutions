@@ -99,8 +99,8 @@ export function UserSection({
                 <div className="min-w-0">
                   <CardTitle>Quản lý tài khoản</CardTitle>
                   <CardDescription>
-                    Tạo tài khoản cho tài xế, thủ kho, kế toán và admin bằng số
-                    điện thoại.
+                    Mặc định mật khẩu cũng chính là số điện thoại đăng nhập, vui
+                    lòng đổi password khi đăng nhập.
                   </CardDescription>
                 </div>
               </div>
