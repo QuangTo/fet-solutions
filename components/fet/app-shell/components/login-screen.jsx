@@ -127,8 +127,12 @@ export function LoginScreen({ onLogin, siteSlug = "" }) {
               Tài khoản
               <Input
                 autoComplete="tel"
+                inputMode="numeric"
+                maxLength={12}
+                pattern="[0-9]*"
                 placeholder="0900..."
                 required
+                type="tel"
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
               />
