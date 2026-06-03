@@ -42,13 +42,40 @@ create table if not exists plans (
   name text not null,
   price_monthly numeric(14, 2) not null default 0,
   currency text not null default 'VND',
+  max_customers integer,
   max_users integer,
   max_vehicles integer,
+  max_warehouses integer,
   max_receipts_per_month integer,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+insert into plans (
+  code,
+  name,
+  price_monthly,
+  currency,
+  max_customers,
+  max_users,
+  max_vehicles,
+  max_warehouses
+)
+values
+  ('plus', 'Plus', 99000, 'VND', 10, 5, 5, 1),
+  ('pro', 'Pro', 199000, 'VND', 30, 15, 15, 5),
+  ('vip', 'Vip', 299000, 'VND', 60, 25, 30, 10)
+on conflict (code) do update
+set name = excluded.name,
+    price_monthly = excluded.price_monthly,
+    currency = excluded.currency,
+    max_customers = excluded.max_customers,
+    max_users = excluded.max_users,
+    max_vehicles = excluded.max_vehicles,
+    max_warehouses = excluded.max_warehouses,
+    is_active = true,
+    updated_at = now();
 
 create table if not exists subscriptions (
   id uuid primary key default gen_random_uuid(),
