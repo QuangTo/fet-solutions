@@ -12,6 +12,7 @@ import {
   Warehouse,
 } from "lucide-react";
 import { SUPPORT_CHAT_URL } from "@/components/fet/app-shell/lib/constants";
+import { LandingHeader } from "@/components/fet/landing-header";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
@@ -86,85 +87,49 @@ const roleHighlights = [
 
 const footerLinks = ["Chính sách bảo mật", "Điều khoản sử dụng"];
 
+const landingPrimaryButtonClassName =
+  "group h-12 w-[15rem] justify-center rounded-lg bg-[#059669] px-6 text-base font-black text-[#ffffff] shadow-lg shadow-[#059669]/20 transition-all duration-200 hover:bg-[#047857] hover:text-[#ffffff] hover:shadow-xl hover:shadow-[#059669]/30 active:scale-[0.98] sm:h-14 sm:w-[16.5rem] sm:px-8";
+
 export function LandingPage() {
   return (
     <div className="min-h-screen bg-[#ffffff] text-[#131b2e]">
       <style>{`body { background: #ffffff; }`}</style>
-      <header className="sticky top-0 z-50 w-full border-b border-[#bccac0] bg-[#ffffff]/90 shadow-sm backdrop-blur-md">
-        <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-10">
-            <Link
-              href="/"
-              className="text-2xl font-black text-[#059669]"
-              aria-label="Trang chủ LMS"
-            >
-              LMS
-            </Link>
-            <nav className="hidden items-center gap-8 md:flex">
-              {navItems.map(([label, href], index) => (
-                <a
-                  key={label}
-                  className={
-                    index === 0
-                      ? "border-b-2 border-[#059669] pb-1 text-base font-semibold text-[#059669]"
-                      : "text-base font-medium text-[#3d4a42] transition-colors hover:text-[#059669]"
-                  }
-                  href={href}
-                >
-                  {label}
-                </a>
-              ))}
-            </nav>
-          </div>
+      <LandingHeader navItems={navItems} />
 
-          <div className="flex shrink-0 items-center gap-3">
-            <a
-              className="text-sm font-black text-[#059669] md:hidden"
-              href="#ho-tro"
-            >
-              Hỗ trợ
-            </a>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-7xl space-y-24 px-4 py-12 sm:px-6 lg:px-8">
-        <section className="grid items-center gap-12 pt-4 lg:grid-cols-12">
-          <div className="space-y-8 lg:col-span-6">
-            <div className="inline-flex items-center gap-2.5 rounded-full border border-[#059669]/10 bg-[#059669]/5 px-4 py-2">
+      <main className="mx-auto w-full max-w-7xl space-y-16 px-4 py-8 sm:space-y-20 sm:px-6 sm:py-12 md:space-y-24 lg:px-8">
+        <section className="grid items-center gap-8 pt-2 sm:gap-10 lg:grid-cols-12 lg:gap-12 lg:pt-4">
+          <div className="space-y-6 sm:space-y-8 lg:col-span-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#059669]/10 bg-[#059669]/5 px-3 py-1.5 sm:gap-2.5 sm:px-4 sm:py-2">
               <Warehouse
-                className="h-5 w-5 text-[#059669]"
+                className="h-4 w-4 shrink-0 text-[#059669] sm:h-5 sm:w-5"
                 aria-hidden="true"
               />
-              <span className="text-xs font-black uppercase text-[#059669]">
+              <span className="text-[10px] font-black uppercase leading-none text-[#059669] sm:text-xs">
                 Độ chính xác vận hành
               </span>
             </div>
             <div>
-              <h1 className="max-w-3xl text-4xl font-black leading-tight text-[#131b2e]">
+              <h1 className="max-w-3xl text-[1.75rem] font-black leading-tight text-[#131b2e] sm:text-4xl lg:text-[2.75rem]">
                 Vận hành kho và kế toán theo nhịp độ thực tế.
               </h1>
-              <p className="mt-6 max-w-xl text-lg font-medium leading-8 text-[#3d4a42]">
+              <p className="mt-4 max-w-xl text-base font-medium leading-7 text-[#3d4a42] sm:mt-6 sm:text-lg sm:leading-8">
                 LMS đồng bộ hóa từng chuyển động: từ xe hàng cập bến, thủ kho
                 ghi nhận nhập xuất, đến khi kế toán chốt hóa đơn cuối kỳ với dữ
                 liệu tồn kho chính xác.
               </p>
             </div>
-            <div className="flex flex-col gap-4 pt-2 sm:flex-row">
-              <Button
-                asChild
-                className="h-14 rounded-lg bg-[#059669] px-8 text-base font-black text-[#ffffff] shadow-lg shadow-[#059669]/20 hover:bg-[#059669]"
-              >
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:gap-4 sm:pt-2">
+              <Button asChild className={landingPrimaryButtonClassName}>
                 <Link href="/demo">
                   Bắt đầu miễn phí
-                  <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                  <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" />
                 </Link>
               </Button>
             </div>
           </div>
 
           <div className="relative lg:col-span-6">
-            <div className="overflow-hidden rounded-lg bg-[#e2e7ff] p-3 shadow-2xl">
+            <div className="overflow-hidden rounded-lg bg-[#e2e7ff] p-2 shadow-2xl sm:p-3">
               <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-[#bccac0]">
                 <Image
                   src="/images/lms-landing-hero.png"
@@ -176,8 +141,8 @@ export function LandingPage() {
                 />
               </div>
             </div>
-            <div className="absolute -bottom-5 left-4 hidden max-w-[280px] rounded-lg border border-[#bccac0] bg-[#ffffff] p-5 shadow-xl md:block">
-              <div className="mb-4 flex items-center justify-between gap-4">
+            <div className="mt-4 rounded-lg border border-[#bccac0] bg-[#ffffff] p-4 shadow-xl sm:p-5 md:absolute md:-bottom-5 md:left-4 md:mt-0 md:max-w-[280px]">
+              <div className="mb-3 flex items-center justify-between gap-4 sm:mb-4">
                 <div className="flex items-center gap-2">
                   <span className="h-3 w-3 rounded-full bg-[#059669]" />
                   <span className="text-xs font-black text-[#131b2e]">
@@ -202,21 +167,21 @@ export function LandingPage() {
 
         <section
           id="tinh-nang"
-          className="grid scroll-mt-28 gap-6 md:grid-cols-3"
+          className="grid scroll-mt-[4.5rem] gap-4 sm:scroll-mt-28 sm:gap-6 md:grid-cols-3"
         >
           {featureCards.map(({ action, copy, icon: Icon, title }) => (
             <article
               key={title}
-              className="group flex min-h-[280px] flex-col gap-6 rounded-lg border border-[#bccac0] bg-[#ffffff] p-8 shadow-sm transition hover:-translate-y-1 hover:border-[#059669]/40 hover:shadow-xl"
+              className="group flex flex-col gap-4 rounded-lg border border-[#bccac0] bg-[#ffffff] p-5 shadow-sm transition sm:min-h-[280px] sm:gap-6 sm:p-8 md:hover:-translate-y-1 md:hover:border-[#059669]/40 md:hover:shadow-xl"
             >
-              <div className="grid h-14 w-14 place-items-center rounded-lg bg-[#059669]/10 text-[#059669] transition-colors group-hover:bg-[#059669] group-hover:text-[#ffffff]">
-                <Icon className="h-8 w-8" aria-hidden="true" />
+              <div className="grid h-12 w-12 place-items-center rounded-lg bg-[#059669]/10 text-[#059669] transition-colors group-hover:bg-[#059669] group-hover:text-[#ffffff] sm:h-14 sm:w-14">
+                <Icon className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
               </div>
               <div>
-                <h2 className="mb-3 text-xl font-black text-[#131b2e]">
+                <h2 className="mb-2 text-lg font-black text-[#131b2e] sm:mb-3 sm:text-xl">
                   {title}
                 </h2>
-                <p className="text-base font-medium leading-7 text-[#3d4a42]">
+                <p className="text-sm font-medium leading-6 text-[#3d4a42] sm:text-base sm:leading-7">
                   {copy}
                 </p>
               </div>
@@ -230,15 +195,15 @@ export function LandingPage() {
 
         <section
           id="quy-trinh"
-          className="grid scroll-mt-28 items-start gap-12 lg:grid-cols-12"
+          className="grid scroll-mt-[4.5rem] items-start gap-8 sm:scroll-mt-28 sm:gap-12 lg:grid-cols-12"
         >
-          <div className="rounded-lg border border-[#bccac0] bg-[#f2f3ff]/60 p-6 sm:p-8 lg:col-span-5">
-            <div className="mb-10 flex items-center justify-between gap-4">
+          <div className="rounded-lg border border-[#bccac0] bg-[#f2f3ff]/60 p-5 sm:p-6 md:p-8 lg:col-span-5">
+            <div className="mb-6 flex items-center justify-between gap-4 sm:mb-10">
               <div>
                 <span className="text-xs font-black uppercase text-[#059669]">
                   Timeline
                 </span>
-                <h2 className="mt-2 text-2xl font-black text-[#131b2e]">
+                <h2 className="mt-1 text-xl font-black text-[#131b2e] sm:mt-2 sm:text-2xl">
                   Lộ trình chứng từ
                 </h2>
               </div>
@@ -250,20 +215,20 @@ export function LandingPage() {
               </div>
             </div>
 
-            <div className="relative grid gap-8">
-              <div className="absolute bottom-8 left-5 top-8 w-0.5 bg-[#bccac0]" />
+            <div className="relative grid gap-5 sm:gap-8">
+              <div className="absolute bottom-6 left-5 top-6 w-0.5 bg-[#bccac0] sm:bottom-8 sm:top-8" />
               {workflowSteps.map(([step, title, copy], index) => (
-                <div key={step} className="relative z-10 flex gap-5">
+                <div key={step} className="relative z-10 flex gap-3 sm:gap-5">
                   <div
                     className={
                       index === 0
-                        ? "grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#059669] text-sm font-black text-[#ffffff] shadow-md"
-                        : "grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#bccac0] bg-[#e2e7ff] text-sm font-black text-[#3d4a42]"
+                        ? "grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#059669] text-sm font-black text-[#ffffff] shadow-md sm:h-10 sm:w-10"
+                        : "grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#bccac0] bg-[#e2e7ff] text-sm font-black text-[#3d4a42] sm:h-10 sm:w-10"
                     }
                   >
                     {step}
                   </div>
-                  <div className="flex-1 rounded-lg border border-[#bccac0] bg-[#ffffff] p-5 transition hover:border-[#059669]">
+                  <div className="flex-1 rounded-lg border border-[#bccac0] bg-[#ffffff] p-4 transition hover:border-[#059669] sm:p-5">
                     <h3 className="text-base font-black text-[#131b2e]">
                       {title}
                     </h3>
@@ -278,26 +243,26 @@ export function LandingPage() {
 
           <div
             id="bao-cao"
-            className="scroll-mt-28 space-y-10 py-4 lg:col-span-7 lg:pl-8"
+            className="scroll-mt-[4.5rem] space-y-8 py-2 sm:scroll-mt-28 sm:space-y-10 sm:py-4 lg:col-span-7 lg:pl-8"
           >
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div className="inline-flex items-center gap-2 text-[#059669]">
                 <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-                <span className="text-sm font-black uppercase">
+                <span className="text-xs font-black uppercase sm:text-sm">
                   Phân quyền thông minh
                 </span>
               </div>
-              <h2 className="text-3xl font-black leading-tight text-[#131b2e]">
+              <h2 className="text-2xl font-black leading-tight text-[#131b2e] sm:text-3xl">
                 Giao diện tối ưu cho từng mắt xích trong vận hành.
               </h2>
-              <p className="max-w-2xl text-lg font-medium leading-8 text-[#3d4a42]">
+              <p className="max-w-2xl text-base font-medium leading-7 text-[#3d4a42] sm:text-lg sm:leading-8">
                 Từ thiết bị di động của tài xế đến bảng điều khiển của quản trị
                 viên, LMS cung cấp đúng dữ liệu cho đúng vai trò ở đúng thời
                 điểm.
               </p>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
               {roleHighlights.map(([title, copy]) => (
                 <div key={title} className="flex items-start gap-4">
                   <div className="mt-1 rounded-lg bg-[#059669]/10 p-2 text-[#059669]">
@@ -313,35 +278,29 @@ export function LandingPage() {
               ))}
             </div>
 
-            <Button
-              asChild
-              className="h-14 rounded-lg bg-[#e2e7ff] px-8 text-base font-black text-[#131b2e] hover:bg-[#059669] hover:text-[#ffffff]"
-            >
+            <Button asChild className={landingPrimaryButtonClassName}>
               <a href="#ho-tro">
-                Bắt đầu trải nghiệm demo
-                <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                Trải nghiệm demo
+                <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" />
               </a>
             </Button>
           </div>
         </section>
       </main>
 
-      <section id="ho-tro" className="scroll-mt-24 bg-[#ffffff] text-[#131b2e]">
-        <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 border-t border-[#bccac0] px-4 py-24 sm:px-6 md:grid-cols-2 md:items-center lg:px-8">
+      <section id="ho-tro" className="scroll-mt-[4.5rem] bg-[#ffffff] text-[#131b2e] sm:scroll-mt-24">
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-5 border-t border-[#bccac0] px-4 py-12 sm:gap-6 sm:px-6 sm:py-16 md:grid-cols-2 md:items-center md:py-24 lg:px-8">
           <div className="md:w-full">
-            <span className="text-sm font-black uppercase text-[#059669]">
+            <span className="text-xs font-black uppercase text-[#059669] sm:text-sm">
               Hỗ trợ triển khai
             </span>
-            <p className="mt-3 max-w-2xl text-lg font-medium leading-8 text-[#3d4a42]">
+            <p className="mt-2 max-w-2xl text-base font-medium leading-7 text-[#3d4a42] sm:mt-3 sm:text-lg sm:leading-8">
               Chat với support để được cấp tài khoản demo, tư vấn quy trình nhập
               xuất hàng và cấu hình hệ thống cho đội vận hành.
             </p>
           </div>
           <div className="flex w-full justify-start md:justify-center">
-            <Button
-              asChild
-              className="bg-[#059669] text-[#ffffff] hover:bg-[#059669]"
-            >
+            <Button asChild className={landingPrimaryButtonClassName}>
               <a href={SUPPORT_CHAT_URL} rel="noreferrer" target="_blank">
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
                 Chat với support
@@ -352,7 +311,7 @@ export function LandingPage() {
       </section>
 
       <footer className="bg-[#111827] text-[#ffffff]">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-5 px-4 py-10 sm:gap-6 sm:px-6 sm:py-16 lg:px-8">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
             <p className="text-sm font-medium text-[#dae2fd]/80">
               © 2026 LMS Management System. All rights reserved.
