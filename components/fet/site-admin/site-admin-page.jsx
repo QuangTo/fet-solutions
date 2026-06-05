@@ -8,6 +8,8 @@ import {
   LoaderCircle,
   Plus,
   RefreshCw,
+  Save,
+  Search,
   X,
 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
@@ -23,6 +25,7 @@ import { money } from "../app-shell/lib/format";
 
 const SITE_STATUS_OPTIONS = ["active", "suspended", "archived"];
 const BILLING_STATUS_OPTIONS = ["trialing", "active", "past_due", "suspended", "canceled"];
+const PLAN_OPTIONS = ["plus", "pro", "vip"];
 
 const initialForm = {
   adminPhone: "0373665129",
@@ -30,6 +33,13 @@ const initialForm = {
   name: "",
   planCode: "plus",
   trialDays: "30",
+};
+
+const initialBillingEdit = {
+  planCode: "plus",
+  siteId: "",
+  siteQuery: "",
+  trialEndsAt: "",
 };
 
 function wordCount(value = "") {
@@ -48,6 +58,15 @@ function dateText(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value.toString().slice(0, 10);
   return date.toLocaleDateString("vi-VN");
+}
+
+function inputDateValue(value) {
+  if (!value) return "";
+  const raw = value.toString();
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
 }
 
 function dateTimeText(value) {
@@ -88,6 +107,27 @@ function paymentReviewCopy(payment) {
   };
 }
 
+function normalizeSiteQuery(value = "") {
+  return value.toString().trim().replace(/^\/+/, "").toLowerCase();
+}
+
+function siteSearchText(site) {
+  return [
+    site.id,
+    site.name,
+    site.publicSlug,
+    site.organizationName,
+    site.organizationSlug,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function sitePlanCode(site) {
+  return site?.subscription?.planCode || "plus";
+}
+
 function SiteAdminShell({ children, onLogout }) {
   return (
     <main className="app-shell min-h-screen bg-zinc-50 text-zinc-950" data-density="compact">
@@ -117,6 +157,7 @@ export default function SiteAdminPage() {
   const queryClient = useQueryClient();
   const [authVersion, setAuthVersion] = useState(0);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [billingEdit, setBillingEdit] = useState(initialBillingEdit);
   const [form, setForm] = useState(initialForm);
   const [message, setMessage] = useState("");
 
@@ -147,6 +188,27 @@ export default function SiteAdminPage() {
     }),
     [sites],
   );
+  const matchingSites = useMemo(() => {
+    const query = normalizeSiteQuery(billingEdit.siteQuery);
+    if (!query) return [];
+    return sites
+      .filter((site) => siteSearchText(site).includes(query))
+      .slice(0, 6);
+  }, [billingEdit.siteQuery, sites]);
+  const selectedBillingSite = useMemo(
+    () => sites.find((site) => site.id === billingEdit.siteId) || null,
+    [billingEdit.siteId, sites],
+  );
+
+  function selectBillingSite(site) {
+    setBillingEdit({
+      planCode: sitePlanCode(site),
+      siteId: site.id,
+      siteQuery: site.publicSlug,
+      trialEndsAt: inputDateValue(site.trialEndsAt || site.subscription?.trialEndsAt),
+    });
+    setMessage("");
+  }
 
   const createMutation = useMutation({
     mutationFn: (payload) =>
@@ -602,118 +664,246 @@ export default function SiteAdminPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Tạo site</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              className="grid gap-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (wordCount(form.name) > 15) {
-                  setMessage("Tên site tối đa 15 từ.");
-                  return;
-                }
-                createMutation.mutate({
-                  ...form,
-                  trialDays: Number(form.trialDays || 0),
-                });
-              }}
-            >
-              <Field>
-                Tên site (tối đa 15 từ)
-                <Input
-                  required
-                  value={form.name}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
+        <div className="grid gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sửa plan / trial</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                className="grid gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!selectedBillingSite) {
+                    setMessage("Chọn site khách hàng trước khi cập nhật.");
+                    return;
                   }
-                />
-              </Field>
-              <Field>
-                Admin phone
-                <Input
-                  inputMode="tel"
-                  required
-                  value={form.adminPhone}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      adminPhone: event.target.value,
-                    }))
-                  }
-                />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
+                  updateMutation.mutate({
+                    body: {
+                      planCode: billingEdit.planCode,
+                      trialEndsAt: billingEdit.trialEndsAt,
+                    },
+                    siteId: selectedBillingSite.id,
+                  });
+                }}
+              >
                 <Field>
-                  Plan
-                  <Select
-                    value={form.planCode}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        planCode: event.target.value,
-                      }))
-                    }
-                  >
-                    <option value="plus">plus</option>
-                    <option value="pro">pro</option>
-                    <option value="vip">vip</option>
-                  </Select>
+                  Site khách hàng
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      className="pl-9"
+                      placeholder="nhap slug, ten site hoac id"
+                      value={billingEdit.siteQuery}
+                      onChange={(event) =>
+                        setBillingEdit((current) => ({
+                          ...current,
+                          siteId: "",
+                          siteQuery: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
                 </Field>
+                {billingEdit.siteQuery ? (
+                  <div className="grid max-h-56 gap-2 overflow-y-auto">
+                    {matchingSites.length ? (
+                      matchingSites.map((site) => (
+                        <Button
+                          className="h-auto w-full min-w-0 justify-start whitespace-normal px-3 py-2 text-left"
+                          key={site.id}
+                          onClick={() => selectBillingSite(site)}
+                          type="button"
+                          variant={site.id === selectedBillingSite?.id ? "secondary" : "outline"}
+                        >
+                          <span className="grid min-w-0 gap-0.5">
+                            <span className="break-words">{site.name}</span>
+                            <span className="break-words text-ui-xs font-medium text-slate-500">
+                              /{site.publicSlug} · {sitePlanCode(site)} · trial{" "}
+                              {dateText(site.trialEndsAt)}
+                            </span>
+                          </span>
+                        </Button>
+                      ))
+                    ) : (
+                      <p className="rounded-md border border-dashed border-slate-200 px-3 py-2 text-ui-sm text-slate-500">
+                        Không tìm thấy site khớp.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+                {selectedBillingSite ? (
+                  <div className="rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2 text-ui-sm text-emerald-900">
+                    <span className="font-semibold">{selectedBillingSite.name}</span>
+                    <span className="text-emerald-700"> /{selectedBillingSite.publicSlug}</span>
+                  </div>
+                ) : null}
+                <div className="grid grid-cols-2 gap-3">
+                  <Field>
+                    Plan
+                    <Select
+                      disabled={!selectedBillingSite}
+                      value={billingEdit.planCode}
+                      onChange={(event) =>
+                        setBillingEdit((current) => ({
+                          ...current,
+                          planCode: event.target.value,
+                        }))
+                      }
+                    >
+                      {PLAN_OPTIONS.map((plan) => (
+                        <option key={plan} value={plan}>
+                          {plan}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field>
+                    Trial end
+                    <Input
+                      disabled={!selectedBillingSite}
+                      required
+                      type="date"
+                      value={billingEdit.trialEndsAt}
+                      onChange={(event) =>
+                        setBillingEdit((current) => ({
+                          ...current,
+                          trialEndsAt: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                </div>
+                {message ? (
+                  <p className="text-ui-sm font-medium text-red-600">{message}</p>
+                ) : null}
+                <Button disabled={!selectedBillingSite || updateMutation.isPending} type="submit">
+                  {updateMutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Lưu plan / trial
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tạo site</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                className="grid gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (wordCount(form.name) > 15) {
+                    setMessage("Tên site tối đa 15 từ.");
+                    return;
+                  }
+                  createMutation.mutate({
+                    ...form,
+                    trialDays: Number(form.trialDays || 0),
+                  });
+                }}
+              >
                 <Field>
-                  Trial days
+                  Tên site (tối đa 15 từ)
                   <Input
-                    min="0"
-                    max="365"
                     required
-                    type="number"
-                    value={form.trialDays}
+                    value={form.name}
                     onChange={(event) =>
                       setForm((current) => ({
                         ...current,
-                        trialDays: event.target.value,
+                        name: event.target.value,
                       }))
                     }
                   />
                 </Field>
-              </div>
-              <Field>
-                Billing
-                <Select
-                  value={form.billingStatus}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      billingStatus: event.target.value,
-                    }))
-                  }
-                >
-                  {BILLING_STATUS_OPTIONS.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              {message ? (
-                <p className="text-ui-sm font-medium text-red-600">{message}</p>
-              ) : null}
-              <Button disabled={createMutation.isPending} type="submit">
-                {createMutation.isPending ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-                Tạo site
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                <Field>
+                  Admin phone
+                  <Input
+                    inputMode="tel"
+                    required
+                    value={form.adminPhone}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        adminPhone: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field>
+                    Plan
+                    <Select
+                      value={form.planCode}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          planCode: event.target.value,
+                        }))
+                      }
+                    >
+                      {PLAN_OPTIONS.map((plan) => (
+                        <option key={plan} value={plan}>
+                          {plan}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field>
+                    Trial days
+                    <Input
+                      min="0"
+                      max="365"
+                      required
+                      type="number"
+                      value={form.trialDays}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          trialDays: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                </div>
+                <Field>
+                  Billing
+                  <Select
+                    value={form.billingStatus}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        billingStatus: event.target.value,
+                      }))
+                    }
+                  >
+                    {BILLING_STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                {message ? (
+                  <p className="text-ui-sm font-medium text-red-600">{message}</p>
+                ) : null}
+                <Button disabled={createMutation.isPending} type="submit">
+                  {createMutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  Tạo site
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </section>
     </SiteAdminShell>
   );
