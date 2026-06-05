@@ -31,7 +31,7 @@ export function LandingHeader({ navItems }) {
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="text-xl font-black text-[#059669] sm:text-2xl"
+          className="text-xl font-semibold tracking-tight text-[#059669] sm:text-2xl"
           aria-label="Trang chủ LMS"
         >
           LMS
