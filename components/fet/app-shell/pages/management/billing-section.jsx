@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   ChevronRight,
   CreditCard,
   LoaderCircle,
@@ -72,6 +73,8 @@ export function BillingSection({
   const [paymentPreview, setPaymentPreview] = useState(null);
   const [confirmedPayment, setConfirmedPayment] = useState(null);
   const [planPickerOpen, setPlanPickerOpen] = useState(false);
+  const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
+  const [pendingDowngrade, setPendingDowngrade] = useState(null);
 
   const invoicePagination = useMemo(
     () => paginate(invoices, invoicePage, 10),
@@ -121,6 +124,10 @@ export function BillingSection({
     plans.find((plan) => plan.code === selectedPlanCode) ||
     plans.find((plan) => plan.code === currentPlanCode) ||
     plans[0];
+  const pendingDowngradePlan =
+    plans.find((plan) => plan.code === pendingDowngrade?.planCode) ||
+    plans.find((plan) => plan.code === "plus") ||
+    null;
 
   const trialDays = trialDaysRemaining(billing?.trialEndsAt);
   const effectivePlanName =
@@ -152,6 +159,9 @@ export function BillingSection({
   const maxCustomers = selectedPlan?.maxCustomers ?? subscription.maxCustomers;
   const maxWarehouses =
     selectedPlan?.maxWarehouses ?? subscription.maxWarehouses;
+  const currentPlan =
+    plans.find((plan) => plan.code === currentPlanCode) || selectedPlan;
+  const currentPlanIsFree = Number(currentPlan?.priceMonthly || 0) === 0;
   const usageLabel = [
     `${billing?.userCount ?? 0}/${maxUsers ?? "∞"} Người dùng`,
     `${billing?.customerCount ?? 0}/${maxCustomers ?? "∞"} Đối tác`,
@@ -162,13 +172,56 @@ export function BillingSection({
     openInvoice?.status === "pending" ||
     pendingPayment?.status === "awaiting_review";
   const canChangePlan = plans.length > 0 && !invoiceAwaitingReview;
-  const showCheckoutButton = !invoiceAwaitingReview;
+  const showCheckoutButton =
+    !invoiceAwaitingReview && (!currentPlanIsFree || Boolean(openInvoice));
   const showPaymentInfoButton = Boolean(
     paymentView && openInvoice && bankTransfer.accountNumber,
   );
   const paymentDueLabel = dueDates.paymentDueDate
     ? formatDate(dueDates.paymentDueDate)
     : "Chưa có hóa đơn cần thanh toán";
+  const downgradeUsageItems = useMemo(() => {
+    if (!pendingDowngradePlan) return [];
+    return [
+      {
+        count: billing?.userCount ?? 0,
+        label: "Người dùng",
+        limit: pendingDowngradePlan.maxUsers,
+      },
+      {
+        count: billing?.customerCount ?? 0,
+        label: "Đối tác",
+        limit: pendingDowngradePlan.maxCustomers,
+      },
+      {
+        count: billing?.vehicleCount ?? 0,
+        label: "Xe",
+        limit: pendingDowngradePlan.maxVehicles,
+      },
+      {
+        count: billing?.warehouseCount ?? 0,
+        label: "Kho",
+        limit: pendingDowngradePlan.maxWarehouses,
+      },
+    ].map((item) => ({
+      ...item,
+      blocked: item.limit != null && item.count > item.limit,
+    }));
+  }, [
+    billing?.customerCount,
+    billing?.userCount,
+    billing?.vehicleCount,
+    billing?.warehouseCount,
+    pendingDowngradePlan,
+  ]);
+  const downgradeBlocked = downgradeUsageItems.some((item) => item.blocked);
+
+  const startFreeCheckout = (planCode, nextInterval) => {
+    setPaymentDialogOpen(false);
+    setPaymentDialogLoading(false);
+    setPaymentPreview(null);
+    onCheckout?.({ billingInterval: nextInterval, planCode });
+  };
 
   const handleCheckout = (payload = {}) => {
     const nextPlanCode = payload.planCode || selectedPlanCode;
@@ -180,6 +233,22 @@ export function BillingSection({
     if (payload.billingInterval) setBillingInterval(payload.billingInterval);
     setPlanPickerOpen(false);
     setConfirmedPayment(null);
+
+    if (Number(nextPlan?.priceMonthly || 0) === 0) {
+      if (currentPlanCode !== "plus" && currentPlanCode !== nextPlanCode) {
+        setPaymentDialogOpen(false);
+        setPaymentDialogLoading(false);
+        setPaymentPreview(null);
+        setPendingDowngrade({
+          billingInterval: nextInterval,
+          planCode: nextPlanCode,
+        });
+        setDowngradeConfirmOpen(true);
+        return;
+      }
+      startFreeCheckout(nextPlanCode, nextInterval);
+      return;
+    }
 
     if (pendingPayment?.status === "awaiting_review") {
       setPaymentPreview(null);
@@ -253,6 +322,19 @@ export function BillingSection({
     } catch {
       // Mutation handlers show the parsed API error.
     }
+  };
+
+  const handleDowngradeOpenChange = (open) => {
+    setDowngradeConfirmOpen(open);
+    if (!open) setPendingDowngrade(null);
+  };
+
+  const handleConfirmDowngrade = () => {
+    if (!pendingDowngrade || downgradeBlocked) return;
+    const next = pendingDowngrade;
+    setDowngradeConfirmOpen(false);
+    setPendingDowngrade(null);
+    startFreeCheckout(next.planCode, next.billingInterval);
   };
 
   return (
@@ -483,6 +565,73 @@ export function BillingSection({
               </div>
             </div>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={downgradeConfirmOpen}
+        onOpenChange={handleDowngradeOpenChange}
+      >
+        <DialogContent className="max-w-lg gap-4">
+          <div className="grid gap-1 pr-8">
+            <DialogTitle className="text-base font-bold text-slate-950">
+              Hạ xuống Plus miễn phí
+            </DialogTitle>
+            <DialogDescription className="text-ui-sm leading-5 text-slate-600">
+              Site sẽ chuyển về gói Plus miễn phí, không tạo chuyển khoản.
+              Giới hạn Plus sẽ được áp dụng ngay sau khi xác nhận.
+            </DialogDescription>
+          </div>
+
+          <div className="grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-ui-sm">
+            {downgradeUsageItems.map((item) => (
+              <div
+                className="flex items-center justify-between gap-3"
+                key={item.label}
+              >
+                <span className="font-medium text-slate-700">{item.label}</span>
+                <span
+                  className={cn(
+                    "font-semibold",
+                    item.blocked ? "text-red-700" : "text-slate-900",
+                  )}
+                >
+                  {item.count}/{item.limit ?? "∞"}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {downgradeBlocked ? (
+            <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-ui-sm leading-5 text-red-800">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>
+                Site đang vượt giới hạn Plus. Giảm dữ liệu hoặc liên hệ support
+                trước khi hạ gói.
+              </p>
+            </div>
+          ) : null}
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleDowngradeOpenChange(false)}
+            >
+              Giữ gói hiện tại
+            </Button>
+            <Button
+              disabled={checkoutPending || downgradeBlocked}
+              type="button"
+              variant={downgradeBlocked ? "secondary" : "default"}
+              onClick={handleConfirmDowngrade}
+            >
+              {checkoutPending ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : null}
+              Xác nhận hạ gói
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

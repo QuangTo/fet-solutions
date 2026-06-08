@@ -784,6 +784,12 @@ export default function FetAppShell({
         session,
       ),
     onSuccess: (checkout) => {
+      if (checkout?.freeCheckout) {
+        setBillingCheckout(null);
+        invalidateBilling();
+        showToast("Đã kích hoạt gói Plus miễn phí.");
+        return;
+      }
       setBillingCheckout(checkout);
       invalidateBilling();
     },

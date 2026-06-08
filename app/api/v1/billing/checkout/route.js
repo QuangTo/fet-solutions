@@ -13,6 +13,9 @@ export const POST = withApi(
   async ({ body, user }) => {
     const parsed = billingCheckoutSchema.parse(body);
     const checkout = await repo.createBillingCheckout(user.siteId, user, parsed);
+    if (checkout.freeCheckout) {
+      return json({ ...checkout, bankTransfer: null }, 200);
+    }
     const bankTransfer = buildBankTransferPayload(
       {
         ...checkout,

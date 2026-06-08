@@ -63,9 +63,9 @@ insert into plans (
   max_warehouses
 )
 values
-  ('plus', 'Plus', 99000, 'VND', 10, 5, 5, 1),
-  ('pro', 'Pro', 199000, 'VND', 30, 15, 15, 5),
-  ('vip', 'Vip', 299000, 'VND', 60, 25, 30, 10)
+  ('plus', 'Plus', 0, 'VND', 20, 5, 5, 1),
+  ('pro', 'Pro', 99000, 'VND', 40, 15, 15, 5),
+  ('vip', 'Vip', 199000, 'VND', 80, 25, 30, 10)
 on conflict (code) do update
 set name = excluded.name,
     price_monthly = excluded.price_monthly,

@@ -1,5 +1,5 @@
 export const billingStatusCopy = {
-  active: { label: "Đang trả phí", tone: "green" },
+  active: { label: "Đang hoạt động", tone: "green" },
   canceled: { label: "Đã hủy", tone: "red" },
   expired: { label: "Hết hạn", tone: "red" },
   past_due: { label: "Quá hạn thanh toán", tone: "red" },

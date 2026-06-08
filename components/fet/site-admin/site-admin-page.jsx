@@ -29,10 +29,10 @@ const PLAN_OPTIONS = ["plus", "pro", "vip"];
 
 const initialForm = {
   adminPhone: "0373665129",
-  billingStatus: "trialing",
+  billingStatus: "active",
   name: "",
   planCode: "plus",
-  trialDays: "30",
+  trialDays: "0",
 };
 
 const initialBillingEdit = {
@@ -199,13 +199,19 @@ export default function SiteAdminPage() {
     () => sites.find((site) => site.id === billingEdit.siteId) || null,
     [billingEdit.siteId, sites],
   );
+  const billingEditPlanIsPlus = billingEdit.planCode === "plus";
+  const formPlanIsPlus = form.planCode === "plus";
 
   function selectBillingSite(site) {
+    const planCode = sitePlanCode(site);
     setBillingEdit({
-      planCode: sitePlanCode(site),
+      planCode,
       siteId: site.id,
       siteQuery: site.publicSlug,
-      trialEndsAt: inputDateValue(site.trialEndsAt || site.subscription?.trialEndsAt),
+      trialEndsAt:
+        planCode === "plus"
+          ? ""
+          : inputDateValue(site.trialEndsAt || site.subscription?.trialEndsAt),
     });
     setMessage("");
   }
@@ -744,12 +750,14 @@ export default function SiteAdminPage() {
                     <Select
                       disabled={!selectedBillingSite}
                       value={billingEdit.planCode}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const planCode = event.target.value;
                         setBillingEdit((current) => ({
                           ...current,
-                          planCode: event.target.value,
-                        }))
-                      }
+                          planCode,
+                          trialEndsAt: planCode === "plus" ? "" : current.trialEndsAt,
+                        }));
+                      }}
                     >
                       {PLAN_OPTIONS.map((plan) => (
                         <option key={plan} value={plan}>
@@ -761,8 +769,8 @@ export default function SiteAdminPage() {
                   <Field>
                     Trial end
                     <Input
-                      disabled={!selectedBillingSite}
-                      required
+                      disabled={!selectedBillingSite || billingEditPlanIsPlus}
+                      required={!billingEditPlanIsPlus}
                       type="date"
                       value={billingEdit.trialEndsAt}
                       onChange={(event) =>
@@ -840,12 +848,16 @@ export default function SiteAdminPage() {
                     Plan
                     <Select
                       value={form.planCode}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const planCode = event.target.value;
                         setForm((current) => ({
                           ...current,
-                          planCode: event.target.value,
-                        }))
-                      }
+                          billingStatus:
+                            planCode === "plus" ? "active" : current.billingStatus,
+                          planCode,
+                          trialDays: planCode === "plus" ? "0" : current.trialDays,
+                        }));
+                      }}
                     >
                       {PLAN_OPTIONS.map((plan) => (
                         <option key={plan} value={plan}>
@@ -857,9 +869,10 @@ export default function SiteAdminPage() {
                   <Field>
                     Trial days
                     <Input
+                      disabled={formPlanIsPlus}
                       min="0"
                       max="365"
-                      required
+                      required={!formPlanIsPlus}
                       type="number"
                       value={form.trialDays}
                       onChange={(event) =>
@@ -874,6 +887,7 @@ export default function SiteAdminPage() {
                 <Field>
                   Billing
                   <Select
+                    disabled={formPlanIsPlus}
                     value={form.billingStatus}
                     onChange={(event) =>
                       setForm((current) => ({

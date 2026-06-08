@@ -6,6 +6,7 @@ import {
   yearlyDiscountLabel,
 } from "@/lib/billing-pricing";
 import { cn } from "@/lib/utils";
+import { iconMap, SUPPORT_CHAT_URL } from "../../lib/constants";
 import { money } from "../../lib/format";
 
 const PLAN_LIMIT_FIELDS = [
@@ -14,6 +15,8 @@ const PLAN_LIMIT_FIELDS = [
   { key: "maxVehicles", label: "Xe" },
   { key: "maxWarehouses", label: "Kho" },
 ];
+
+const SupportIcon = iconMap.MessageCircle;
 
 function planLimitItems(plan) {
   return PLAN_LIMIT_FIELDS.flatMap(({ key, label }) => {
@@ -76,6 +79,7 @@ function PlanCard({
   active,
   billingInterval,
   buttonPending,
+  currentPlanCode,
   plan,
   popular,
   selected,
@@ -87,6 +91,17 @@ function PlanCard({
     billingInterval,
   );
   const featured = selected;
+  const freePlan = Number(monthlyEquivalent || 0) === 0;
+  const downgradeToFree = freePlan && currentPlanCode && currentPlanCode !== plan.code;
+  const buttonLabel = active
+    ? "Đang dùng"
+    : downgradeToFree
+      ? "Hạ xuống Plus"
+      : freePlan
+        ? "Chọn Plus"
+        : selected
+          ? "Tiếp tục thanh toán"
+          : "Chọn";
 
   return (
     <div
@@ -117,11 +132,13 @@ function PlanCard({
 
       <div className="mb-5 flex flex-wrap items-baseline gap-1">
         <span className="text-xl font-bold leading-none text-[#3b465d] sm:text-[28px]">
-          {money(monthlyEquivalent, plan.currency)}
+          {freePlan ? "Miễn phí" : money(monthlyEquivalent, plan.currency)}
         </span>
-        <span className="text-[11px] font-medium leading-5 text-[#3d4a41]">
-          /tháng
-        </span>
+        {!freePlan ? (
+          <span className="text-[11px] font-medium leading-5 text-[#3d4a41]">
+            /tháng
+          </span>
+        ) : null}
       </div>
 
       <ul className="mb-6 grid gap-1.5 text-xs leading-4 sm:text-sm sm:leading-5">
@@ -150,16 +167,18 @@ function PlanCard({
             ? "bg-[#00a669] text-white shadow-md hover:bg-[#008f5b]"
             : "border border-[#bccabe] bg-white text-[#263149] hover:bg-[#eaedff]",
         )}
-        disabled={buttonPending}
+        disabled={buttonPending || active}
         type="button"
         onClick={() =>
-          selected
+          freePlan
             ? onCheckout?.({ billingInterval, planCode: plan.code })
-            : onSelectPlan(plan.code)
+            : selected
+              ? onCheckout?.({ billingInterval, planCode: plan.code })
+              : onSelectPlan(plan.code)
         }
       >
         {buttonPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-        {selected ? "Tiếp tục thanh toán" : "Chọn"}
+        {buttonLabel}
       </button>
     </div>
   );
@@ -197,6 +216,7 @@ export function BillingPlanPricing({
                 active={active}
                 billingInterval={billingInterval}
                 buttonPending={buttonPending}
+                currentPlanCode={currentPlanCode}
                 key={plan.code}
                 plan={plan}
                 popular={popular}
@@ -209,7 +229,17 @@ export function BillingPlanPricing({
         </div>
       </div>
       <div className="border-t border-[#bccabe] bg-[#f2f3ff] px-4 py-3 text-center text-xs leading-5 text-[#3d4a41] sm:text-sm">
-        Liên hệ để upgrade với nhu cầu lớn hơn hoặc tính năng mới.
+        <a
+          className="inline-flex items-center justify-center gap-2 font-medium text-[#263149] transition-colors hover:text-[#00a669]"
+          href={SUPPORT_CHAT_URL}
+          rel="noreferrer"
+          target="_blank"
+        >
+          <SupportIcon className="h-4 w-4 shrink-0" />
+          <span>
+            Liên hệ để upgrade với nhu cầu lớn hơn hoặc tính năng mới.
+          </span>
+        </a>
       </div>
     </>
   );
