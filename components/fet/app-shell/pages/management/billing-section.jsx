@@ -540,7 +540,7 @@ export function BillingSection({
             <DialogClose asChild>
               <Button
                 aria-label="Đóng"
-                className="h-8 w-8 rounded-full text-[#00a669] hover:bg-[#f2f3ff]"
+                className="h-8 w-8 rounded-full text-[var(--fes-accent-600)] hover:bg-[#f2f3ff]"
                 size="icon"
                 type="button"
                 variant="ghost"

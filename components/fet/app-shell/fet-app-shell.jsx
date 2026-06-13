@@ -196,7 +196,7 @@ export default function FetAppShell({
     const ui = shellContextQuery.data?.ui;
     if (!ui) return;
     setSettings({
-      accent: ui.accent === "slate" ? "slate" : "emerald",
+      accent: ui.accent === "blue" ? "blue" : "emerald",
       density: ui.density === "compact" ? "compact" : "comfortable",
     });
   }, [shellContextQuery.data?.ui]);
@@ -902,6 +902,7 @@ export default function FetAppShell({
       className={cn(
         "app-grid app-shell",
       )}
+      data-accent={settings.accent}
       data-density={settings.density}
     >
       <button

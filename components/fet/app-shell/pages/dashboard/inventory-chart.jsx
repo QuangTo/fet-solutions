@@ -44,8 +44,16 @@ export function InventoryChart({ period, trend = [] }) {
             >
               <defs>
                 <linearGradient id="stockGradient" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="5%" stopColor="#059669" stopOpacity={0.26} />
-                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                  <stop
+                    offset="5%"
+                    stopColor="var(--fes-accent-600, #059669)"
+                    stopOpacity={0.26}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--fes-accent-600, #059669)"
+                    stopOpacity={0}
+                  />
                 </linearGradient>
               </defs>
               <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
@@ -70,7 +78,7 @@ export function InventoryChart({ period, trend = [] }) {
               <Area
                 dataKey="quantity"
                 fill="url(#stockGradient)"
-                stroke="#059669"
+                stroke="var(--fes-accent-600, #059669)"
                 strokeWidth={3}
                 type="monotone"
               />

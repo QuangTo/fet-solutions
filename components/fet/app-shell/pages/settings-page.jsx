@@ -81,7 +81,7 @@ export function SettingsPage({
               }
             >
               <option value="emerald">Xanh ngọc</option>
-              <option value="slate">Trung tính</option>
+              <option value="blue">Xanh lam</option>
             </Select>
           </Field>
         </CardContent>

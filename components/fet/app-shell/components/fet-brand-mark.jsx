@@ -6,7 +6,7 @@ const pixelSize = {
   md: 36,
 };
 
-/** Inline mark matching app/icon.svg — avoids Tailwind bg quirks inside flex buttons. */
+/** Inline mark matching app/icon.svg; fill follows the active site accent. */
 export function FetBrandMark({ className, size = "sm" }) {
   const pixels = pixelSize[size] ?? pixelSize.sm;
 
@@ -19,7 +19,7 @@ export function FetBrandMark({ className, size = "sm" }) {
       viewBox="0 0 32 32"
       width={pixels}
     >
-      <rect fill="#059669" height="32" rx="6" width="32" />
+      <rect fill="var(--fes-accent-600, #059669)" height="32" rx="6" width="32" />
       <text
         fill="#ffffff"
         fontFamily="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"

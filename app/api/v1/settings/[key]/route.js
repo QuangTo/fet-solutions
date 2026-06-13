@@ -10,7 +10,7 @@ const { pageAccessSchema, settingSchema, uiSettingsSchema } = validators;
 const { normalizePageAccess } = pageAccess;
 
 const saveSetting = withApi(
-  ({ body, params }) => {
+  ({ body, params, user }) => {
     const settingKey = params.key;
     let value = body.value;
 
@@ -22,7 +22,7 @@ const saveSetting = withApi(
       settingSchema.parse({ key: settingKey, value });
     }
 
-    return settings.upsertAppSetting(settingKey, value);
+    return settings.upsertAppSetting(settingKey, value, user.siteId);
   },
   { roles: ["admin"] },
 );

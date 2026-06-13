@@ -11,8 +11,8 @@ const { withApi } = http;
 export const GET = withApi(async ({ url, user }) => {
   const page = url.searchParams.get("page") || "shell";
   const [pageAccess, ui, payload] = await Promise.all([
-    settings.loadPageAccess(),
-    settings.loadUiSettings(),
+    settings.loadPageAccess(user.siteId),
+    settings.loadUiSettings(user.siteId),
     repo.appContextData(user.siteId, page),
   ]);
   return {

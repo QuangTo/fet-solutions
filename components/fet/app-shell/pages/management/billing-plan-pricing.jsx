@@ -31,7 +31,7 @@ function IntervalToggle({ billingInterval, onChange }) {
     <div className="relative inline-grid shrink-0 grid-cols-2 rounded-full bg-[#eaedff] p-1">
       <span
         className={cn(
-          "absolute bottom-1 left-1 top-1 w-[calc(50%-0.25rem)] rounded-full bg-[#00a669] shadow-sm transition-transform duration-300 ease-out",
+          "absolute bottom-1 left-1 top-1 w-[calc(50%-0.25rem)] rounded-full bg-[var(--fes-accent-600)] shadow-sm transition-transform duration-300 ease-out",
           billingInterval === "yearly" && "translate-x-full",
         )}
       />
@@ -65,7 +65,7 @@ function IntervalToggle({ billingInterval, onChange }) {
             "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-colors duration-300",
             billingInterval === "yearly"
               ? "bg-white/20 text-white"
-              : "bg-[#00a669] text-white",
+              : "bg-[var(--fes-accent-600)] text-white",
           )}
         >
           Save {yearlyDiscountLabel()}
@@ -109,12 +109,12 @@ function PlanCard({
         "relative flex min-h-[260px] flex-col rounded-xl bg-white p-3 text-left transition-all duration-300 sm:min-h-[300px] sm:p-4",
         "hover:-translate-y-1 hover:shadow-[0_12px_30px_rgba(0,0,0,0.08)]",
         featured
-          ? "border-2 border-[#00a669] shadow-lg md:scale-[1.03]"
+          ? "border-2 border-[var(--fes-accent-600)] shadow-lg md:scale-[1.03]"
           : "border border-[#bccabe]",
       )}
     >
       {popular ? (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#00a669] px-3 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--fes-accent-600)] px-3 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
           Phổ biến nhất
         </div>
       ) : null}
@@ -124,7 +124,7 @@ function PlanCard({
           {plan.name}
         </h3>
         {active ? (
-          <span className="shrink-0 rounded-full bg-[#00a669] px-3 py-1 text-[12px] font-semibold leading-4 text-white">
+          <span className="shrink-0 rounded-full bg-[var(--fes-accent-600)] px-3 py-1 text-[12px] font-semibold leading-4 text-white">
             Đang dùng
           </span>
         ) : null}
@@ -146,7 +146,7 @@ function PlanCard({
           <li className="flex items-center gap-2" key={item}>
             <CheckCircle2
               aria-hidden="true"
-              className="h-4 w-4 shrink-0 fill-[#00a669] text-[#00a669]"
+              className="h-4 w-4 shrink-0 fill-[var(--fes-accent-600)] text-[var(--fes-accent-600)]"
             />
             <span
               className={cn(
@@ -164,7 +164,7 @@ function PlanCard({
         className={cn(
           "mt-auto inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg px-4 text-xs font-semibold leading-5 transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-60 sm:h-9 sm:text-sm",
           selected
-            ? "bg-[#00a669] text-white shadow-md hover:bg-[#008f5b]"
+            ? "bg-[var(--fes-accent-600)] text-white shadow-md hover:bg-[var(--fes-accent-700)]"
             : "border border-[#bccabe] bg-white text-[#263149] hover:bg-[#eaedff]",
         )}
         disabled={buttonPending || active}
@@ -230,7 +230,7 @@ export function BillingPlanPricing({
       </div>
       <div className="border-t border-[#bccabe] bg-[#f2f3ff] px-4 py-3 text-center text-xs leading-5 text-[#3d4a41] sm:text-sm">
         <a
-          className="inline-flex items-center justify-center gap-2 font-medium text-[#263149] transition-colors hover:text-[#00a669]"
+          className="inline-flex items-center justify-center gap-2 font-medium text-[#263149] transition-colors hover:text-[var(--fes-accent-600)]"
           href={SUPPORT_CHAT_URL}
           rel="noreferrer"
           target="_blank"

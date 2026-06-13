@@ -156,6 +156,7 @@ Warehouse API notes:
 
 - Inventory is derived from `receipt_items - dispatch_items`; it is not manually edited.
 - Operational data is scoped by `site_id`; clients pass `x-site-id` or `?siteId=...`.
+- `app_settings` rows are scoped by `site_id`; UI accent/density and page-access settings are independent per site.
 - Receipt and dispatch rows store the selected `warehouse_id`; warehouse codes are unique only within active warehouses in the same site.
 - Tenant data endpoints require `x-user-id`; `POST /users/login`, `/health`, and `/ready` stay public.
 - Write actions check site billing status and may return `BILLING_REQUIRED`.
